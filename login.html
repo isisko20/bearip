@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BEARIP — 로그인</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="login.css">
+</head>
+<body>
+<div class="lg-app">
+  <div class="lg-card">
+    <div class="lg-logo">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="13" r="7" fill="#fff"/>
+        <circle cx="5.5" cy="6" r="2.6" fill="#fff"/>
+        <circle cx="18.5" cy="6" r="2.6" fill="#fff"/>
+        <circle cx="9.3" cy="13.2" r="1" fill="#6d4de6"/>
+        <circle cx="14.7" cy="13.2" r="1" fill="#6d4de6"/>
+      </svg>
+    </div>
+    <h1>BEARIP에 오신 걸 환영해요</h1>
+    <p class="sub">닉네임만 있으면 바로 시작할 수 있어요.<br>테스트용 로그인이라 비밀번호는 필요 없어요.</p>
+
+    <div class="lg-field">
+      <label>닉네임</label>
+      <input type="text" id="lgNickname" placeholder="예: 판타지" maxlength="20">
+      <div class="error" id="lgNicknameError">닉네임을 입력해주세요.</div>
+    </div>
+
+    <div class="lg-field">
+      <label>한 줄 소개 (선택)</label>
+      <textarea id="lgBio" placeholder="어떤 창작자인지 간단히 소개해주세요"></textarea>
+    </div>
+
+    <button class="lg-submit-btn" id="lgSubmitBtn">시작하기</button>
+
+    <div class="lg-note">
+      실제 서비스가 아닌 테스트 버전이에요. 입력한 정보는 이 브라우저에만 저장되고, 다른 사람에게는 보이지 않아요.
+    </div>
+
+    <a class="lg-back-link" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      처음으로 돌아가기
+    </a>
+  </div>
+</div>
+<script src="storage.js"></script>
+<script src="login.js"></script>
+</body>
+</html>

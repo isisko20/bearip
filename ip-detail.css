@@ -66,6 +66,9 @@
 .ipd-ep-info .t { font-size: 13.5px; font-weight: 700; margin: 2px 0; }
 .ipd-ep-info .m { font-size: 11px; color: var(--od-ink-soft); }
 .ipd-ep-chev { width: 15px; height: 15px; color: var(--od-ink-soft); flex-shrink: 0; }
+.ipd-ep-card.disabled { cursor: default; opacity: 0.6; }
+.ipd-ep-card.disabled:hover { background: none; }
+.ipd-ep-soon { font-size: 10.5px; font-weight: 700; color: var(--od-ink-soft); white-space: nowrap; flex-shrink: 0; }
 
 /* Updates feed */
 .ipd-feed { display: flex; flex-direction: column; gap: 14px; }

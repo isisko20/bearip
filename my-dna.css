@@ -41,6 +41,17 @@
 .md-col-main { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .md-col-side { display: flex; flex-direction: column; gap: 18px; }
 
+/* Sub-tabs (개요 / ASSETS / DISCUSSION) */
+.md-tabs {
+  display: flex; gap: 4px; width: fit-content;
+  background: var(--dr-panel); border: 1px solid var(--dr-border);
+  padding: 4px; border-radius: 999px; box-shadow: var(--dr-shadow);
+}
+.md-tab { padding: 9px 18px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--dr-ink-soft); border: none; background: none; cursor: pointer; }
+.md-tab.active { background: var(--dr-purple); color: #fff; }
+.md-tab-panel { display: none; }
+.md-tab-panel.active { display: flex; flex-direction: column; gap: 20px; }
+
 .md-section-label { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .md-section-label .num {
   width: 22px; height: 22px; border-radius: 50%;
@@ -175,6 +186,10 @@
 }
 .md-pill-btn.ai { background: #efeaff; border-color: transparent; color: var(--dr-purple); }
 .md-pill-btn.creator { background: #fff2e6; border-color: transparent; color: #d9791f; }
+.md-pill-btn.active { background: var(--dr-purple); border-color: transparent; color: #fff; }
+
+/* Asset filter chips */
+.md-asset-filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
 
 /* ---- Assets ---- */
 .md-assets-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
@@ -234,6 +249,36 @@
 .md-tip-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; margin-bottom: 8px; }
 .md-tip-title svg { width: 15px; height: 15px; color: var(--dr-purple); }
 .md-tip-text { font-size: 12px; line-height: 1.65; color: var(--dr-ink); }
+
+/* ---- Discussion ---- */
+.md-discuss-box { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+.md-discuss-avatar-icon {
+  width: 36px; height: 36px; border-radius: 50%; background: #6b5541; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.md-discuss-avatar-icon svg { width: 20px; height: 20px; }
+.md-discuss-box input {
+  flex: 1; padding: 11px 16px; border-radius: 999px; border: 1px solid var(--dr-border);
+  background: var(--dr-bg); font-size: 13px; color: var(--dr-ink); outline: none; font-family: inherit;
+}
+.md-discuss-box input:focus { border-color: var(--dr-purple); }
+.md-discuss-box button {
+  padding: 11px 18px; border-radius: 999px; border: none; background: var(--dr-purple);
+  color: #fff; font-weight: 700; font-size: 12.5px; cursor: pointer; flex-shrink: 0;
+}
+
+.md-discuss-list { display: flex; flex-direction: column; gap: 18px; }
+.md-discuss-item { display: flex; gap: 12px; }
+.md-discuss-avatar { width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; }
+.md-discuss-body { flex: 1; min-width: 0; }
+.md-discuss-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.md-discuss-head .n { font-size: 13px; font-weight: 700; }
+.md-discuss-head .r { font-size: 11px; color: var(--dr-purple); font-weight: 700; }
+.md-discuss-head .d { font-size: 10.5px; color: var(--dr-ink-soft); }
+.md-discuss-text { font-size: 12.5px; color: var(--dr-ink); line-height: 1.6; margin: 4px 0 6px; }
+.md-discuss-meta { display: flex; gap: 14px; }
+.md-discuss-meta button { font-size: 11px; font-weight: 700; color: var(--dr-ink-soft); background: none; border: none; cursor: pointer; padding: 0; }
+.md-discuss-meta button:hover { color: var(--dr-ink); }
 
 /* ---- Responsive ---- */
 @media (max-width: 1180px) {

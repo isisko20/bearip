@@ -1,0 +1,145 @@
+// "모집글 올리기" — CREW MATCH recruiting post creation flow.
+
+const CM_DEMO_IP = { id: 'demo', title: '서울 야행수선단' };
+const CM_THUMBS = ['thumb-1', 'thumb-2', 'thumb-3', 'thumb-4', 'thumb-5', 'thumb-6', 'thumb-7', 'thumb-8'];
+
+function cmPopulateIpSelect() {
+  const select = document.getElementById('postIp');
+  const savedIps = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
+  const options = [CM_DEMO_IP, ...savedIps];
+  select.innerHTML = options.map((ip) => `<option value="${ip.id}">${ip.title}</option>`).join('');
+}
+
+function cmRenderPositionCard(pos) {
+  const el = document.createElement('article');
+  el.className = 'cm-position-card';
+  const tagsHtml = (pos.tags || []).map((t) => `<span>${t}</span>`).join('');
+  const filled = pos.filled || 0;
+  el.innerHTML = `
+    <div class="cm-position-thumb ${pos.thumb}"></div>
+    <div class="cm-position-info">
+      <div class="cm-position-ip">${pos.ipTitle}</div>
+      <div class="cm-position-role">${pos.role} 모집</div>
+      <div class="cm-position-tags">${tagsHtml}</div>
+    </div>
+    <div class="cm-position-meta"><div class="frac">${filled}/${pos.count}</div><div class="deadline">${pos.deadlineText}</div></div>
+    <button class="cm-apply-btn">지원하기</button>
+  `;
+  el.querySelector('.cm-apply-btn').addEventListener('click', (e) => {
+    e.target.textContent = '지원 완료';
+    e.target.disabled = true;
+    e.target.style.opacity = '0.6';
+  });
+  return el;
+}
+
+function cmRenderSavedPositions() {
+  const list = document.getElementById('positionsList');
+  const saved = typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : [];
+  saved
+    .slice()
+    .reverse()
+    .forEach((pos) => list.insertBefore(cmRenderPositionCard(pos), list.firstChild));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  cmPopulateIpSelect();
+  cmRenderSavedPositions();
+
+  // Page tabs (포지션 둘러보기 / 모집글 올리기) — posting requires login
+  document.querySelectorAll('#cmPageTabs .od-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.pageTab;
+      if (target === 'post' && !bearipRequireLogin('crew-match.html')) return;
+      document.querySelectorAll('.cm-page-panel').forEach((panel) => {
+        panel.classList.toggle('active', panel.dataset.pagePanel === target);
+      });
+    });
+  });
+
+  // Skill chips (max 3)
+  let selectedSkills = [];
+  document.querySelectorAll('.cm-skill-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const skill = chip.dataset.skill;
+      if (chip.classList.contains('active')) {
+        chip.classList.remove('active');
+        selectedSkills = selectedSkills.filter((s) => s !== skill);
+      } else {
+        if (selectedSkills.length >= 3) return;
+        chip.classList.add('active');
+        selectedSkills.push(skill);
+      }
+    });
+  });
+
+  const goToBrowseTab = () => {
+    const browseTab = document.querySelector('#cmPageTabs [data-page-tab="browse"]');
+    if (browseTab) browseTab.click();
+  };
+
+  document.getElementById('postCancelBtn').addEventListener('click', goToBrowseTab);
+
+  document.getElementById('postSubmitBtn').addEventListener('click', () => {
+    const roleInput = document.getElementById('postRole');
+    const role = roleInput.value.trim();
+    const errorEl = document.getElementById('postRoleError');
+
+    if (!role) {
+      errorEl.classList.add('show');
+      roleInput.classList.add('error');
+      roleInput.focus();
+      return;
+    }
+    errorEl.classList.remove('show');
+    roleInput.classList.remove('error');
+
+    const ipSelect = document.getElementById('postIp');
+    const ipTitle = ipSelect.options[ipSelect.selectedIndex]
+      ? ipSelect.options[ipSelect.selectedIndex].text
+      : '내 IP';
+    const count = parseInt(document.getElementById('postCount').value, 10) || 1;
+    const desc = document.getElementById('postDesc').value.trim();
+    const deadlineRaw = document.getElementById('postDeadline').value;
+    const deadlineText = deadlineRaw
+      ? `~${deadlineRaw.slice(5, 7)}.${deadlineRaw.slice(8, 10)} 마감`
+      : '상시 모집';
+    const thumb = CM_THUMBS[Math.floor(Math.random() * CM_THUMBS.length)];
+
+    const position = {
+      id: 'pos_' + Date.now(),
+      ipTitle,
+      role,
+      count,
+      filled: 0,
+      tags: selectedSkills.slice(),
+      desc,
+      deadlineText,
+      thumb,
+      createdAt: new Date().toISOString(),
+    };
+
+    bearipAddPosition(position);
+    bearipAddNotification({
+      type: 'crew',
+      title: '모집글이 등록됐어요',
+      message: `'${position.ipTitle}'의 '${position.role}' 포지션 모집글이 등록됐어요.`,
+      link: 'crew-match.html',
+    });
+    const list = document.getElementById('positionsList');
+    list.insertBefore(cmRenderPositionCard(position), list.firstChild);
+
+    // reset form
+    roleInput.value = '';
+    document.getElementById('postCount').value = 1;
+    document.getElementById('postDesc').value = '';
+    document.getElementById('postDeadline').value = '';
+    document.querySelectorAll('.cm-skill-chip.active').forEach((c) => c.classList.remove('active'));
+    selectedSkills = [];
+
+    goToBrowseTab();
+    const successEl = document.getElementById('postSuccess');
+    successEl.classList.add('show');
+    setTimeout(() => successEl.classList.remove('show'), 4000);
+  });
+});

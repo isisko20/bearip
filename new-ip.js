@@ -135,6 +135,12 @@ function createAndSaveIP() {
     assets: [],
   };
   bearipAddIP(ip);
+  bearipAddNotification({
+    type: 'ip',
+    title: '새 IP가 생성됐어요',
+    message: `'${ip.title}'가 MY DNA에 추가됐어요. 목표부터 채워보세요.`,
+    link: 'my-dna.html',
+  });
   return ip;
 }
 

@@ -41,10 +41,10 @@ const DEMO_IP = {
     { key: 'upload', label: '업로드/<br>연재', status: 'todo', progress: 0 },
   ],
   assets: [
-    { name: '캐릭터 시트', ver: 'v1.2', date: '2024.05.12', thumb: 'thumb-5', icon: 'user' },
-    { name: '세계관 문서', ver: 'v2.0', date: '2024.05.10', thumb: 'thumb-2', icon: 'doc' },
-    { name: 'EP01 시놉시스', ver: 'v1.1', date: '2024.05.09', thumb: 'thumb-8', icon: 'file' },
-    { name: '콘셉트 아트', ver: 'v1.0', date: '2024.05.07', thumb: 'thumb-7', icon: 'image' },
+    { name: '캐릭터 시트', ver: 'v1.2', date: '2024.05.12', thumb: 'thumb-5', icon: 'user', type: 'character' },
+    { name: '세계관 문서', ver: 'v2.0', date: '2024.05.10', thumb: 'thumb-2', icon: 'doc', type: 'world' },
+    { name: 'EP01 시놉시스', ver: 'v1.1', date: '2024.05.09', thumb: 'thumb-8', icon: 'file', type: 'story' },
+    { name: '콘셉트 아트', ver: 'v1.0', date: '2024.05.07', thumb: 'thumb-7', icon: 'image', type: 'art' },
   ],
 };
 
@@ -135,6 +135,7 @@ function renderAssets() {
   currentIP.assets.forEach((asset) => {
     const card = document.createElement('div');
     card.className = 'md-asset-card';
+    card.dataset.type = asset.type || 'other';
     card.innerHTML = `
       <div class="md-asset-thumb ${asset.thumb || 'thumb-1'}">${ASSET_ICONS[asset.icon] || ''}</div>
       <div class="md-asset-name">${asset.name}</div>

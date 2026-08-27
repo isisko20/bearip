@@ -1,8 +1,11 @@
-// Category tab switching (visual only)
-document.querySelectorAll('.od-tabs .od-tab').forEach((tab) => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.od-tabs .od-tab').forEach((t) => t.classList.remove('active'));
-    tab.classList.add('active');
+// Category tab switching (visual only) — scoped per .od-tabs group so a page
+// with more than one tab bar (e.g. role filter + page tabs) doesn't cross-toggle.
+document.querySelectorAll('.od-tabs').forEach((group) => {
+  group.querySelectorAll('.od-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      group.querySelectorAll('.od-tab').forEach((t) => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
   });
 });
 

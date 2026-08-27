@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BEARIP — 알림함</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="dna-room.css">
+<link rel="stylesheet" href="notifications.css">
+</head>
+<body>
+<div class="dna-app">
+
+  <!-- ===================== Sidebar ===================== -->
+  <aside class="dr-sidebar">
+    <a class="dr-back-home" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      BEARIP
+    </a>
+    <a class="dr-logo" href="create.html">
+      <svg class="mark" viewBox="0 0 40 40" fill="none">
+        <path d="M15 7C15 7 27 12 27 20C27 28 15 33 15 33" stroke="url(#dnaGradA6)" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M25 7C25 7 13 12 13 20C13 28 25 33 25 33" stroke="url(#dnaGradB6)" stroke-width="2.6" stroke-linecap="round"/>
+        <line x1="15.5" y1="12.5" x2="24.5" y2="12.5" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"/>
+        <line x1="13.5" y1="20" x2="26.5" y2="20" stroke="#818cf8" stroke-width="2" stroke-linecap="round"/>
+        <line x1="15.5" y1="27.5" x2="24.5" y2="27.5" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="dnaGradA6" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#7c4dff"/><stop offset="1" stop-color="#3aa0ff"/></linearGradient>
+          <linearGradient id="dnaGradB6" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#3aa0ff"/><stop offset="1" stop-color="#7c4dff"/></linearGradient>
+        </defs>
+      </svg>
+      <div>
+        <div class="name">DNA <span class="dr-grad-text">ROOM</span></div>
+        <div class="desc">아이디어로 IP를 만들고<br>함께 성장하는 공간</div>
+      </div>
+    </a>
+
+    <nav class="dr-nav">
+      <a href="create.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9"/></svg>
+        <span>홈</span>
+      </a>
+      <a href="my-dna.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+        <span>MY DNA</span>
+      </a>
+      <a href="open-dna.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18 15 15 0 010-18z"/></svg>
+        <span>OPEN DNA</span>
+      </a>
+      <a href="crew-match.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg>
+        <span>CREW MATCH</span>
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 0c0 1.7-2.5 2-2.5 3.6"/><circle cx="12" cy="16.6" r="0.4" fill="currentColor"/></svg>
+        <span>GUIDE</span>
+      </a>
+    </nav>
+
+    <div class="dr-sidebar-spacer"></div>
+
+    <div class="dr-promo">
+      <div class="lead">창작의 시작,<br>DNA ROOM과 함께</div>
+      <svg class="bear-mini" viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="55" cy="120" rx="26" ry="34" fill="#5b4636"/>
+        <ellipse cx="145" cy="120" rx="26" ry="34" fill="#5b4636"/>
+        <rect x="20" y="90" width="14" height="34" rx="7" fill="#e8ceac" transform="rotate(-150 20 90)"/>
+        <rect x="146" y="150" width="24" height="10" rx="5" fill="#8a6b45" transform="rotate(18 146 150)"/>
+        <rect x="168" y="140" width="14" height="30" rx="6" fill="#8a6b45" transform="rotate(20 168 140)"/>
+        <circle cx="46" cy="48" r="19" fill="#5b4636"/>
+        <circle cx="154" cy="48" r="19" fill="#5b4636"/>
+        <circle cx="46" cy="48" r="9" fill="#7a6250"/>
+        <circle cx="154" cy="48" r="9" fill="#7a6250"/>
+        <ellipse cx="100" cy="120" rx="58" ry="66" fill="#6b5541"/>
+        <path d="M55 150 Q100 175 145 150 L150 205 Q100 222 50 205 Z" fill="#f6efe1"/>
+        <path d="M78 152 Q100 165 122 152 L120 168 Q100 178 80 168 Z" fill="#5f8c5a"/>
+        <circle cx="100" cy="186" r="12" fill="#efe4cf" stroke="#ddcda8" stroke-width="1.5"/>
+        <ellipse cx="100" cy="96" rx="34" ry="28" fill="#8a725c"/>
+        <circle cx="82" cy="88" r="6.5" fill="#241b12"/>
+        <circle cx="118" cy="88" r="6.5" fill="#241b12"/>
+        <ellipse cx="100" cy="104" rx="10" ry="7" fill="#3a2c1f"/>
+        <path d="M92 116 Q100 121 108 116" stroke="#3a2c1f" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <a class="guide-btn" href="#">
+        가이드 보기
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ===================== Main ===================== -->
+  <main class="dr-main">
+
+    <div class="dr-topbar">
+      <button class="dr-icon-btn" aria-label="검색">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </button>
+      <button class="dr-profile-chip">
+        <span class="avatar">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="6" fill="#fff"/><circle cx="7" cy="7.5" r="2.4" fill="#fff"/><circle cx="17" cy="7.5" r="2.4" fill="#fff"/></svg>
+        </span>
+        <span class="uname">-</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </div>
+
+    <div class="nt-header">
+      <div>
+        <h1>알림함</h1>
+        <p>지원 결과, 매치 제안, 크루 소식을 여기서 모아볼 수 있어요.</p>
+      </div>
+      <button class="nt-read-all-btn" id="ntReadAllBtn">모두 읽음 처리</button>
+    </div>
+
+    <div class="nt-list" id="ntList"></div>
+
+  </main>
+</div>
+<script src="storage.js"></script>
+<script src="auth-ui.js"></script>
+<script src="notifications.js"></script>
+</body>
+</html>

@@ -51,17 +51,9 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18 15 15 0 010-18z"/></svg>
         <span>OPEN DNA</span>
       </a>
-      <a href="#">
+      <a href="crew-match.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg>
         <span>CREW MATCH</span>
-      </a>
-      <a href="#">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M14 4v5h5"/></svg>
-        <span>ASSETS</span>
-      </a>
-      <a href="#">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg>
-        <span>DISCUSSION</span>
       </a>
       <a href="#">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 0c0 1.7-2.5 2-2.5 3.6"/><circle cx="12" cy="16.6" r="0.4" fill="currentColor"/></svg>
@@ -173,7 +165,7 @@
           <div class="dr-stat"><div class="num">5</div><div class="label">참여한 프로젝트</div></div>
           <div class="dr-stat"><div class="num">128</div><div class="label">받은 응원</div></div>
         </div>
-        <button class="dr-new-ip-btn" onclick="location.href='new-ip.html'">
+        <button class="dr-new-ip-btn" onclick="if (bearipRequireLogin('new-ip.html')) location.href='new-ip.html'">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           새 IP 만들기
         </button>
@@ -373,6 +365,7 @@
 <script src="script.js"></script>
 <script src="dna-room.js"></script>
 <script src="storage.js"></script>
+<script src="auth-ui.js"></script>
 <script src="create-dashboard.js"></script>
 </body>
 </html>

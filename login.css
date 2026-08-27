@@ -1,0 +1,77 @@
+/* ================= Login (mock, nickname-only) ================= */
+
+.lg-app {
+  --lg-bg: #f6f6fb;
+  --lg-panel: #ffffff;
+  --lg-border: #e9e7f3;
+  --lg-ink: #201d33;
+  --lg-ink-soft: #8b879c;
+  --lg-purple: #6d4de6;
+  --lg-purple-2: #8f6bff;
+  --lg-blue: #3aa0ff;
+  --lg-radius: 24px;
+  --lg-shadow: 0 20px 50px rgba(43, 32, 92, 0.1);
+
+  min-height: 100vh;
+  background: var(--lg-bg);
+  color: var(--lg-ink);
+  font-family: 'Noto Sans KR', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.lg-app a, .lg-app button, .lg-app input, .lg-app textarea { font-family: inherit; color: inherit; }
+
+.lg-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--lg-panel);
+  border: 1px solid var(--lg-border);
+  border-radius: var(--lg-radius);
+  padding: 40px 36px;
+  box-shadow: var(--lg-shadow);
+  text-align: center;
+}
+
+.lg-logo {
+  width: 56px; height: 56px; margin: 0 auto 18px;
+  border-radius: 16px;
+  background: linear-gradient(150deg, var(--lg-purple), var(--lg-blue));
+  display: flex; align-items: center; justify-content: center;
+}
+.lg-logo svg { width: 28px; height: 28px; color: #fff; }
+
+.lg-card h1 { font-size: 21px; font-weight: 800; margin-bottom: 8px; }
+.lg-card p.sub { font-size: 12.5px; color: var(--lg-ink-soft); line-height: 1.6; margin-bottom: 28px; }
+
+.lg-field { text-align: left; margin-bottom: 16px; }
+.lg-field label { display: block; font-size: 12.5px; font-weight: 700; margin-bottom: 8px; }
+.lg-field input[type="text"], .lg-field textarea {
+  width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--lg-border);
+  background: var(--lg-bg); font-size: 13.5px; color: var(--lg-ink); outline: none; font-family: inherit;
+}
+.lg-field input:focus, .lg-field textarea:focus { border-color: var(--lg-purple); }
+.lg-field textarea { min-height: 70px; resize: vertical; line-height: 1.5; }
+.lg-field .error { display: none; font-size: 11px; color: #e0455b; margin-top: 6px; }
+.lg-field .error.show { display: block; }
+.lg-field input.error-field { border-color: #e0455b; }
+
+.lg-submit-btn {
+  width: 100%; padding: 13px; border-radius: 12px; border: none; margin-top: 6px;
+  background: linear-gradient(120deg, var(--lg-purple), var(--lg-purple-2));
+  color: #fff; font-size: 14px; font-weight: 800; cursor: pointer;
+}
+
+.lg-back-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 22px; font-size: 12px; font-weight: 700; color: var(--lg-ink-soft); text-decoration: none;
+}
+.lg-back-link svg { width: 12px; height: 12px; }
+.lg-back-link:hover { color: var(--lg-ink); }
+
+.lg-note {
+  margin-top: 20px; padding: 12px 14px; border-radius: 12px;
+  background: #efeaff; color: var(--lg-purple);
+  font-size: 11px; line-height: 1.6; text-align: left;
+}

@@ -1,0 +1,42 @@
+/* ================= 알림함 (notifications) ================= */
+/* Uses dna-room.css tokens (--dr-*) via the shared .dna-app sidebar shell. */
+
+.nt-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; margin: 14px 0 20px; }
+.nt-header h1 { font-size: 26px; font-weight: 800; }
+.nt-header p { font-size: 13px; color: var(--dr-ink-soft); margin-top: 6px; }
+.nt-read-all-btn {
+  padding: 10px 18px; border-radius: 12px; border: 1px solid var(--dr-border);
+  background: var(--dr-panel); font-size: 12.5px; font-weight: 700; color: var(--dr-ink); cursor: pointer;
+  box-shadow: var(--dr-shadow);
+}
+
+.nt-list { display: flex; flex-direction: column; gap: 10px; max-width: 720px; }
+.nt-item {
+  display: flex; align-items: flex-start; gap: 14px;
+  background: var(--dr-panel); border: 1px solid var(--dr-border); border-radius: 16px;
+  padding: 16px; cursor: pointer; text-align: left; width: 100%;
+  font-family: inherit; color: inherit;
+  transition: background 0.15s;
+}
+.nt-item:hover { background: var(--dr-bg); }
+.nt-item.unread { border-color: rgba(109,77,230,0.35); background: var(--dr-active-bg); }
+.nt-item.unread:hover { background: #e6e0ff; }
+
+.nt-icon { width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.nt-icon svg { width: 17px; height: 17px; }
+.nt-icon.type-crew { background: #efeaff; color: var(--dr-purple); }
+.nt-icon.type-ip { background: #e7f3ff; color: var(--dr-blue); }
+.nt-icon.type-discussion { background: #e6f7ee; color: #2fae66; }
+.nt-icon.type-system { background: var(--dr-bg-soft); color: var(--dr-ink-soft); }
+
+.nt-body { flex: 1; min-width: 0; }
+.nt-top-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.nt-title { font-size: 13.5px; font-weight: 700; }
+.nt-time { font-size: 10.5px; color: var(--dr-ink-soft); white-space: nowrap; flex-shrink: 0; }
+.nt-message { font-size: 12.5px; color: var(--dr-ink-soft); line-height: 1.55; margin-top: 4px; }
+.nt-unread-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dr-purple); flex-shrink: 0; margin-top: 6px; }
+
+.nt-empty { text-align: center; padding: 60px 20px; color: var(--dr-ink-soft); }
+.nt-empty svg { width: 40px; height: 40px; margin-bottom: 14px; opacity: 0.5; }
+.nt-empty .t { font-size: 14px; font-weight: 700; margin-bottom: 6px; color: var(--dr-ink); }
+.nt-empty .s { font-size: 12.5px; }

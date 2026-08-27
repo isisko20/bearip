@@ -160,6 +160,23 @@
 .cr-thumb-9 { background: linear-gradient(150deg,#3a4a1c,#141c08); }
 .cr-thumb-10 { background: linear-gradient(150deg,#4a1c4a,#1c081c); }
 
+/* Mock selection slot — a placeholder standing in for a card that isn't
+   wired to a real detail page yet, so browsing doesn't imply every poster
+   leads somewhere. */
+.cr-mock-card { flex: 0 0 250px; }
+.cr-mock-rank { flex: 0 0 170px; }
+.cr-mock-card .placeholder,
+.cr-mock-rank .placeholder {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  border: 1.5px dashed var(--cr-border); border-radius: 10px;
+  background: rgba(255,255,255,0.03); color: var(--cr-ink-soft);
+  text-align: center; padding: 14px;
+}
+.cr-mock-card .placeholder { aspect-ratio: 16 / 9; }
+.cr-mock-rank .placeholder { aspect-ratio: 2 / 3; }
+.cr-mock-card .placeholder svg, .cr-mock-rank .placeholder svg { width: 20px; height: 20px; opacity: 0.5; }
+.cr-mock-card .placeholder .t, .cr-mock-rank .placeholder .t { font-size: 10.5px; font-weight: 700; }
+
 /* Section hidden via tab filter */
 .cr-row[hidden] { display: none; }
 
