@@ -1,0 +1,138 @@
+/* ================= 새 IP 만들기 (wizard) ================= */
+
+.ni-app {
+  --ni-bg: #f6f6fb;
+  --ni-panel: #ffffff;
+  --ni-border: #e9e7f3;
+  --ni-ink: #201d33;
+  --ni-ink-soft: #8b879c;
+  --ni-purple: #6d4de6;
+  --ni-purple-2: #8f6bff;
+  --ni-blue: #3aa0ff;
+  --ni-active-bg: #efeaff;
+  --ni-radius: 22px;
+  --ni-shadow: 0 12px 34px rgba(43, 32, 92, 0.07);
+
+  min-height: 100vh;
+  background: var(--ni-bg);
+  color: var(--ni-ink);
+  font-family: 'Noto Sans KR', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 36px 20px 80px;
+}
+.ni-app a, .ni-app button, .ni-app input, .ni-app textarea { font-family: inherit; color: inherit; }
+
+.ni-topbar { width: 100%; max-width: 760px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 26px; }
+.ni-cancel { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--ni-ink-soft); text-decoration: none; }
+.ni-cancel svg { width: 14px; height: 14px; }
+.ni-cancel:hover { color: var(--ni-ink); }
+.ni-step-count { font-size: 12px; font-weight: 700; color: var(--ni-ink-soft); }
+
+.ni-header { width: 100%; max-width: 760px; margin-bottom: 28px; }
+.ni-header h1 { font-size: 26px; font-weight: 800; }
+.ni-header p { font-size: 13px; color: var(--ni-ink-soft); margin-top: 6px; }
+
+/* Stepper */
+.ni-stepper { display: flex; align-items: flex-start; width: 100%; max-width: 760px; margin-bottom: 30px; }
+.ni-step { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; position: relative; }
+.ni-step-line { position: absolute; top: 15px; left: 50%; width: 100%; height: 2px; background: var(--ni-border); z-index: 0; }
+.ni-step:last-child .ni-step-line { display: none; }
+.ni-step .dot {
+  position: relative; z-index: 1;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--ni-panel); border: 2px solid var(--ni-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; color: var(--ni-ink-soft);
+}
+.ni-step .dot svg { width: 14px; height: 14px; display: none; }
+.ni-step .label { font-size: 11px; font-weight: 700; color: var(--ni-ink-soft); }
+.ni-step.active .dot { background: var(--ni-purple); border-color: var(--ni-purple); color: #fff; }
+.ni-step.active .label { color: var(--ni-ink); }
+.ni-step.done .dot { background: var(--ni-purple); border-color: var(--ni-purple); color: #fff; }
+.ni-step.done .dot span { display: none; }
+.ni-step.done .dot svg { display: block; }
+.ni-step.done .ni-step-line { background: var(--ni-purple); }
+
+/* Card */
+.ni-card { width: 100%; max-width: 760px; background: var(--ni-panel); border: 1px solid var(--ni-border); border-radius: var(--ni-radius); padding: 32px; box-shadow: var(--ni-shadow); }
+.ni-panel { display: none; }
+.ni-panel.active { display: block; }
+.ni-panel h2 { font-size: 17px; font-weight: 800; margin-bottom: 6px; }
+.ni-panel .sub { font-size: 12.5px; color: var(--ni-ink-soft); margin-bottom: 22px; }
+
+/* Step 1: goal */
+.ni-goals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.ni-goal {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 22px 10px; border-radius: 18px; border: 1.5px solid var(--ni-border);
+  background: var(--ni-panel); cursor: pointer; font-weight: 700; font-size: 13.5px; color: var(--ni-ink);
+  transition: transform 0.15s;
+}
+.ni-goal:hover { transform: translateY(-2px); }
+.ni-goal .ic { width: 42px; height: 42px; border-radius: 12px; background: var(--ni-bg); display: flex; align-items: center; justify-content: center; }
+.ni-goal .ic svg { width: 20px; height: 20px; color: var(--ni-purple); }
+.ni-goal.active { background: linear-gradient(135deg, var(--ni-purple), var(--ni-purple-2)); color: #fff; border-color: transparent; box-shadow: 0 14px 26px rgba(109,77,230,0.3); }
+.ni-goal.active .ic { background: rgba(255,255,255,0.18); }
+.ni-goal.active .ic svg { color: #fff; }
+.ni-goal-check { position: absolute; top: 9px; right: 9px; width: 18px; height: 18px; border-radius: 50%; background: #fff; color: var(--ni-purple); display: none; align-items: center; justify-content: center; }
+.ni-goal-check svg { width: 10px; height: 10px; }
+.ni-goal.active .ni-goal-check { display: flex; }
+
+/* Fields */
+.ni-field { margin-bottom: 20px; }
+.ni-field:last-child { margin-bottom: 0; }
+.ni-field label { display: block; font-size: 12.5px; font-weight: 700; margin-bottom: 8px; }
+.ni-field input[type="text"], .ni-field textarea {
+  width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--ni-border);
+  background: var(--ni-bg); font-size: 13.5px; color: var(--ni-ink); outline: none; font-family: inherit;
+}
+.ni-field input[type="text"]:focus, .ni-field textarea:focus { border-color: var(--ni-purple); }
+.ni-field textarea { resize: vertical; min-height: 110px; line-height: 1.6; }
+.ni-hint { font-size: 11px; color: var(--ni-ink-soft); margin-top: 6px; }
+
+.ni-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.ni-chip { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--ni-border); background: var(--ni-bg); font-size: 12.5px; font-weight: 700; color: var(--ni-ink-soft); cursor: pointer; }
+.ni-chip.active { background: var(--ni-purple); border-color: var(--ni-purple); color: #fff; }
+
+.ni-visibility { display: flex; gap: 10px; }
+.ni-vis-option { flex: 1; padding: 14px; border-radius: 14px; border: 1.5px solid var(--ni-border); cursor: pointer; text-align: left; background: var(--ni-panel); }
+.ni-vis-option.active { border-color: var(--ni-purple); background: var(--ni-active-bg); }
+.ni-vis-option .t { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.ni-vis-option .t svg { width: 14px; height: 14px; color: var(--ni-purple); }
+.ni-vis-option .d { font-size: 11px; color: var(--ni-ink-soft); margin-top: 4px; }
+
+/* Step 3: cover upload */
+.ni-upload { border: 1.5px dashed var(--ni-border); border-radius: 16px; padding: 30px; text-align: center; cursor: pointer; color: var(--ni-ink-soft); }
+.ni-upload svg { width: 26px; height: 26px; margin-bottom: 8px; color: var(--ni-ink-soft); }
+.ni-upload .t { font-size: 13px; font-weight: 700; color: var(--ni-ink); }
+.ni-upload .d { font-size: 11px; margin-top: 4px; }
+.ni-upload.has-file { border-style: solid; border-color: var(--ni-purple); }
+
+/* Step 4: summary */
+.ni-summary { display: flex; gap: 18px; align-items: flex-start; padding: 18px; border: 1px solid var(--ni-border); border-radius: 16px; margin-bottom: 22px; }
+.ni-summary-cover { width: 96px; aspect-ratio: 1/1; border-radius: 12px; background: linear-gradient(150deg, var(--ni-purple), var(--ni-blue)); flex-shrink: 0; }
+.ni-summary-info { min-width: 0; }
+.ni-summary-info .title { font-size: 17px; font-weight: 800; }
+.ni-summary-info .row { font-size: 12px; color: var(--ni-ink-soft); margin-top: 5px; line-height: 1.6; }
+.ni-summary-chips { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+.ni-summary-chips span { font-size: 10.5px; font-weight: 700; background: var(--ni-active-bg); color: var(--ni-purple); padding: 4px 9px; border-radius: 999px; }
+
+.ni-checklist { display: flex; flex-direction: column; gap: 10px; }
+.ni-checklist-item { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--ni-ink); }
+.ni-checklist-item svg { width: 16px; height: 16px; color: #2fae66; flex-shrink: 0; }
+
+/* Footer nav */
+.ni-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 26px; }
+.ni-btn-ghost { padding: 12px 22px; border-radius: 12px; border: 1px solid var(--ni-border); background: var(--ni-panel); font-size: 13px; font-weight: 700; color: var(--ni-ink); cursor: pointer; }
+.ni-btn-ghost:disabled { opacity: 0.35; cursor: not-allowed; }
+.ni-btn-primary { padding: 12px 26px; border-radius: 12px; border: none; background: linear-gradient(120deg, var(--ni-purple), var(--ni-purple-2)); color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.ni-btn-primary svg { width: 15px; height: 15px; }
+
+@media (max-width: 560px) {
+  .ni-goals { grid-template-columns: repeat(2, 1fr); }
+  .ni-visibility { flex-direction: column; }
+  .ni-card { padding: 22px; }
+  .ni-step .label { display: none; }
+}

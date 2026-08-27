@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BEARIP — OPEN DNA</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="open-dna.css">
+</head>
+<body>
+<div class="od-app">
+
+  <!-- ===================== Top bar ===================== -->
+  <header class="od-topbar">
+    <a class="od-back-home" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      BEARIP
+    </a>
+    <a class="od-logo" href="create.html">
+      <svg class="mark" viewBox="0 0 40 40" fill="none">
+        <path d="M15 7C15 7 27 12 27 20C27 28 15 33 15 33" stroke="url(#dnaGradA2)" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M25 7C25 7 13 12 13 20C13 28 25 33 25 33" stroke="url(#dnaGradB2)" stroke-width="2.6" stroke-linecap="round"/>
+        <line x1="15.5" y1="12.5" x2="24.5" y2="12.5" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"/>
+        <line x1="13.5" y1="20" x2="26.5" y2="20" stroke="#818cf8" stroke-width="2" stroke-linecap="round"/>
+        <line x1="15.5" y1="27.5" x2="24.5" y2="27.5" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="dnaGradA2" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#7c4dff"/><stop offset="1" stop-color="#3aa0ff"/></linearGradient>
+          <linearGradient id="dnaGradB2" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#3aa0ff"/><stop offset="1" stop-color="#7c4dff"/></linearGradient>
+        </defs>
+      </svg>
+      <span class="name">DNA ROOM</span>
+    </a>
+
+    <nav class="od-nav">
+      <a href="my-dna.html">MY DNA</a>
+      <a class="active" href="open-dna.html">OPEN DNA</a>
+      <a href="#">CREW MATCH</a>
+    </nav>
+
+    <label class="od-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" placeholder="프로젝트, 키워드, 태그 검색">
+    </label>
+
+    <div class="od-top-actions">
+      <button class="od-icon-btn" aria-label="알림">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+      </button>
+      <button class="od-icon-btn" aria-label="메시지">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+      </button>
+      <button class="od-avatar-chip">
+        <span class="av"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="6" fill="#fff"/><circle cx="7" cy="7.5" r="2.4" fill="#fff"/><circle cx="17" cy="7.5" r="2.4" fill="#fff"/></svg></span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="od-main">
+
+    <!-- Hero -->
+    <section class="od-hero">
+      <div class="od-hero-left">
+        <div class="od-hero-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18 15 15 0 010-18z"/></svg>
+        </div>
+        <div>
+          <h1>OPEN DNA</h1>
+          <p>공개된 IP의 성장 과정과 작품을 발견해보세요</p>
+        </div>
+      </div>
+
+      <div class="od-hero-art">
+        <div class="od-hero-sphere">
+          <svg viewBox="0 0 40 40" fill="none">
+            <path d="M15 4C15 4 29 10 29 20C29 30 15 36 15 36" stroke="url(#heroA)" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M25 4C25 4 11 10 11 20C11 30 25 36 25 36" stroke="url(#heroB)" stroke-width="2.2" stroke-linecap="round"/>
+            <line x1="15.5" y1="10" x2="24.5" y2="10" stroke="#a78bfa" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="12" y1="20" x2="28" y2="20" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="15.5" y1="30" x2="24.5" y2="30" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round"/>
+            <defs>
+              <linearGradient id="heroA" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#7c4dff"/><stop offset="1" stop-color="#3aa0ff"/></linearGradient>
+              <linearGradient id="heroB" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#3aa0ff"/><stop offset="1" stop-color="#7c4dff"/></linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="od-hero-cube">DNA</div>
+        <div class="od-hero-deco d1"></div>
+        <div class="od-hero-deco d2"></div>
+        <div class="od-hero-deco d3"></div>
+      </div>
+    </section>
+
+    <!-- Filter row -->
+    <section class="od-filter-row">
+      <div class="od-tabs">
+        <button class="od-tab active">전체</button>
+        <button class="od-tab">웹소설</button>
+        <button class="od-tab">웹툰</button>
+        <button class="od-tab">영상</button>
+        <button class="od-tab">멀티포맷</button>
+      </div>
+
+      <div class="od-legend">
+        <div class="od-legend-item seed">
+          <span class="od-legend-dot"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg></span>
+          <span class="txt"><span class="name">SEED</span><br><span class="desc">아이디어 단계</span></span>
+        </div>
+        <div class="od-legend-item rising">
+          <span class="od-legend-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V9M12 9c0-3 2-5 5-5 0 3-2 5-5 5zM12 13c0-2.5-1.7-4.5-4.5-4.5C7.5 11.3 9.5 13 12 13z"/></svg></span>
+          <span class="txt"><span class="name">RISING</span><br><span class="desc">성장 단계</span></span>
+        </div>
+        <div class="od-legend-item joinable">
+          <span class="od-legend-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+          <span class="txt"><span class="name">JOINABLE</span><br><span class="desc">참여 가능</span></span>
+        </div>
+        <div class="od-legend-item official">
+          <span class="od-legend-dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 5-3.2 8-7 9-3.8-1-7-4-7-9V6z"/></svg></span>
+          <span class="txt"><span class="name">OFFICIAL</span><br><span class="desc">공식 프로젝트</span></span>
+        </div>
+      </div>
+
+      <div class="od-sort">
+        <select>
+          <option>최신순</option>
+          <option>인기순</option>
+          <option>DNA 높은순</option>
+          <option>참여 임박순</option>
+        </select>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+    </section>
+
+    <!-- 지금 성장 중인 OPEN DNA -->
+    <section>
+      <div class="od-section-head">
+        <div class="od-section-title">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2z"/></svg></span>
+          <div>
+            <div class="t">지금 성장 중인 OPEN DNA</div>
+            <div class="s">열린 IP의 목표와 진행 상황을 확인하고 함께 성장해요</div>
+          </div>
+        </div>
+        <a class="od-view-more" href="#">더 많은 프로젝트 보기 →</a>
+      </div>
+
+      <div class="od-cards">
+
+        <!-- Card 1 -->
+        <article class="od-card">
+          <div class="od-card-banner thumb-1">
+            <span class="od-stage-badge rising">RISING</span>
+            <div class="od-card-avatar thumb-2">서울<br>야행수선단</div>
+          </div>
+          <div class="od-card-body">
+            <div class="od-card-title-row">
+              <h3>서울 야행수선단</h3>
+              <button class="od-bookmark" aria-label="북마크"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
+            </div>
+            <div class="od-card-byline">판타지 · RISING</div>
+            <p class="od-card-tagline">밤이 숨기고, 수선단이 바로잡는다.</p>
+            <div class="od-format-tags">
+              <span class="od-format-tag">WEBTOON</span>
+              <span class="od-format-tag">VIDEO</span>
+              <span class="od-format-tag">+1</span>
+            </div>
+            <div class="od-stat-row">
+              <div class="od-stat"><div class="label">DNA</div><div class="value">78%</div><div class="bar"><div class="bar-fill" style="width:78%"></div></div></div>
+              <div class="od-stat"><div class="label">준비도</div><div class="value">62%</div><div class="bar"><div class="bar-fill" style="width:62%"></div></div></div>
+              <div class="od-stat"><div class="label">제작 진행</div><div class="value">41%</div><div class="bar"><div class="bar-fill" style="width:41%"></div></div></div>
+            </div>
+            <div class="od-latest-label">Latest Work</div>
+            <div class="od-latest-row">
+              <div class="od-latest-thumb thumb-1"></div>
+              <div class="od-latest-thumb thumb-8"></div>
+              <div class="od-latest-thumb thumb-3"></div>
+              <div class="od-latest-thumb od-latest-more">+3</div>
+            </div>
+            <div class="od-recruit">
+              <span class="od-recruit-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 3a2.8 2.8 0 114 4L7 21l-4 1 1-4z"/></svg>Visual Artist 모집</span>
+              <span class="od-recruit-right"><span class="od-recruit-frac">3/5</span><span class="od-avatar-stack"><span style="background:#e0a9c4"></span><span style="background:#a9c4e0"></span><span style="background:#c4e0a9"></span></span></span>
+            </div>
+            <div class="od-foot-stats">
+              <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg>128</span><span class="lbl">팔로워</span></div>
+              <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.6 8.5 3 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 4 0 6.4 4 4.5 7.5C19 16.5 12 21 12 21z"/></svg>342</span><span class="lbl">응원</span></div>
+              <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg>56</span><span class="lbl">활동</span></div>
+            </div>
+            <div class="od-card-actions">
+              <button class="od-btn-outline" onclick="location.href='ip-detail.html'">IP 보기</button>
+              <button class="od-btn-solid" onclick="location.href='ip-detail.html'">참여하기</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card 2 -->
+        <article class="od-card">
+          <div class="od-card-banner thumb-5">
+            <span class="od-stage-badge joinable">JOINABLE</span>
+            <div class="od-card-avatar thumb-6">고양이<br>탐정 모모</div>
+          </div>
+          <div class="od-card-body">
+            <div class="od-card-title-row">
+              <h3>고양이 탐정 모모</h3>
+              <button class="od-bookmark" aria-label="북마크"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
+            </div>
+            <div class="od-card-byline">미스터리 · JOINABLE</div>
+            <p class="od-card-tagline">작은 단서가 모여, 진실을 가리킨다.</p>
+            <div class="od-format-tags">
+              <span class="od-format-tag">WEB NOVEL</span>
+              <span class="od-format-tag">WEBTOON</span>
+              <span class="od-format-tag">+1</span>
+            </div>
+            <div class="od-stat-row">
+              <div class="od-stat"><div class="label">DNA</div><div class="value">71%</div><div class="bar"><div class="bar-fill" style="width:71%"></div></div></div>
+              <div class="od-stat"><div class="label">준비도</div><div class="value">58%</div><div class="bar"><div class="bar-fill" style="width:58%"></div></div></div>
+              <div class="od-stat"><div class="label">제작 진행</div><div class="value">33%</div><div class="bar"><div class="bar-fill" style="width:33%"></div></div></div>
+            </div>
+            <div class="od-latest-label">Latest Work</div>
+            <div class="od-latest-row">
+              <div class="od-latest-thumb thumb-5"></div>
+              <div class="od-latest-thumb thumb-6"></div>
+              <div class="od-latest-thumb thumb-7"></div>
+              <div class="od-latest-thumb od-latest-more">+2</div>
+            </div>
+            <div class="od-recruit">
+              <span class="od-recruit-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 3a2.8 2.8 0 114 4L7 21l-4 1 1-4z"/></svg>Story Writer 모집</span>
+              <span class="od-recruit-right"><span class="od-recruit-frac">2/4</span><span class="od-avatar-stack"><span style="background:#e0c4a9"></span><span style="background:#a9d6e0"></span><span style="background:#d6a9e0"></span></span></span>
+            </div>
+            <div class="od-foot-stats">
+              <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg>96</span><span class="lbl">팔로워</span></div>
+              <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.6 8.5 3 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 4 0 6.4 4 4.5 7.5C19 16.5 12 21 12 21z"/></svg>271</span><span class="lbl">응원</span></div>
+              <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg>38</span><span class="lbl">활동</span></div>
+            </div>
+            <div class="od-card-actions">
+              <button class="od-btn-outline" onclick="location.href='ip-detail.html'">IP 보기</button>
+              <button class="od-btn-solid" onclick="location.href='ip-detail.html'">참여하기</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card 3 -->
+        <article class="od-card">
+          <div class="od-card-banner thumb-3">
+            <span class="od-stage-badge rising">RISING</span>
+            <div class="od-card-avatar thumb-4">기억을<br>걷는 소녀</div>
+          </div>
+          <div class="od-card-body">
+            <div class="od-card-title-row">
+              <h3>기억을 걷는 소녀</h3>
+              <button class="od-bookmark" aria-label="북마크"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
+            </div>
+            <div class="od-card-byline">드라마 · RISING</div>
+            <p class="od-card-tagline">잊혀진 기억을 따라, 소녀는 오늘도 걷는다.</p>
+            <div class="od-format-tags">
+              <span class="od-format-tag">WEB NOVEL</span>
+              <span class="od-format-tag">VIDEO</span>
+            </div>
+            <div class="od-stat-row">
+              <div class="od-stat"><div class="label">DNA</div><div class="value">64%</div><div class="bar"><div class="bar-fill" style="width:64%"></div></div></div>
+              <div class="od-stat"><div class="label">준비도</div><div class="value">70%</div><div class="bar"><div class="bar-fill" style="width:70%"></div></div></div>
+              <div class="od-stat"><div class="label">제작 진행</div><div class="value">48%</div><div class="bar"><div class="bar-fill" style="width:48%"></div></div></div>
+            </div>
+            <div class="od-latest-label">Latest Work</div>
+            <div class="od-latest-row">
+              <div class="od-latest-thumb thumb-3"></div>
+              <div class="od-latest-thumb thumb-4"></div>
+              <div class="od-latest-thumb thumb-2"></div>
+              <div class="od-latest-thumb od-latest-more">+2</div>
+            </div>
+            <div class="od-recruit">
+              <span class="od-recruit-left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 3a2.8 2.8 0 114 4L7 21l-4 1 1-4z"/></svg>Video Creator 모집</span>
+              <span class="od-recruit-right"><span class="od-recruit-frac">1/3</span><span class="od-avatar-stack"><span style="background:#c4a9e0"></span><span style="background:#e0a9a9"></span></span></span>
+            </div>
+            <div class="od-foot-stats">
+              <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg>142</span><span class="lbl">팔로워</span></div>
+              <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.6 8.5 3 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 4 0 6.4 4 4.5 7.5C19 16.5 12 21 12 21z"/></svg>389</span><span class="lbl">응원</span></div>
+              <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg>61</span><span class="lbl">활동</span></div>
+            </div>
+            <div class="od-card-actions">
+              <button class="od-btn-outline" onclick="location.href='ip-detail.html'">IP 보기</button>
+              <button class="od-btn-solid" onclick="location.href='ip-detail.html'">참여하기</button>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- Bottom -->
+    <section class="od-bottom">
+      <div class="od-results-panel">
+        <div class="od-section-head" style="margin-bottom:0">
+          <div class="od-section-title">
+            <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></span>
+            <div>
+              <div class="t">주목받는 결과물</div>
+              <div class="s">OPEN DNA에서 탄생한 대표 작품들을 만나보세요</div>
+            </div>
+          </div>
+        </div>
+        <div class="od-results-grid">
+          <div class="od-result-card thumb-4">
+            <div class="od-result-scrim"></div>
+            <div class="od-result-label"><div class="tag">BEST CHARACTER</div><div class="by">by 작가 홍기</div></div>
+          </div>
+          <div class="od-result-card thumb-2">
+            <div class="od-result-scrim"></div>
+            <div class="od-result-label"><div class="tag">BEST STORYBOARD</div><div class="by">by 스토리보드 팀</div></div>
+          </div>
+          <div class="od-result-card thumb-3">
+            <div class="od-result-scrim"></div>
+            <div class="od-result-label"><div class="tag">BEST VISUAL</div><div class="by">by V.A팀 루비</div></div>
+          </div>
+          <div class="od-result-card thumb-1">
+            <div class="od-result-scrim"></div>
+            <div class="od-result-play"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="11" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 8l6 4-6 4z"/></svg></div>
+            <div class="od-result-label"><div class="tag">BEST VIDEO</div><div class="by">by 유비메이커스</div></div>
+          </div>
+        </div>
+        <a class="od-view-more" href="#">모든 결과물 보기 →</a>
+      </div>
+
+      <div class="od-info-panel">
+        <h4>OPEN DNA는 무엇인가요?</h4>
+        <div class="od-info-list">
+          <div class="od-info-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>공개된 IP의 목표와 진행 현황을 확인</div>
+          <div class="od-info-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>필요한 창작자 포지션과 참여 정보 확인</div>
+          <div class="od-info-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>함께 만들고, 성장하는 여정에 참여</div>
+        </div>
+        <a class="od-info-more" href="#">더 알아보기 →</a>
+        <div class="od-info-deco"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+<script src="script.js"></script>
+<script src="open-dna.js"></script>
+</body>
+</html>

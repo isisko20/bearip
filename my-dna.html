@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BEARIP — MY DNA</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="dna-room.css">
+<link rel="stylesheet" href="my-dna.css">
+</head>
+<body>
+<div class="dna-app">
+
+  <!-- ===================== Sidebar ===================== -->
+  <aside class="dr-sidebar">
+    <a class="dr-back-home" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      BEARIP
+    </a>
+    <a class="dr-logo" href="create.html">
+      <svg class="mark" viewBox="0 0 40 40" fill="none">
+        <path d="M15 7C15 7 27 12 27 20C27 28 15 33 15 33" stroke="url(#dnaGradA)" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M25 7C25 7 13 12 13 20C13 28 25 33 25 33" stroke="url(#dnaGradB)" stroke-width="2.6" stroke-linecap="round"/>
+        <line x1="15.5" y1="12.5" x2="24.5" y2="12.5" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"/>
+        <line x1="13.5" y1="20" x2="26.5" y2="20" stroke="#818cf8" stroke-width="2" stroke-linecap="round"/>
+        <line x1="15.5" y1="27.5" x2="24.5" y2="27.5" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="dnaGradA" x1="0" y1="0" x2="0" y2="1">
+            <stop stop-color="#7c4dff"/><stop offset="1" stop-color="#3aa0ff"/>
+          </linearGradient>
+          <linearGradient id="dnaGradB" x1="0" y1="0" x2="0" y2="1">
+            <stop stop-color="#3aa0ff"/><stop offset="1" stop-color="#7c4dff"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div>
+        <div class="name">DNA <span class="dr-grad-text">ROOM</span></div>
+        <div class="desc">아이디어로 IP를 만들고<br>함께 성장하는 공간</div>
+      </div>
+    </a>
+
+    <nav class="dr-nav">
+      <a href="create.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9"/></svg>
+        <span>홈</span>
+      </a>
+      <a class="active" href="my-dna.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+        <span>MY DNA</span>
+      </a>
+      <a href="open-dna.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18 15 15 0 010-18z"/></svg>
+        <span>OPEN DNA</span>
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg>
+        <span>CREW MATCH</span>
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M14 4v5h5"/></svg>
+        <span>ASSETS</span>
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg>
+        <span>DISCUSSION</span>
+      </a>
+      <a href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 0c0 1.7-2.5 2-2.5 3.6"/><circle cx="12" cy="16.6" r="0.4" fill="currentColor"/></svg>
+        <span>GUIDE</span>
+      </a>
+    </nav>
+
+    <div class="dr-sidebar-spacer"></div>
+
+    <div class="dr-promo">
+      <div class="lead">창작의 시작,<br>DNA ROOM과 함께</div>
+      <svg class="bear-mini" viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="55" cy="120" rx="26" ry="34" fill="#5b4636"/>
+        <ellipse cx="145" cy="120" rx="26" ry="34" fill="#5b4636"/>
+        <rect x="20" y="90" width="14" height="34" rx="7" fill="#e8ceac" transform="rotate(-150 20 90)"/>
+        <rect x="146" y="150" width="24" height="10" rx="5" fill="#8a6b45" transform="rotate(18 146 150)"/>
+        <rect x="168" y="140" width="14" height="30" rx="6" fill="#8a6b45" transform="rotate(20 168 140)"/>
+        <circle cx="46" cy="48" r="19" fill="#5b4636"/>
+        <circle cx="154" cy="48" r="19" fill="#5b4636"/>
+        <circle cx="46" cy="48" r="9" fill="#7a6250"/>
+        <circle cx="154" cy="48" r="9" fill="#7a6250"/>
+        <ellipse cx="100" cy="120" rx="58" ry="66" fill="#6b5541"/>
+        <path d="M55 150 Q100 175 145 150 L150 205 Q100 222 50 205 Z" fill="#f6efe1"/>
+        <path d="M78 152 Q100 165 122 152 L120 168 Q100 178 80 168 Z" fill="#5f8c5a"/>
+        <circle cx="100" cy="186" r="12" fill="#efe4cf" stroke="#ddcda8" stroke-width="1.5"/>
+        <ellipse cx="100" cy="96" rx="34" ry="28" fill="#8a725c"/>
+        <circle cx="82" cy="88" r="6.5" fill="#241b12"/>
+        <circle cx="118" cy="88" r="6.5" fill="#241b12"/>
+        <ellipse cx="100" cy="104" rx="10" ry="7" fill="#3a2c1f"/>
+        <path d="M92 116 Q100 121 108 116" stroke="#3a2c1f" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <a class="guide-btn" href="#">
+        가이드 보기
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ===================== Main ===================== -->
+  <main class="dr-main">
+
+    <div class="dr-topbar">
+      <button class="dr-icon-btn" aria-label="검색">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </button>
+      <button class="dr-icon-btn" aria-label="알림">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+        <span class="dot"></span>
+      </button>
+      <button class="dr-profile-chip">
+        <span class="avatar">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="6" fill="#fff"/><circle cx="7" cy="7.5" r="2.4" fill="#fff"/><circle cx="17" cy="7.5" r="2.4" fill="#fff"/></svg>
+        </span>
+        <span class="uname">모루</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </div>
+
+    <div class="md-header">
+      <div>
+        <h1>MY DNA</h1>
+        <p>당신의 IP를 체계적으로 정리하고, 선택한 목표에 맞게 준비를 도와드려요.</p>
+        <div class="md-current-ip-chip" id="currentIpChip">📁 -</div>
+      </div>
+      <button class="md-help-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 0c0 1.7-2.5 2-2.5 3.6"/><circle cx="12" cy="16.6" r="0.4" fill="currentColor"/></svg>
+        도움말
+      </button>
+    </div>
+
+    <div class="md-layout">
+      <div class="md-col-main">
+
+        <!-- 1. 목표 선택 -->
+        <section class="md-panel">
+          <div class="md-section-label">
+            <span class="num">1</span>
+            <span class="t">목표 선택</span>
+            <span class="hint">선택한 목표에 따라 준비 항목이 바뀝니다.</span>
+          </div>
+          <div class="md-goals">
+            <button class="md-goal" data-goal="webnovel">
+              <span class="goal-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M14 4v5h5M8 13h8M8 17h5"/></svg></span>
+              웹소설
+            </button>
+            <button class="md-goal active" data-goal="webtoon">
+              <span class="md-goal-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+              <span class="goal-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l4-1 12-12-3-3L4 17l-1 4z"/><path d="M14 6l3 3"/></svg></span>
+              웹툰
+            </button>
+            <button class="md-goal" data-goal="video">
+              <span class="goal-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="14" height="12" rx="2"/><path d="M16.5 10l5-3v10l-5-3z"/></svg></span>
+              영상
+            </button>
+            <button class="md-goal" data-goal="multi">
+              <span class="goal-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5L12 12l8-4.5M12 12v9"/></svg></span>
+              멀티포맷
+            </button>
+          </div>
+        </section>
+
+        <!-- 2. 나의 IP 현황 -->
+        <section class="md-panel">
+          <div class="md-section-label"><span class="num">2</span><span class="t">나의 IP 현황</span></div>
+          <div class="md-status-grid">
+            <div class="md-status-card purple">
+              <div class="md-status-top">
+                <div class="md-status-left">
+                  <div class="md-status-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3C8 3 16 6 16 12C16 18 8 21 8 21"/><path d="M16 3C16 3 8 6 8 12C8 18 16 21 16 21"/><path d="M9 7h6M8 12h8M9 17h6"/></svg></div>
+                  <div class="md-status-label">DNA SCORE</div>
+                </div>
+                <svg class="md-status-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.1"/></svg>
+              </div>
+              <div class="md-status-value" id="dnaScoreValue">78%</div>
+              <div class="md-status-desc">IP의 핵심 완성도</div>
+              <div class="md-status-bar"><div class="md-status-bar-fill" id="dnaScoreBar" style="width:78%"></div></div>
+            </div>
+            <div class="md-status-card blue">
+              <div class="md-status-top">
+                <div class="md-status-left">
+                  <div class="md-status-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg></div>
+                  <div class="md-status-label">READINESS SCORE</div>
+                </div>
+                <svg class="md-status-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.1"/></svg>
+              </div>
+              <div class="md-status-value" id="readinessValue">57%</div>
+              <div class="md-status-desc" id="readinessDesc">선택한 목표(웹툰) 준비도</div>
+              <div class="md-status-bar"><div class="md-status-bar-fill" id="readinessBar" style="width:57%"></div></div>
+            </div>
+            <div class="md-status-card green">
+              <div class="md-status-top">
+                <div class="md-status-left">
+                  <div class="md-status-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l3-4h3l-2 4z"/><path d="M8 8l3-4h3l-2 4z"/><path d="M13 8l3-4h3l-2 4z"/><rect x="3" y="8" width="18" height="12" rx="1.5"/></svg></div>
+                  <div class="md-status-label">PRODUCTION PROGRESS</div>
+                </div>
+                <svg class="md-status-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.1"/></svg>
+              </div>
+              <div class="md-status-value" id="productionValue">23%</div>
+              <div class="md-status-desc">실제 제작 진행도</div>
+              <div class="md-status-bar"><div class="md-status-bar-fill" id="productionBar" style="width:23%"></div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. 웹툰 개발 맵 -->
+        <section class="md-panel">
+          <div class="md-section-label">
+            <span class="num">3</span>
+            <span class="t" id="roadmapTitle">웹툰 개발 맵</span>
+            <span class="md-badge" id="roadmapGoalBadge">선택한 목표: 웹툰</span>
+          </div>
+
+          <div class="md-roadmap" id="roadmapContainer">
+            <div class="md-road-step done">
+              <div class="md-road-ic-wrap">
+                <div class="md-road-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5C4 3.7 4.7 3 5.5 3H18a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2z"/><path d="M6 3v18"/></svg></div>
+                <span class="md-road-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+              </div>
+              <div class="md-road-name">스토리</div>
+              <div class="md-road-status">완료</div>
+            </div>
+            <div class="md-road-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+
+            <div class="md-road-step done">
+              <div class="md-road-ic-wrap">
+                <div class="md-road-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5.5 20c0-3.6 3-5.8 6.5-5.8s6.5 2.2 6.5 5.8"/></svg></div>
+                <span class="md-road-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+              </div>
+              <div class="md-road-name">캐릭터<br>디자인</div>
+              <div class="md-road-status">완료</div>
+            </div>
+            <div class="md-road-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+
+            <div class="md-road-step done">
+              <div class="md-road-ic-wrap">
+                <div class="md-road-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a6 6 0 000 12 2 2 0 010 4"/><circle cx="8" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="7" r="1" fill="currentColor"/><circle cx="16" cy="10" r="1" fill="currentColor"/></svg></div>
+                <span class="md-road-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+              </div>
+              <div class="md-road-name">비주얼<br>가이드</div>
+              <div class="md-road-status">완료</div>
+            </div>
+            <div class="md-road-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+
+            <div class="md-road-step progress">
+              <div class="md-road-ic-wrap ring" style="--p:60">
+                <div class="md-road-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V9l6-4 6 4v12"/><path d="M10 21v-6h4v6"/></svg></div>
+              </div>
+              <div class="md-road-name">배경/장소</div>
+              <div class="md-road-status">60%</div>
+            </div>
+            <div class="md-road-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+
+            <div class="md-road-step progress">
+              <div class="md-road-ic-wrap ring" style="--p:35">
+                <div class="md-road-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg></div>
+              </div>
+              <div class="md-road-name">콘티</div>
+              <div class="md-road-status">35%</div>
+            </div>
+            <div class="md-road-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+
+            <div class="md-road-step">
+              <div class="md-road-ic-wrap">
+                <div class="md-road-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l4-1 12-12-3-3L4 17l-1 4z"/><path d="M14 6l3 3"/></svg></div>
+              </div>
+              <div class="md-road-name">작화</div>
+              <div class="md-road-status">0%</div>
+            </div>
+            <div class="md-road-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+
+            <div class="md-road-step">
+              <div class="md-road-ic-wrap">
+                <div class="md-road-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg></div>
+              </div>
+              <div class="md-road-name">레터링/<br>검수</div>
+              <div class="md-road-status">0%</div>
+            </div>
+            <div class="md-road-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+
+            <div class="md-road-step">
+              <div class="md-road-ic-wrap">
+                <div class="md-road-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 01-1-8.9 5.5 5.5 0 0110.6-1.8A4.5 4.5 0 0117 18z"/><path d="M12 11v7M9.5 15.5L12 13l2.5 2.5"/></svg></div>
+              </div>
+              <div class="md-road-name">업로드/<br>연재</div>
+              <div class="md-road-status">0%</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. 추가로 필요한 것 -->
+        <section class="md-panel">
+          <div class="md-section-label">
+            <span class="num">5</span>
+            <span class="t">추가로 필요한 것</span>
+            <span class="hint" id="needsHint">(웹툰 목표 기준)</span>
+          </div>
+          <div class="md-needs-grid">
+            <div class="md-need-card">
+              <div class="md-need-top">
+                <div class="md-need-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 15l5-5 4 4 4-4 5 5"/><circle cx="8" cy="9" r="1.4"/></svg></div>
+                <div>
+                  <div class="md-need-title">배경/장소 레퍼런스</div>
+                  <div class="md-need-desc">주요 장소의 분위기와 구조가 더 필요해요.</div>
+                </div>
+              </div>
+              <div class="md-need-actions">
+                <button class="md-pill-btn">내가 직접</button>
+                <button class="md-pill-btn ai">AI와 만들기</button>
+                <button class="md-pill-btn creator">Creator 찾기</button>
+              </div>
+            </div>
+            <div class="md-need-card">
+              <div class="md-need-top">
+                <div class="md-need-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></div>
+                <div>
+                  <div class="md-need-title">콘티 보강</div>
+                  <div class="md-need-desc">장면 연결과 연출 흐름을 구체화해볼까요?</div>
+                </div>
+              </div>
+              <div class="md-need-actions">
+                <button class="md-pill-btn">내가 직접</button>
+                <button class="md-pill-btn ai">AI와 만들기</button>
+                <button class="md-pill-btn creator">Creator 찾기</button>
+              </div>
+            </div>
+            <div class="md-need-card">
+              <div class="md-need-top">
+                <div class="md-need-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg></div>
+                <div>
+                  <div class="md-need-title">레터링 준비</div>
+                  <div class="md-need-desc">대사 배치와 효과음 구성이 필요해요.</div>
+                </div>
+              </div>
+              <div class="md-need-actions">
+                <button class="md-pill-btn">내가 직접</button>
+                <button class="md-pill-btn ai">AI와 만들기</button>
+                <button class="md-pill-btn creator">Creator 찾기</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6. MY ASSETS -->
+        <section class="md-panel">
+          <div class="md-assets-head">
+            <div class="md-section-label" style="margin-bottom:0">
+              <span class="num">6</span>
+              <span class="t">MY ASSETS</span>
+              <span class="hint">(재사용 가능한 나의 IP 자산)</span>
+            </div>
+            <a class="dr-link-btn" href="#">전체 보기 →</a>
+          </div>
+          <div class="md-assets-row" id="assetsRow">
+            <div class="md-asset-card">
+              <div class="md-asset-thumb thumb-5"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></div>
+              <div class="md-asset-name">캐릭터 시트</div>
+              <div class="md-asset-meta">v1.2 · 2024.05.12</div>
+            </div>
+            <div class="md-asset-card">
+              <div class="md-asset-thumb thumb-2"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5C4 3.7 4.7 3 5.5 3H18a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+              <div class="md-asset-name">세계관 문서</div>
+              <div class="md-asset-meta">v2.0 · 2024.05.10</div>
+            </div>
+            <div class="md-asset-card">
+              <div class="md-asset-thumb thumb-8"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M14 4v5h5M8 13h8M8 17h5"/></svg></div>
+              <div class="md-asset-name">EP01 시놉시스</div>
+              <div class="md-asset-meta">v1.1 · 2024.05.09</div>
+            </div>
+            <div class="md-asset-card">
+              <div class="md-asset-thumb thumb-7"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 15l5-5 4 4 4-4 5 5"/><circle cx="8" cy="9" r="1.4"/></svg></div>
+              <div class="md-asset-name">콘셉트 아트</div>
+              <div class="md-asset-meta">v1.0 · 2024.05.07</div>
+            </div>
+            <button class="md-asset-add">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              새 자산 추가
+            </button>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- ===================== Right sidebar ===================== -->
+      <div class="md-col-side">
+
+        <div class="md-panel md-guide-card">
+          <div class="md-guide-title">베어 가이드</div>
+          <svg class="md-guide-bear" viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="100" cy="205" rx="55" ry="8" fill="#2a241d" opacity="0.08"/>
+            <circle cx="46" cy="48" r="19" fill="#5b4636"/>
+            <circle cx="154" cy="48" r="19" fill="#5b4636"/>
+            <circle cx="46" cy="48" r="9" fill="#7a6250"/>
+            <circle cx="154" cy="48" r="9" fill="#7a6250"/>
+            <ellipse cx="55" cy="120" rx="26" ry="34" fill="#5b4636"/>
+            <ellipse cx="145" cy="120" rx="26" ry="34" fill="#5b4636"/>
+            <rect x="30" y="150" width="24" height="10" rx="5" fill="#e8ceac" transform="rotate(-18 30 150)"/>
+            <rect x="146" y="150" width="24" height="10" rx="5" fill="#8a6b45" transform="rotate(18 146 150)"/>
+            <rect x="20" y="140" width="12" height="34" rx="6" fill="#e8ceac" transform="rotate(-18 20 140)"/>
+            <rect x="168" y="140" width="14" height="30" rx="6" fill="#8a6b45" transform="rotate(20 168 140)"/>
+            <ellipse cx="100" cy="120" rx="58" ry="66" fill="#6b5541"/>
+            <path d="M55 150 Q100 175 145 150 L150 205 Q100 222 50 205 Z" fill="#f6efe1"/>
+            <path d="M78 152 Q100 165 122 152 L120 168 Q100 178 80 168 Z" fill="#5f8c5a"/>
+            <circle cx="100" cy="186" r="12" fill="#efe4cf" stroke="#ddcda8" stroke-width="1.5"/>
+            <ellipse cx="100" cy="96" rx="34" ry="28" fill="#8a725c"/>
+            <circle cx="82" cy="88" r="6.5" fill="#241b12"/>
+            <circle cx="118" cy="88" r="6.5" fill="#241b12"/>
+            <ellipse cx="100" cy="104" rx="10" ry="7" fill="#3a2c1f"/>
+            <path d="M92 116 Q100 121 108 116" stroke="#3a2c1f" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          </svg>
+          <div class="md-guide-bubble">
+            웹툰 목표로는 콘티와 배경 준비가 조금 더 필요해요.<br>목표를 바꾸면 필요한 항목도 바로 보여드릴게요!
+          </div>
+        </div>
+
+        <div class="md-panel">
+          <div class="md-section-label"><span class="num">4</span><span class="t">목표 변경 시 달라지는 점</span></div>
+
+          <div class="md-change-row">
+            <div class="md-change-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M14 4v5h5"/></svg></div>
+            <div class="md-change-text">
+              <div class="h">웹소설로 변경하면</div>
+              <div class="s">추가 준비 적음 / 바로 시작 가능</div>
+            </div>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+          </div>
+
+          <div class="md-change-row">
+            <div class="md-change-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="14" height="12" rx="2"/><path d="M16.5 10l5-3v10l-5-3z"/></svg></div>
+            <div class="md-change-text">
+              <div class="h">영상으로 변경하면</div>
+              <div class="s">스토리보드, 사운드, 숏플랜 추가 필요</div>
+            </div>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+          </div>
+
+          <button class="md-more-btn">더 많은 목표 보기</button>
+        </div>
+
+        <div class="md-tip-card">
+          <div class="md-tip-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M7 9a5 5 0 1110 0c0 2-1.5 3-2.2 4.2-.4.7-.8 1.3-.8 1.8H10c0-.5-.4-1.1-.8-1.8C8.5 12 7 11 7 9z"/></svg>
+            TIP
+          </div>
+          <div class="md-tip-text">
+            목표를 변경하면 개발 맵과 필요한 항목이 즉시 바뀌어요. 다양한 목표를 비교해 가장 잘 맞는 방향을 찾아보세요!
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+<script src="script.js"></script>
+<script src="dna-room.js"></script>
+<script src="storage.js"></script>
+<script src="my-dna.js"></script>
+<script src="my-dna-render.js"></script>
+</body>
+</html>

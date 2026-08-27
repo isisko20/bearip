@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BEARIP — 서울 야행수선단</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="open-dna.css">
+<link rel="stylesheet" href="ip-detail.css">
+</head>
+<body>
+<div class="od-app">
+
+  <header class="od-topbar">
+    <a class="od-back-home" href="open-dna.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      OPEN DNA
+    </a>
+    <a class="od-logo" href="create.html">
+      <svg class="mark" viewBox="0 0 40 40" fill="none">
+        <path d="M15 7C15 7 27 12 27 20C27 28 15 33 15 33" stroke="url(#dnaGradA3)" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M25 7C25 7 13 12 13 20C13 28 25 33 25 33" stroke="url(#dnaGradB3)" stroke-width="2.6" stroke-linecap="round"/>
+        <line x1="15.5" y1="12.5" x2="24.5" y2="12.5" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"/>
+        <line x1="13.5" y1="20" x2="26.5" y2="20" stroke="#818cf8" stroke-width="2" stroke-linecap="round"/>
+        <line x1="15.5" y1="27.5" x2="24.5" y2="27.5" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="dnaGradA3" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#7c4dff"/><stop offset="1" stop-color="#3aa0ff"/></linearGradient>
+          <linearGradient id="dnaGradB3" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#3aa0ff"/><stop offset="1" stop-color="#7c4dff"/></linearGradient>
+        </defs>
+      </svg>
+      <span class="name">DNA ROOM</span>
+    </a>
+    <nav class="od-nav">
+      <a href="my-dna.html">MY DNA</a>
+      <a href="open-dna.html">OPEN DNA</a>
+      <a href="#">CREW MATCH</a>
+    </nav>
+    <label class="od-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" placeholder="프로젝트, 키워드, 태그 검색">
+    </label>
+    <div class="od-top-actions">
+      <button class="od-icon-btn" aria-label="알림"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></button>
+      <button class="od-avatar-chip">
+        <span class="av"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="6" fill="#fff"/><circle cx="7" cy="7.5" r="2.4" fill="#fff"/><circle cx="17" cy="7.5" r="2.4" fill="#fff"/></svg></span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="od-main">
+
+    <!-- Hero -->
+    <section class="ipd-hero">
+      <div class="ipd-hero-bg thumb-1" style="position:absolute;inset:0"></div>
+      <div class="ipd-hero-scrim"></div>
+      <div class="ipd-hero-body">
+        <div class="ipd-hero-top">
+          <span class="stage">RISING</span>
+          <span class="genre">판타지 · 웹툰 · 영상</span>
+        </div>
+        <h1>서울 야행수선단</h1>
+        <p class="ipd-hero-tagline">밤이 숨기고, 수선단이 바로잡는다. 낮 동안 어긋난 서울의 틈을 밤마다 몰래 고쳐놓는 이들의 이야기.</p>
+
+        <div class="ipd-hero-stats">
+          <div class="ipd-hero-stat"><div class="label">DNA</div><div class="value">78%</div><div class="bar"><div class="bar-fill" style="width:78%"></div></div></div>
+          <div class="ipd-hero-stat"><div class="label">준비도</div><div class="value">62%</div><div class="bar"><div class="bar-fill" style="width:62%"></div></div></div>
+          <div class="ipd-hero-stat"><div class="label">제작 진행</div><div class="value">41%</div><div class="bar"><div class="bar-fill" style="width:41%"></div></div></div>
+        </div>
+
+        <div class="ipd-hero-actions">
+          <button class="ipd-btn-join">참여하기</button>
+          <button class="ipd-btn-follow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>
+            팔로우
+          </button>
+          <div class="ipd-hero-foot">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg>128 팔로워</span>
+            <span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.6 8.5 3 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 4 0 6.4 4 4.5 7.5C19 16.5 12 21 12 21z"/></svg>342 응원</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg>56 활동</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="ipd-grid">
+      <div class="ipd-main-col">
+
+        <!-- 소개 -->
+        <section class="ipd-panel">
+          <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5C4 3.7 4.7 3 5.5 3H18a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2z"/><path d="M6 3v18"/></svg>세계관 소개</h2>
+          <p class="desc">서울의 밤은 낮과 다르게 흐른다. 사람들이 잠든 사이, 도시 곳곳에 생긴 틈 — 약속을 어긴 자리, 잊혀진 골목, 끊어진 인연 — 을 몰래 고쳐놓는 비밀 조직 "야행수선단". 신입 수선공 '단이'가 조직에 합류하며 서울의 숨겨진 규칙과 마주하는 어반 판타지입니다.</p>
+        </section>
+
+        <!-- 참여 크리에이터 -->
+        <section class="ipd-panel">
+          <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-4 3-6.5 6.5-6.5s6.5 2.5 6.5 6.5"/><circle cx="17.5" cy="9" r="2.6"/><path d="M15 13.2c2.7.3 4.6 2.4 5.5 4.3"/></svg>참여 크리에이터</h2>
+          <div class="ipd-creators">
+            <div class="ipd-creator-row">
+              <div class="ipd-creator-avatar thumb-2"></div>
+              <div class="ipd-creator-info"><div class="n">판타지</div><div class="r">원작 · 스토리</div></div>
+              <span class="ipd-creator-badge">오너</span>
+            </div>
+            <div class="ipd-creator-row">
+              <div class="ipd-creator-avatar thumb-3"></div>
+              <div class="ipd-creator-info"><div class="n">라라</div><div class="r">스토리보드</div></div>
+              <span class="ipd-creator-badge">크루</span>
+            </div>
+            <div class="ipd-creator-row">
+              <div class="ipd-creator-avatar thumb-4"></div>
+              <div class="ipd-creator-info"><div class="n">몽몽</div><div class="r">비주얼 가이드</div></div>
+              <span class="ipd-creator-badge">크루</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 콘텐츠/회차 -->
+        <section class="ipd-panel">
+          <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>콘텐츠 (3화)</h2>
+          <div class="ipd-ep-list">
+            <a class="ipd-ep-card" href="content-detail.html">
+              <div class="ipd-ep-thumb thumb-7"><span class="badge">CHALLENGE</span></div>
+              <div class="ipd-ep-info"><div class="n">EP 01</div><div class="t">틈이 생긴 밤</div><div class="m">조회수 18K · 좋아요 2.4K</div></div>
+              <svg class="ipd-ep-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+            </a>
+            <a class="ipd-ep-card" href="content-detail.html">
+              <div class="ipd-ep-thumb thumb-1"><span class="badge">RISING</span></div>
+              <div class="ipd-ep-info"><div class="n">EP 02</div><div class="t">수선공의 규칙</div><div class="m">조회수 6.1K · 좋아요 540</div></div>
+              <svg class="ipd-ep-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+            </a>
+            <a class="ipd-ep-card" href="content-detail.html">
+              <div class="ipd-ep-thumb thumb-8"><span class="badge">RISING</span></div>
+              <div class="ipd-ep-info"><div class="n">EP 03</div><div class="t">잊혀진 골목</div><div class="m">조회수 2.3K · 좋아요 198</div></div>
+              <svg class="ipd-ep-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+            </a>
+          </div>
+        </section>
+
+        <!-- 업데이트 -->
+        <section class="ipd-panel">
+          <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg>업데이트</h2>
+          <div class="ipd-feed">
+            <div class="ipd-feed-item"><div class="ipd-feed-dot"></div><div class="ipd-feed-text"><div class="t">EP 03 "잊혀진 골목" 공개</div><div class="d">2024.05.20</div></div></div>
+            <div class="ipd-feed-item"><div class="ipd-feed-dot"></div><div class="ipd-feed-text"><div class="t">Visual Artist 포지션 2명 추가 모집</div><div class="d">2024.05.14</div></div></div>
+            <div class="ipd-feed-item"><div class="ipd-feed-dot"></div><div class="ipd-feed-text"><div class="t">DNA SCORE 78% 달성 — 챌린지 승급</div><div class="d">2024.05.02</div></div></div>
+          </div>
+        </section>
+
+      </div>
+
+      <div class="ipd-side-col">
+        <div class="ipd-panel">
+          <h2>모집 중인 포지션</h2>
+          <div class="ipd-recruit-row">
+            <div class="ipd-recruit-info"><div class="r">Visual Artist</div><div class="f">3/5 참여</div></div>
+            <button class="ipd-apply-btn">지원하기</button>
+          </div>
+          <div class="ipd-recruit-row">
+            <div class="ipd-recruit-info"><div class="r">배경 컨셉 아티스트</div><div class="f">0/2 참여</div></div>
+            <button class="ipd-apply-btn">지원하기</button>
+          </div>
+        </div>
+
+        <div class="ipd-panel">
+          <h2>IP 정보</h2>
+          <div class="ipd-info-row"><span class="k">장르</span><span class="v">판타지</span></div>
+          <div class="ipd-info-row"><span class="k">목표 포맷</span><span class="v">웹툰, 영상</span></div>
+          <div class="ipd-info-row"><span class="k">시작일</span><span class="v">2024.03.02</span></div>
+          <div class="ipd-info-row"><span class="k">공개 범위</span><span class="v">전체 공개 (참여형)</span></div>
+          <div class="ipd-info-row"><span class="k">단계</span><span class="v">RISING</span></div>
+        </div>
+
+        <div class="ipd-panel">
+          <h2>비슷한 IP</h2>
+          <a class="ipd-related-row" href="#">
+            <div class="ipd-related-thumb thumb-5"></div>
+            <div class="ipd-related-info"><div class="t">고양이 탐정 모모</div><div class="m">미스터리 · DNA 71%</div></div>
+          </a>
+          <a class="ipd-related-row" href="#">
+            <div class="ipd-related-thumb thumb-3"></div>
+            <div class="ipd-related-info"><div class="t">기억을 걷는 소녀</div><div class="m">드라마 · DNA 64%</div></div>
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+<script src="script.js"></script>
+<script src="open-dna.js"></script>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BEARIP — Content Room</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="content-room.css">
+</head>
+<body>
+<div class="cr-app">
+
+  <!-- ===================== Top bar ===================== -->
+  <header class="cr-topbar">
+    <a class="cr-back-home" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      BEARIP
+    </a>
+    <a class="cr-logo" href="consume.html">
+      <span class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="10 8 16 12 10 16 10 8"/><circle cx="12" cy="12" r="9"/></svg>
+      </span>
+      <span class="name">CONTENT ROOM</span>
+    </a>
+
+    <div class="cr-tabs">
+      <button class="cr-tab active" data-tab="all">전체</button>
+      <button class="cr-tab" data-tab="rising">라이징</button>
+      <button class="cr-tab" data-tab="challenge">챌린지</button>
+      <button class="cr-tab" data-tab="official">오피셜</button>
+      <button class="cr-tab" data-tab="top100">TOP 100</button>
+    </div>
+
+    <label class="cr-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" placeholder="제목, 세계관 검색">
+    </label>
+
+    <button class="cr-profile" aria-label="프로필">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="6" fill="#fff"/><circle cx="7" cy="7.5" r="2.4" fill="#fff"/><circle cx="17" cy="7.5" r="2.4" fill="#fff"/></svg>
+    </button>
+  </header>
+
+  <!-- ===================== Hero ===================== -->
+  <section class="cr-hero">
+    <div class="cr-hero-bg cr-thumb-8" style="position:absolute;inset:0"></div>
+    <div class="cr-hero-scrim"></div>
+    <div class="cr-hero-content">
+      <span class="cr-hero-badge">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 5-3.2 8-7 9-3.8-1-7-4-7-9V6z"/></svg>
+        OFFICIAL · 오늘의 추천
+      </span>
+      <h1>OCEAN PLANET</h1>
+      <p>바다로 뒤덮인 미래 지구, 마지막 육지를 찾아 나선 탐험대의 SF 어드벤처. OPEN DNA에서 시작해 오피셜로 승격된 대표작입니다.</p>
+      <div class="cr-hero-actions">
+        <button class="cr-btn-play" onclick="location.href='content-detail.html'">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          재생
+        </button>
+        <button class="cr-btn-info" onclick="location.href='ip-detail.html'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.1"/></svg>
+          상세 정보
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== Rows ===================== -->
+  <main class="cr-main">
+
+    <!-- RISING -->
+    <section class="cr-row rising" data-section="rising">
+      <div class="cr-row-head">
+        <div>
+          <div class="cr-row-title"><span class="tier-dot"></span>라이징 콘텐츠</div>
+          <div class="cr-row-sub">누구나 올릴 수 있는 콘텐츠 · 검열 후 공개</div>
+        </div>
+        <a class="cr-row-more" href="#">더 보기 →</a>
+      </div>
+      <div class="cr-carousel">
+        <button class="cr-arrow prev" aria-label="이전"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <div class="cr-carousel-track">
+          <article class="cr-card" onclick="location.href='content-detail.html'">
+            <div class="poster cr-thumb-1"><span class="cr-tier-badge rising">RISING</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+            <div class="title">꿈의 문</div>
+            <div class="meta">조회수 1.2K · 좋아요 89</div>
+          </article>
+          <article class="cr-card" onclick="location.href='content-detail.html'">
+            <div class="poster cr-thumb-2"><span class="cr-tier-badge rising">RISING</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+            <div class="title">PROJECT B</div>
+            <div class="meta">조회수 940 · 좋아요 61</div>
+          </article>
+          <article class="cr-card" onclick="location.href='content-detail.html'">
+            <div class="poster cr-thumb-3"><span class="cr-tier-badge rising">RISING</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+            <div class="title">시간을 잇는 여행자</div>
+            <div class="meta">조회수 2.4K · 좋아요 210</div>
+          </article>
+          <article class="cr-card" onclick="location.href='content-detail.html'">
+            <div class="poster cr-thumb-4"><span class="cr-tier-badge rising">RISING</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+            <div class="title">미래 도시의 하루</div>
+            <div class="meta">조회수 3.1K · 좋아요 340</div>
+          </article>
+          <article class="cr-card" onclick="location.href='content-detail.html'">
+            <div class="poster cr-thumb-5"><span class="cr-tier-badge rising">RISING</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+            <div class="title">별빛 소년단</div>
+            <div class="meta">조회수 780 · 좋아요 54</div>
+          </article>
+          <article class="cr-card" onclick="location.href='content-detail.html'">
+            <div class="poster cr-thumb-6"><span class="cr-tier-badge rising">RISING</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+            <div class="title">유령우체국</div>
+            <div class="meta">조회수 1.6K · 좋아요 132</div>
+          </article>
+        </div>
+        <button class="cr-arrow next" aria-label="다음"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+    </section>
+
+    <!-- CHALLENGE -->
+    <section class="cr-row challenge" data-section="challenge">
+      <div class="cr-row-head">
+        <div>
+          <div class="cr-row-title"><span class="tier-dot"></span>챌린지 콘텐츠</div>
+          <div class="cr-row-sub">조회수·좋아요가 쌓여 라이징에서 승급한 콘텐츠</div>
+        </div>
+        <a class="cr-row-more" href="#">더 보기 →</a>
+      </div>
+      <div class="cr-carousel">
+        <button class="cr-arrow prev" aria-label="이전"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <div class="cr-carousel-track">
+          <article class="cr-card" onclick="location.href='content-detail.html'">
+            <div class="poster cr-thumb-7"><span class="cr-tier-badge challenge">CHALLENGE</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+            <div class="title">서울 야행수선단</div>
+            <div class="meta">조회수 18K · 좋아요 2.4K</div>
+          </article>
+          <article class="cr-card" onclick="location.href='content-detail.html'">
+            <div class="poster cr-thumb-8"><span class="cr-tier-badge challenge">CHALLENGE</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+            <div class="title">기억을 걷는 소녀</div>
+            <div class="meta">조회수 24K · 좋아요 3.1K</div>
+          </article>
+          <article class="cr-card" onclick="location.href='content-detail.html'">
+            <div class="poster cr-thumb-9"><span class="cr-tier-badge challenge">CHALLENGE</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+            <div class="title">별을 품은 탑</div>
+            <div class="meta">조회수 31K · 좋아요 4.5K</div>
+          </article>
+          <article class="cr-card" onclick="location.href='content-detail.html'">
+            <div class="poster cr-thumb-10"><span class="cr-tier-badge challenge">CHALLENGE</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+            <div class="title">PROJECT X</div>
+            <div class="meta">조회수 12K · 좋아요 1.8K</div>
+          </article>
+          <article class="cr-card" onclick="location.href='content-detail.html'">
+            <div class="poster cr-thumb-1"><span class="cr-tier-badge challenge">CHALLENGE</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+            <div class="title">고양이 탐정 모모</div>
+            <div class="meta">조회수 27K · 좋아요 3.9K</div>
+          </article>
+        </div>
+        <button class="cr-arrow next" aria-label="다음"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+    </section>
+
+    <!-- OFFICIAL -->
+    <section class="cr-row official" data-section="official">
+      <div class="cr-row-head">
+        <div>
+          <div class="cr-row-title"><span class="tier-dot"></span>오피셜 콘텐츠</div>
+          <div class="cr-row-sub">유료 전환을 통해 수익화된 공식 콘텐츠</div>
+        </div>
+        <a class="cr-row-more" href="#">더 보기 →</a>
+      </div>
+      <div class="cr-carousel">
+        <button class="cr-arrow prev" aria-label="이전"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <div class="cr-carousel-track">
+          <article class="cr-card" onclick="location.href='content-detail.html'">
+            <div class="poster cr-thumb-8"><span class="cr-tier-badge official">OFFICIAL</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+            <div class="title">OCEAN PLANET</div>
+            <div class="meta">★ 유료 콘텐츠 · 구독자 전용</div>
+          </article>
+          <article class="cr-card" onclick="location.href='content-detail.html'">
+            <div class="poster cr-thumb-2"><span class="cr-tier-badge official">OFFICIAL</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+            <div class="title">하늘을 걷는 소녀</div>
+            <div class="meta">★ 유료 콘텐츠 · 구독자 전용</div>
+          </article>
+          <article class="cr-card" onclick="location.href='content-detail.html'">
+            <div class="poster cr-thumb-7"><span class="cr-tier-badge official">OFFICIAL</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+            <div class="title">서울 야행수선단: 스페셜</div>
+            <div class="meta">★ 유료 콘텐츠 · 구독자 전용</div>
+          </article>
+          <article class="cr-card" onclick="location.href='content-detail.html'">
+            <div class="poster cr-thumb-9"><span class="cr-tier-badge official">OFFICIAL</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+            <div class="title">별을 품은 탑: 확장판</div>
+            <div class="meta">★ 유료 콘텐츠 · 구독자 전용</div>
+          </article>
+        </div>
+        <button class="cr-arrow next" aria-label="다음"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+    </section>
+
+    <!-- TOP 100 -->
+    <section class="cr-row top100" data-section="top100">
+      <div class="cr-row-head">
+        <div>
+          <div class="cr-row-title"><span class="tier-dot"></span>TOP 100</div>
+          <div class="cr-row-sub">챌린지 + 오피셜 콘텐츠를 합산한 실시간 순위</div>
+        </div>
+        <a class="cr-row-more" href="#">전체 순위 보기 →</a>
+      </div>
+      <div class="cr-carousel">
+        <button class="cr-arrow prev" aria-label="이전"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <div class="cr-carousel-track">
+          <article class="cr-rank-card" onclick="location.href='content-detail.html'">
+            <span class="cr-rank-num">1</span>
+            <div class="cr-rank-poster-wrap">
+              <div class="poster cr-thumb-8"><span class="cr-tier-badge official">OFFICIAL</span></div>
+              <div class="title">OCEAN PLANET</div>
+              <div class="meta">챌린지 → 오피셜</div>
+            </div>
+          </article>
+          <article class="cr-rank-card" onclick="location.href='content-detail.html'">
+            <span class="cr-rank-num">2</span>
+            <div class="cr-rank-poster-wrap">
+              <div class="poster cr-thumb-7"><span class="cr-tier-badge challenge">CHALLENGE</span></div>
+              <div class="title">서울 야행수선단</div>
+              <div class="meta">조회수 18K</div>
+            </div>
+          </article>
+          <article class="cr-rank-card" onclick="location.href='content-detail.html'">
+            <span class="cr-rank-num">3</span>
+            <div class="cr-rank-poster-wrap">
+              <div class="poster cr-thumb-2"><span class="cr-tier-badge official">OFFICIAL</span></div>
+              <div class="title">하늘을 걷는 소녀</div>
+              <div class="meta">챌린지 → 오피셜</div>
+            </div>
+          </article>
+          <article class="cr-rank-card" onclick="location.href='content-detail.html'">
+            <span class="cr-rank-num">4</span>
+            <div class="cr-rank-poster-wrap">
+              <div class="poster cr-thumb-9"><span class="cr-tier-badge challenge">CHALLENGE</span></div>
+              <div class="title">별을 품은 탑</div>
+              <div class="meta">조회수 31K</div>
+            </div>
+          </article>
+          <article class="cr-rank-card" onclick="location.href='content-detail.html'">
+            <span class="cr-rank-num">5</span>
+            <div class="cr-rank-poster-wrap">
+              <div class="poster cr-thumb-8"><span class="cr-tier-badge challenge">CHALLENGE</span></div>
+              <div class="title">기억을 걷는 소녀</div>
+              <div class="meta">조회수 24K</div>
+            </div>
+          </article>
+          <article class="cr-rank-card" onclick="location.href='content-detail.html'">
+            <span class="cr-rank-num">6</span>
+            <div class="cr-rank-poster-wrap">
+              <div class="poster cr-thumb-10"><span class="cr-tier-badge challenge">CHALLENGE</span></div>
+              <div class="title">PROJECT X</div>
+              <div class="meta">조회수 12K</div>
+            </div>
+          </article>
+        </div>
+        <button class="cr-arrow next" aria-label="다음"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+    </section>
+
+  </main>
+</div>
+<script src="script.js"></script>
+<script src="content-room.js"></script>
+</body>
+</html>
