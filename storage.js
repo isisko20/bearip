@@ -86,18 +86,26 @@ function bearipLogout() {
   localStorage.removeItem(BEARIP_USER_KEY);
 }
 
-// Redirects to the login page (preserving where to return to) when no user
-// is signed in. Returns true if already logged in, false if it redirected.
+// Sends the user to the login page, remembering where to bring them back to.
 // The return target is kept in sessionStorage rather than a ?next= query
 // param, since some static hosts/dev servers rewrite URLs and drop query
 // strings on redirect.
 const BEARIP_LOGIN_NEXT_KEY = 'bearip_login_next';
 
-function bearipRequireLogin(nextUrl) {
-  if (bearipGetUser()) return true;
-  const target = nextUrl || location.pathname.split('/').pop() || 'index.html';
+function bearipGoToLogin(nextUrl) {
+  let target = nextUrl || location.pathname.split('/').pop() || 'index.html';
+  // Some dev servers (clean-URL redirects) strip the .html extension from
+  // location.pathname — restore it so the stored target still resolves on
+  // hosts (like GitHub Pages) that require the real filename.
+  if (target && !target.includes('.')) target += '.html';
   sessionStorage.setItem(BEARIP_LOGIN_NEXT_KEY, target);
   location.href = 'login.html';
+}
+
+// Returns true if already logged in, false if it redirected to login.
+function bearipRequireLogin(nextUrl) {
+  if (bearipGetUser()) return true;
+  bearipGoToLogin(nextUrl);
   return false;
 }
 

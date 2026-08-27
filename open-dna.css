@@ -127,6 +127,16 @@
 .od-tabs { display: flex; gap: 4px; background: var(--od-panel); border: 1px solid var(--od-border); padding: 5px; border-radius: 999px; box-shadow: var(--od-shadow); }
 .od-tab { padding: 9px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--od-ink-soft); border: none; background: none; cursor: pointer; }
 .od-tab.active { background: var(--od-purple); color: #fff; }
+.od-tab.disabled { opacity: 0.45; cursor: not-allowed; }
+.od-tab.disabled:hover { opacity: 0.6; }
+
+.od-tab-note {
+  display: none; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 600; color: var(--od-purple);
+  background: var(--od-active-bg); border-radius: 10px;
+  padding: 10px 14px; margin: -14px 0 24px; width: fit-content;
+}
+.od-tab-note.show { display: flex; }
 
 .od-legend { display: flex; align-items: center; gap: 18px; padding-left: 16px; border-left: 1px solid var(--od-border); flex-wrap: wrap; }
 .od-legend-item { display: flex; align-items: center; gap: 7px; }

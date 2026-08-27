@@ -118,6 +118,29 @@ html, body {
 }
 .btn-create-ip:hover { transform: translateY(-2px); }
 
+.header-actions { display: flex; align-items: center; gap: 12px; }
+
+.dr-profile-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+}
+.dr-profile-chip .avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #6b5541;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.dr-profile-chip .avatar svg { width: 16px; height: 16px; }
+.dr-profile-chip .uname { font-size: 13px; font-weight: 700; color: var(--ink); }
+.dr-profile-chip svg.chev { width: 13px; height: 13px; color: var(--ink-soft); }
+
 /* ---------- Hero ---------- */
 .hero {
   flex: 1;
