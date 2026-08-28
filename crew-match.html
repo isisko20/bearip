@@ -38,7 +38,7 @@
     </nav>
     <label class="od-search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      <input type="text" placeholder="포지션, 크리에이터 검색">
+      <input type="text" id="cmSearchInput" placeholder="포지션, 크리에이터 검색">
     </label>
     <div class="od-top-actions">
       <button class="od-icon-btn" aria-label="알림"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></button>
@@ -83,18 +83,18 @@
 
     <!-- Filter row -->
     <section class="od-filter-row">
-      <div class="od-tabs">
-        <button class="od-tab active">전체</button>
-        <button class="od-tab">스토리 작가</button>
-        <button class="od-tab">비주얼 아티스트</button>
-        <button class="od-tab">영상 크리에이터</button>
-        <button class="od-tab">레터링</button>
+      <div class="od-tabs" id="cmRoleTabs">
+        <button class="od-tab active" data-role="all">전체</button>
+        <button class="od-tab" data-role="story">스토리 작가</button>
+        <button class="od-tab" data-role="visual">비주얼 아티스트</button>
+        <button class="od-tab" data-role="video">영상 크리에이터</button>
+        <button class="od-tab" data-role="lettering">레터링</button>
       </div>
       <div class="od-sort">
-        <select>
-          <option>최신순</option>
-          <option>마감 임박순</option>
-          <option>인원 적은순</option>
+        <select id="cmSortSelect">
+          <option value="latest">최신순</option>
+          <option value="deadline">마감 임박순</option>
+          <option value="fewest">인원 적은순</option>
         </select>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
       </div>
@@ -113,7 +113,8 @@
     </div>
 
     <div class="cm-positions" id="positionsList">
-      <article class="cm-position-card">
+      <div class="cm-empty-state" id="positionsEmpty" hidden>조건에 맞는 포지션이 없어요.</div>
+      <article class="cm-position-card" data-role="visual" data-deadline="06-10" data-remaining="2">
         <div class="cm-position-thumb thumb-1"></div>
         <div class="cm-position-info">
           <div class="cm-position-ip">서울 야행수선단</div>
@@ -123,7 +124,7 @@
         <div class="cm-position-meta"><div class="frac">3/5</div><div class="deadline">~06.10 마감</div></div>
         <button class="cm-apply-btn">지원하기</button>
       </article>
-      <article class="cm-position-card">
+      <article class="cm-position-card" data-role="story" data-deadline="06-05" data-remaining="2">
         <div class="cm-position-thumb thumb-5"></div>
         <div class="cm-position-info">
           <div class="cm-position-ip">고양이 탐정 모모</div>
@@ -133,7 +134,7 @@
         <div class="cm-position-meta"><div class="frac">2/4</div><div class="deadline">~06.05 마감</div></div>
         <button class="cm-apply-btn">지원하기</button>
       </article>
-      <article class="cm-position-card">
+      <article class="cm-position-card" data-role="video" data-deadline="06-15" data-remaining="2">
         <div class="cm-position-thumb thumb-3"></div>
         <div class="cm-position-info">
           <div class="cm-position-ip">기억을 걷는 소녀</div>
@@ -143,7 +144,7 @@
         <div class="cm-position-meta"><div class="frac">1/3</div><div class="deadline">~06.15 마감</div></div>
         <button class="cm-apply-btn">지원하기</button>
       </article>
-      <article class="cm-position-card">
+      <article class="cm-position-card" data-role="visual" data-deadline="06-20" data-remaining="2">
         <div class="cm-position-thumb thumb-6"></div>
         <div class="cm-position-info">
           <div class="cm-position-ip">별을 품은 탑</div>
@@ -153,7 +154,7 @@
         <div class="cm-position-meta"><div class="frac">0/2</div><div class="deadline">~06.20 마감</div></div>
         <button class="cm-apply-btn">지원하기</button>
       </article>
-      <article class="cm-position-card">
+      <article class="cm-position-card" data-role="lettering" data-deadline="06-08" data-remaining="1">
         <div class="cm-position-thumb thumb-8"></div>
         <div class="cm-position-info">
           <div class="cm-position-ip">OCEAN PLANET</div>
@@ -178,7 +179,8 @@
     </div>
 
     <div class="cm-creators">
-      <article class="cm-creator-card">
+      <div class="cm-empty-state" id="creatorsEmpty" hidden>조건에 맞는 크리에이터가 없어요.</div>
+      <article class="cm-creator-card" data-role="story">
         <div class="cm-creator-top">
           <div class="cm-creator-avatar thumb-2"></div>
           <div><div class="cm-creator-name">라라</div><div class="cm-creator-role">스토리보드 작가</div></div>
@@ -190,7 +192,7 @@
           <button class="cm-propose-btn">매치 제안</button>
         </div>
       </article>
-      <article class="cm-creator-card">
+      <article class="cm-creator-card" data-role="visual">
         <div class="cm-creator-top">
           <div class="cm-creator-avatar thumb-4"></div>
           <div><div class="cm-creator-name">몽몽</div><div class="cm-creator-role">비주얼 가이드 아티스트</div></div>
@@ -202,7 +204,7 @@
           <button class="cm-propose-btn">매치 제안</button>
         </div>
       </article>
-      <article class="cm-creator-card">
+      <article class="cm-creator-card" data-role="video">
         <div class="cm-creator-top">
           <div class="cm-creator-avatar thumb-5"></div>
           <div><div class="cm-creator-name">키키</div><div class="cm-creator-role">영상 크리에이터</div></div>
@@ -214,7 +216,7 @@
           <button class="cm-propose-btn">매치 제안</button>
         </div>
       </article>
-      <article class="cm-creator-card">
+      <article class="cm-creator-card" data-role="visual">
         <div class="cm-creator-top">
           <div class="cm-creator-avatar thumb-6"></div>
           <div><div class="cm-creator-name">나나</div><div class="cm-creator-role">아트워크 디렉터</div></div>
@@ -226,7 +228,7 @@
           <button class="cm-propose-btn">매치 제안</button>
         </div>
       </article>
-      <article class="cm-creator-card">
+      <article class="cm-creator-card" data-role="story">
         <div class="cm-creator-top">
           <div class="cm-creator-avatar thumb-3"></div>
           <div><div class="cm-creator-name">도도</div><div class="cm-creator-role">스토리 작가</div></div>
@@ -238,7 +240,7 @@
           <button class="cm-propose-btn">매치 제안</button>
         </div>
       </article>
-      <article class="cm-creator-card">
+      <article class="cm-creator-card" data-role="visual">
         <div class="cm-creator-top">
           <div class="cm-creator-avatar thumb-7"></div>
           <div><div class="cm-creator-name">블루</div><div class="cm-creator-role">3D / 컨셉 아티스트</div></div>
@@ -355,5 +357,6 @@
 <script src="open-dna.js"></script>
 <script src="crew-match.js"></script>
 <script src="crew-match-post.js"></script>
+<script src="crew-match-filter.js"></script>
 </body>
 </html>

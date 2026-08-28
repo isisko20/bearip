@@ -66,6 +66,12 @@
   .cm-form-row { grid-template-columns: 1fr; }
 }
 
+.cm-empty-state {
+  grid-column: 1 / -1;
+  text-align: center; padding: 30px 16px; color: var(--od-ink-soft); font-size: 12.5px;
+  border: 1px dashed var(--od-border); border-radius: 16px;
+}
+
 /* Position cards */
 .cm-positions { display: flex; flex-direction: column; gap: 12px; margin-bottom: 44px; }
 .cm-position-card {

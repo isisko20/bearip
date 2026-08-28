@@ -10,9 +10,28 @@ function cmPopulateIpSelect() {
   select.innerHTML = options.map((ip) => `<option value="${ip.id}">${ip.title}</option>`).join('');
 }
 
+const CM_SKILL_TO_ROLE = {
+  '스토리': 'story',
+  '비주얼': 'visual',
+  '배경/장소': 'visual',
+  '컨셉아트': 'visual',
+  '영상편집': 'video',
+  '레터링': 'lettering',
+};
+
+function cmGuessRole(tags) {
+  for (const tag of tags || []) {
+    if (CM_SKILL_TO_ROLE[tag]) return CM_SKILL_TO_ROLE[tag];
+  }
+  return 'other';
+}
+
 function cmRenderPositionCard(pos) {
   const el = document.createElement('article');
   el.className = 'cm-position-card';
+  el.dataset.role = cmGuessRole(pos.tags);
+  el.dataset.deadline = '99-99'; // sorts after dated posts under "마감 임박순"
+  el.dataset.remaining = String(pos.count - (pos.filled || 0));
   const tagsHtml = (pos.tags || []).map((t) => `<span>${t}</span>`).join('');
   const filled = pos.filled || 0;
   el.innerHTML = `
