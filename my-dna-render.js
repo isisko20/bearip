@@ -157,6 +157,8 @@ function renderAssets() {
     const card = document.createElement('div');
     card.className = 'md-asset-card';
     card.dataset.type = asset.type || 'other';
+    card.dataset.index = i;
+    card.tabIndex = 0;
     const hasImage = !!asset.imageData;
     const thumbClass = hasImage ? 'md-asset-thumb has-image' : `md-asset-thumb ${asset.thumb || 'thumb-1'}`;
     const thumbStyle = hasImage ? ` style="background-image:url('${asset.imageData}')"` : '';
@@ -180,6 +182,102 @@ function deleteAssetAt(index) {
   if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { assets: currentIP.assets });
   if (asset && asset.blobStored) bearipDeleteAssetFile(asset.id);
   renderAssets();
+}
+
+let mdPreviewObjectUrl = null;
+
+function ensureAssetPreviewOverlay() {
+  let overlay = document.getElementById('assetPreviewOverlay');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.className = 'md-asset-preview-overlay';
+  overlay.id = 'assetPreviewOverlay';
+  overlay.hidden = true;
+  overlay.innerHTML = `
+    <div class="md-asset-preview-box">
+      <div class="md-asset-preview-head">
+        <span id="assetPreviewTitle"></span>
+        <button type="button" class="md-asset-preview-close" id="assetPreviewClose" aria-label="닫기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="md-asset-preview-body" id="assetPreviewBody"></div>
+      <div class="md-asset-preview-meta" id="assetPreviewMeta"></div>
+    </div>
+  `;
+  (document.querySelector('.dna-app') || document.body).appendChild(overlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeAssetPreview();
+  });
+  document.getElementById('assetPreviewClose').addEventListener('click', closeAssetPreview);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.hidden) closeAssetPreview();
+  });
+  return overlay;
+}
+
+function closeAssetPreview() {
+  const overlay = document.getElementById('assetPreviewOverlay');
+  if (overlay) overlay.hidden = true;
+  document.body.style.overflow = '';
+  if (mdPreviewObjectUrl) {
+    URL.revokeObjectURL(mdPreviewObjectUrl);
+    mdPreviewObjectUrl = null;
+  }
+  const body = document.getElementById('assetPreviewBody');
+  if (body) body.innerHTML = '';
+}
+
+async function openAssetPreview(index) {
+  const asset = (currentIP.assets || [])[index];
+  if (!asset) return;
+
+  const overlay = ensureAssetPreviewOverlay();
+  if (mdPreviewObjectUrl) {
+    URL.revokeObjectURL(mdPreviewObjectUrl);
+    mdPreviewObjectUrl = null;
+  }
+  const body = document.getElementById('assetPreviewBody');
+  const meta = document.getElementById('assetPreviewMeta');
+  document.getElementById('assetPreviewTitle').textContent = asset.name;
+  meta.textContent = '';
+  body.innerHTML = '<div class="md-asset-preview-loading">불러오는 중...</div>';
+  overlay.hidden = false;
+  document.body.style.overflow = 'hidden';
+
+  if (asset.imageData) {
+    body.innerHTML = `<img src="${asset.imageData}" alt="${bearipEscapeHtml(asset.name)}">`;
+    meta.textContent = `${asset.ver} · ${asset.date}`;
+    return;
+  }
+
+  if (!asset.blobStored) {
+    body.innerHTML = '<div class="md-asset-preview-empty">미리보기를 지원하지 않는 자산이에요</div>';
+    return;
+  }
+
+  try {
+    const record = await bearipGetAssetFile(asset.id);
+    if (!record) {
+      body.innerHTML = '<div class="md-asset-preview-empty">파일을 찾을 수 없어요</div>';
+      return;
+    }
+    const url = URL.createObjectURL(record.blob);
+    mdPreviewObjectUrl = url;
+    if (asset.mime && asset.mime.startsWith('video/')) {
+      body.innerHTML = `<video src="${url}" controls autoplay></video>`;
+    } else if (asset.mime === 'application/pdf') {
+      body.innerHTML = `<iframe src="${url}" class="md-asset-preview-pdf"></iframe>`;
+    } else {
+      body.innerHTML = `
+        <div class="md-asset-preview-empty">미리보기를 지원하지 않는 파일 형식이에요</div>
+        <a class="md-asset-preview-download" href="${url}" download="${bearipEscapeHtml(record.name)}">다운로드</a>
+      `;
+    }
+    meta.textContent = `${asset.date} · ${mdFormatFileSize(asset.fileSize)}`;
+  } catch (e) {
+    body.innerHTML = '<div class="md-asset-preview-empty">파일을 불러오지 못했어요</div>';
+  }
 }
 
 function renderDiscussion() {
@@ -239,10 +337,21 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAll();
 
   document.getElementById('assetsRow').addEventListener('click', (e) => {
-    const btn = e.target.closest('.md-asset-delete');
-    if (!btn) return;
-    e.stopPropagation();
-    deleteAssetAt(parseInt(btn.dataset.index, 10));
+    const delBtn = e.target.closest('.md-asset-delete');
+    if (delBtn) {
+      e.stopPropagation();
+      deleteAssetAt(parseInt(delBtn.dataset.index, 10));
+      return;
+    }
+    const card = e.target.closest('.md-asset-card');
+    if (card) openAssetPreview(parseInt(card.dataset.index, 10));
+  });
+  document.getElementById('assetsRow').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const card = e.target.closest('.md-asset-card');
+    if (!card) return;
+    e.preventDefault();
+    openAssetPreview(parseInt(card.dataset.index, 10));
   });
 
   // Re-render dependent sections (status label, roadmap title, badge) whenever
@@ -334,7 +443,10 @@ async function addAssetFromUpload(title, type, file) {
     asset.fileName = file.name;
     asset.fileSize = file.size;
   }
-  if (needsBlobStore) asset.blobStored = true;
+  if (needsBlobStore) {
+    asset.blobStored = true;
+    asset.mime = file.type;
+  }
 
   currentIP.assets = [...(currentIP.assets || []), asset];
   if (currentIP.id !== 'demo') {

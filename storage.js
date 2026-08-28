@@ -339,6 +339,18 @@ function bearipSaveAssetFile(id, file) {
   );
 }
 
+function bearipGetAssetFile(id) {
+  return bearipOpenFilesDb().then(
+    (db) =>
+      new Promise((resolve, reject) => {
+        const tx = db.transaction(BEARIP_FILES_STORE, 'readonly');
+        const req = tx.objectStore(BEARIP_FILES_STORE).get(id);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error || new Error('파일을 불러오지 못했어요'));
+      })
+  );
+}
+
 function bearipDeleteAssetFile(id) {
   return bearipOpenFilesDb()
     .then(
