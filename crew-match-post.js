@@ -32,6 +32,7 @@ function cmRenderPositionCard(pos) {
   el.dataset.role = cmGuessRole(pos.tags);
   el.dataset.deadline = '99-99'; // sorts after dated posts under "마감 임박순"
   el.dataset.remaining = String(pos.count - (pos.filled || 0));
+  el.dataset.posId = pos.id;
   const tagsHtml = (pos.tags || []).map((t) => `<span>${t}</span>`).join('');
   const filled = pos.filled || 0;
   el.innerHTML = `
@@ -44,10 +45,22 @@ function cmRenderPositionCard(pos) {
     <div class="cm-position-meta"><div class="frac">${filled}/${pos.count}</div><div class="deadline">${pos.deadlineText}</div></div>
     <button class="cm-apply-btn">지원하기</button>
   `;
-  el.querySelector('.cm-apply-btn').addEventListener('click', (e) => {
-    e.target.textContent = '지원 완료';
-    e.target.disabled = true;
-    e.target.style.opacity = '0.6';
+  // Reuses crew-match.js's persistence + "나의 매치 현황" refresh so a
+  // user-posted listing's apply button behaves exactly like a static one.
+  const applyBtn = el.querySelector('.cm-apply-btn');
+  cmSetApplyUI(applyBtn, bearipSetHas(CM_APPLY_KEY, pos.id));
+  applyBtn.addEventListener('click', () => {
+    if (!bearipRequireLogin('crew-match.html')) return;
+    const applied = bearipSetToggle(CM_APPLY_KEY, pos.id);
+    cmSetApplyUI(applyBtn, applied);
+    if (!applied) return;
+    bearipAddNotification({
+      type: 'crew',
+      title: '포지션에 지원했어요',
+      message: `${pos.ipTitle} · ${pos.role}에 지원했어요. 결과를 기다려주세요.`,
+      link: 'profile.html',
+    });
+    if (typeof cmRenderMatchStatus === 'function') cmRenderMatchStatus();
   });
   return el;
 }

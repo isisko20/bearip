@@ -11,6 +11,12 @@ const CM_POSITION_LABELS = {
   'ocean-planet_lettering': { ip: 'OCEAN PLANET', role: '레터링 스페셜리스트' },
 };
 
+function cmPositionLabel(id) {
+  if (CM_POSITION_LABELS[id]) return CM_POSITION_LABELS[id];
+  const posted = (typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : []).find((p) => p.id === id);
+  return posted ? { ip: posted.ipTitle, role: posted.role } : null;
+}
+
 function cmRenderMatchStatus() {
   const applied = bearipSetList('bearip_applied_positions');
   const proposed = bearipSetList('bearip_proposed_creators');
@@ -27,7 +33,7 @@ function cmRenderMatchStatus() {
   }
   rowsEl.innerHTML = applied
     .map((id) => {
-      const label = CM_POSITION_LABELS[id];
+      const label = cmPositionLabel(id);
       const text = label ? `${bearipEscapeHtml(label.ip)} · ${bearipEscapeHtml(label.role)}` : bearipEscapeHtml(id);
       return `<div class="cm-applied-row"><span class="t">${text}</span><span class="s pending">검토 중</span></div>`;
     })

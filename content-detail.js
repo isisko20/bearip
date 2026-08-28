@@ -2,6 +2,7 @@
 
 const CD_LIKE_KEY = 'bearip_liked_content';
 const CD_BOOKMARK_KEY = 'bearip_bookmarked_content';
+const CD_COMMENT_LIKE_KEY = 'bearip_liked_comments';
 
 function cdFormatCount(n) {
   return n.toLocaleString('ko-KR');
@@ -68,12 +69,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function buildCommentEl(c) {
     const el = document.createElement('div');
     el.className = 'cd-comment';
+    el.dataset.commentId = c.id;
     el.innerHTML = `
       <div class="av ${c.thumb || 'thumb-6'}"></div>
       <div class="body">
         <div class="n">${bearipEscapeHtml(c.name)}</div>
         <div class="t">${bearipEscapeHtml(c.text)}</div>
-        <div class="m"><span>방금 전</span><span>좋아요 0</span></div>
+        <div class="m"><span>방금 전</span><button class="cd-comment-like" data-base="0">좋아요 0</button></div>
       </div>
     `;
     return el;
@@ -87,7 +89,13 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     const user = bearipGetUser();
-    const comment = { name: user.nickname, text, thumb: 'thumb-6', createdAt: new Date().toISOString() };
+    const comment = {
+      id: contentId + '_c_' + Date.now(),
+      name: user.nickname,
+      text,
+      thumb: 'thumb-6',
+      createdAt: new Date().toISOString(),
+    };
     bearipAddComment(contentId, comment);
     commentList.insertBefore(buildCommentEl(comment), commentList.firstChild);
     const total = cdParseCount(commentCountEl.textContent) + 1;
@@ -101,5 +109,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') submitComment();
   });
 
+  // ---- Per-comment likes (delegated so both seed and posted comments work) ----
+  function restoreCommentLikeUI(btn) {
+    const commentId = btn.closest('.cd-comment').dataset.commentId;
+    const base = parseInt(btn.dataset.base, 10) || 0;
+    const liked = bearipSetHas(CD_COMMENT_LIKE_KEY, commentId);
+    btn.classList.toggle('liked', liked);
+    btn.textContent = `좋아요 ${base + (liked ? 1 : 0)}`;
+  }
+
+  commentList.addEventListener('click', (e) => {
+    const btn = e.target.closest('.cd-comment-like');
+    if (!btn) return;
+    if (!bearipRequireLogin('content-detail.html')) return;
+    const commentId = btn.closest('.cd-comment').dataset.commentId;
+    bearipSetToggle(CD_COMMENT_LIKE_KEY, commentId);
+    restoreCommentLikeUI(btn);
+  });
+
   renderSavedComments();
+  // Restore like state now that both seed and previously-saved comments exist.
+  document.querySelectorAll('.cd-comment-like').forEach(restoreCommentLikeUI);
 });
