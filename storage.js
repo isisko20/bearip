@@ -290,3 +290,65 @@ function bearipSeedNotificationsIfEmpty() {
   }));
   bearipSaveNotifications(list);
 }
+
+// ---- Uploaded asset files (IndexedDB — localStorage's ~5-10MB origin quota
+// can't hold real files, IndexedDB gives us realistic headroom for documents
+// and short video clips). Only non-image files go through here; images are
+// downscaled to a small inline thumbnail and kept in the IP's own JSON. ----
+const BEARIP_FILES_DB = 'bearip-files';
+const BEARIP_FILES_STORE = 'assetFiles';
+const BEARIP_MAX_ASSET_FILE_BYTES = 50 * 1024 * 1024; // 50MB
+
+function bearipOpenFilesDb() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      reject(new Error('이 브라우저는 파일 저장을 지원하지 않아요'));
+      return;
+    }
+    const req = indexedDB.open(BEARIP_FILES_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(BEARIP_FILES_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error('저장소를 열지 못했어요'));
+  });
+}
+
+// Best-effort pre-flight check using the Storage API; returns true when the
+// browser doesn't support estimate() so we fall through to the real write
+// (which still fails safely via try/catch if space actually runs out).
+async function bearipCheckStorageRoom(fileSize) {
+  if (!navigator.storage || !navigator.storage.estimate) return true;
+  try {
+    const { quota, usage } = await navigator.storage.estimate();
+    if (typeof quota !== 'number' || typeof usage !== 'number') return true;
+    return quota - usage > fileSize * 1.1;
+  } catch (e) {
+    return true;
+  }
+}
+
+function bearipSaveAssetFile(id, file) {
+  return bearipOpenFilesDb().then(
+    (db) =>
+      new Promise((resolve, reject) => {
+        const tx = db.transaction(BEARIP_FILES_STORE, 'readwrite');
+        tx.objectStore(BEARIP_FILES_STORE).put({ blob: file, name: file.name, type: file.type, size: file.size }, id);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || new Error('파일 저장에 실패했어요'));
+        tx.onabort = () => reject(tx.error || new Error('파일 저장에 실패했어요'));
+      })
+  );
+}
+
+function bearipDeleteAssetFile(id) {
+  return bearipOpenFilesDb()
+    .then(
+      (db) =>
+        new Promise((resolve) => {
+          const tx = db.transaction(BEARIP_FILES_STORE, 'readwrite');
+          tx.objectStore(BEARIP_FILES_STORE).delete(id);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        })
+    )
+    .catch(() => {});
+}

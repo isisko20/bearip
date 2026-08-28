@@ -194,7 +194,18 @@
 /* ---- Assets ---- */
 .md-assets-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .md-assets-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-.md-asset-card { border: 1px solid var(--dr-border); border-radius: 14px; padding: 10px; }
+.md-asset-card { position: relative; border: 1px solid var(--dr-border); border-radius: 14px; padding: 10px; }
+.md-asset-delete {
+  position: absolute; top: 6px; right: 6px; z-index: 1;
+  width: 22px; height: 22px; border-radius: 50%; border: none;
+  background: rgba(0,0,0,0.5); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.15s, background 0.15s; cursor: pointer;
+}
+.md-asset-delete svg { width: 12px; height: 12px; }
+.md-asset-card:hover .md-asset-delete { opacity: 1; }
+.md-asset-delete:hover { background: #e5484d; }
+.md-asset-delete:focus-visible { opacity: 1; outline: 2px solid var(--dr-purple); outline-offset: 1px; }
 .md-asset-thumb {
   aspect-ratio: 1 / 1; border-radius: 10px; margin-bottom: 8px;
   display: flex; align-items: center; justify-content: center;
@@ -221,6 +232,22 @@
   flex: 1; padding: 7px; border-radius: 8px; border: none; font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit;
 }
 .md-asset-add-form .confirm { background: var(--dr-purple); color: #fff; }
+.md-asset-add-form .confirm:disabled { opacity: 0.6; cursor: default; }
+.md-asset-add-form select {
+  width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--dr-border);
+  background: var(--dr-panel); font-size: 11.5px; color: var(--dr-ink); outline: none; font-family: inherit; cursor: pointer;
+}
+.md-asset-add-form select:focus { border-color: var(--dr-purple); }
+.md-asset-file-label {
+  display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 8px;
+  border: 1px dashed var(--dr-border); background: var(--dr-panel); font-size: 11px; color: var(--dr-ink-soft);
+  cursor: pointer; font-weight: 600;
+}
+.md-asset-file-label:hover { border-color: var(--dr-purple); color: var(--dr-ink); }
+.md-asset-file-label svg { width: 14px; height: 14px; flex-shrink: 0; }
+.md-asset-file-label .fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.md-asset-file-label.has-file { border-style: solid; border-color: var(--dr-purple); color: var(--dr-ink); }
+.md-asset-thumb.has-image { background-size: cover; background-position: center; }
 .md-asset-add-form .cancel { background: var(--dr-bg); color: var(--dr-ink-soft); }
 .md-assets-empty {
   grid-column: 1 / -1;

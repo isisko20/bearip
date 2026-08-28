@@ -21,6 +21,7 @@ const ASSET_ICONS = {
   doc: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5C4 3.7 4.7 3 5.5 3H18a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
   file: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M14 4v5h5M8 13h8M8 17h5"/></svg>',
   image: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 15l5-5 4 4 4-4 5 5"/><circle cx="8" cy="9" r="1.4"/></svg>',
+  video: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="14" height="12" rx="2"/><path d="M16.5 10.5l5-3v9l-5-3z"/></svg>',
 };
 
 const DEMO_IP = {
@@ -60,6 +61,12 @@ function mdFormatRelativeTime(iso) {
   const hr = Math.floor(min / 60);
   if (hr < 24) return `${hr}시간 전`;
   return `${Math.floor(hr / 24)}일 전`;
+}
+
+function mdFormatFileSize(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
 let currentIP = null;
@@ -146,17 +153,33 @@ function renderAssets() {
     return;
   }
 
-  currentIP.assets.forEach((asset) => {
+  currentIP.assets.forEach((asset, i) => {
     const card = document.createElement('div');
     card.className = 'md-asset-card';
     card.dataset.type = asset.type || 'other';
+    const hasImage = !!asset.imageData;
+    const thumbClass = hasImage ? 'md-asset-thumb has-image' : `md-asset-thumb ${asset.thumb || 'thumb-1'}`;
+    const thumbStyle = hasImage ? ` style="background-image:url('${asset.imageData}')"` : '';
+    const iconHtml = hasImage ? '' : ASSET_ICONS[asset.icon] || '';
+    const meta = asset.blobStored ? `${asset.date} · ${mdFormatFileSize(asset.fileSize)}` : `${asset.ver} · ${asset.date}`;
     card.innerHTML = `
-      <div class="md-asset-thumb ${asset.thumb || 'thumb-1'}">${ASSET_ICONS[asset.icon] || ''}</div>
-      <div class="md-asset-name">${asset.name}</div>
-      <div class="md-asset-meta">${asset.ver} · ${asset.date}</div>
+      <button type="button" class="md-asset-delete" data-index="${i}" aria-label="자산 삭제">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <div class="${thumbClass}"${thumbStyle}>${iconHtml}</div>
+      <div class="md-asset-name">${bearipEscapeHtml(asset.name)}</div>
+      <div class="md-asset-meta">${meta}</div>
     `;
     row.insertBefore(card, addBtn);
   });
+}
+
+function deleteAssetAt(index) {
+  const asset = (currentIP.assets || [])[index];
+  currentIP.assets = (currentIP.assets || []).filter((_, i) => i !== index);
+  if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { assets: currentIP.assets });
+  if (asset && asset.blobStored) bearipDeleteAssetFile(asset.id);
+  renderAssets();
 }
 
 function renderDiscussion() {
@@ -215,6 +238,13 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCurrentIP();
   renderAll();
 
+  document.getElementById('assetsRow').addEventListener('click', (e) => {
+    const btn = e.target.closest('.md-asset-delete');
+    if (!btn) return;
+    e.stopPropagation();
+    deleteAssetAt(parseInt(btn.dataset.index, 10));
+  });
+
   // Re-render dependent sections (status label, roadmap title, badge) whenever
   // the goal is switched — my-dna.js already handles the button's own visual toggle.
   document.querySelectorAll('.md-goal').forEach((btn) => {
@@ -228,20 +258,94 @@ document.addEventListener('DOMContentLoaded', () => {
   bindAssetAddTile();
 });
 
-function addAssetFromTitle(title) {
-  const cycle = [
-    { type: 'character', icon: 'user', thumb: 'thumb-5' },
-    { type: 'world', icon: 'doc', thumb: 'thumb-2' },
-    { type: 'story', icon: 'file', thumb: 'thumb-8' },
-    { type: 'art', icon: 'image', thumb: 'thumb-7' },
-  ];
-  const pick = cycle[(currentIP.assets || []).length % cycle.length];
+const ASSET_TYPE_ICONS = { character: 'user', world: 'doc', story: 'file', art: 'image' };
+const ASSET_THUMB_CYCLE = ['thumb-1', 'thumb-2', 'thumb-3', 'thumb-4', 'thumb-5', 'thumb-6', 'thumb-7', 'thumb-8'];
+
+// Reads an image file, downsizes it on a canvas, and returns a small JPEG
+// data URL — keeps uploaded photos from blowing past localStorage's quota.
+function resizeImageToDataUrl(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('이미지를 읽지 못했어요'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('이미지를 불러오지 못했어요'));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const scale = maxDim / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function addAssetFromUpload(title, type, file) {
+  if (file && file.size > BEARIP_MAX_ASSET_FILE_BYTES) {
+    throw new Error('파일이 너무 커요 (최대 50MB)');
+  }
+  if (file && !(await bearipCheckStorageRoom(file.size))) {
+    throw new Error('저장 공간이 부족해요. 다른 파일을 시도해보세요.');
+  }
+
+  const isImage = !!file && file.type.startsWith('image/');
+  let imageData = null;
+  if (isImage) {
+    imageData = await resizeImageToDataUrl(file, 480, 0.85);
+  }
+
+  const id = 'asset_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  // Non-image files (docs, video clips, etc.) go to IndexedDB — they have no
+  // small inline thumbnail to fall back to, so they need the bigger quota.
+  const needsBlobStore = !!file && !isImage;
+  if (needsBlobStore) {
+    try {
+      await bearipSaveAssetFile(id, file);
+    } catch (e) {
+      throw new Error('저장 공간이 부족해요. 다른 파일을 시도해보세요.');
+    }
+  }
+
   const today = new Date();
   const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+  const thumb = ASSET_THUMB_CYCLE[(currentIP.assets || []).length % ASSET_THUMB_CYCLE.length];
 
-  const asset = { name: title, ver: 'v1.0', date: dateStr, thumb: pick.thumb, icon: pick.icon, type: pick.type };
+  const isVideo = !!file && file.type.startsWith('video/');
+  const asset = {
+    id,
+    name: title,
+    ver: 'v1.0',
+    date: dateStr,
+    thumb,
+    icon: isVideo ? 'video' : ASSET_TYPE_ICONS[type] || 'file',
+    type,
+  };
+  if (imageData) asset.imageData = imageData;
+  if (file) {
+    asset.fileName = file.name;
+    asset.fileSize = file.size;
+  }
+  if (needsBlobStore) asset.blobStored = true;
+
   currentIP.assets = [...(currentIP.assets || []), asset];
-  if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { assets: currentIP.assets });
+  if (currentIP.id !== 'demo') {
+    try {
+      bearipUpdateIP(currentIP.id, { assets: currentIP.assets });
+    } catch (e) {
+      currentIP.assets = currentIP.assets.filter((a) => a !== asset);
+      if (needsBlobStore) bearipDeleteAssetFile(id);
+      throw new Error('저장 공간이 부족해요. 더 작은 파일로 시도해보세요.');
+    }
+  }
   renderAssets();
 }
 
@@ -258,6 +362,17 @@ function bindAssetAddTile() {
     tile.innerHTML = `
       <div class="md-asset-add-form">
         <input type="text" id="assetTitleInput" placeholder="자산 이름" maxlength="30">
+        <label class="md-asset-file-label" for="assetFileInput" id="assetFileLabel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 01-1-8.9 5.5 5.5 0 0110.6-1.8A4.5 4.5 0 0117 18z"/><path d="M12 11v7M9.5 15.5L12 13l2.5 2.5"/></svg>
+          <span class="fname">이미지·영상·문서 선택 (최대 50MB)</span>
+        </label>
+        <input type="file" id="assetFileInput" accept="image/*,video/*,.pdf,.doc,.docx,.txt" style="display:none">
+        <select id="assetTypeSelect">
+          <option value="character">캐릭터</option>
+          <option value="world">세계관</option>
+          <option value="story">스토리</option>
+          <option value="art">아트워크</option>
+        </select>
         <div class="row">
           <button type="button" class="confirm" id="assetConfirmBtn">추가</button>
           <button type="button" class="cancel" id="assetCancelBtn">취소</button>
@@ -265,11 +380,23 @@ function bindAssetAddTile() {
       </div>
     `;
     const input = document.getElementById('assetTitleInput');
+    const fileInput = document.getElementById('assetFileInput');
+    const fileLabel = document.getElementById('assetFileLabel');
     input.focus();
     input.addEventListener('click', (e) => e.stopPropagation());
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') submitAsset();
       if (e.key === 'Escape') reset();
+    });
+    fileInput.addEventListener('click', (e) => e.stopPropagation());
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      fileLabel.classList.add('has-file');
+      fileLabel.querySelector('.fname').textContent = file.name;
+      if (!input.value.trim()) input.value = file.name.replace(/\.[^.]+$/, '');
+      const typeSelect = document.getElementById('assetTypeSelect');
+      if (file.type.startsWith('image/')) typeSelect.value = 'art';
     });
     document.getElementById('assetConfirmBtn').addEventListener('click', (e) => {
       e.stopPropagation();
@@ -281,15 +408,27 @@ function bindAssetAddTile() {
     });
   }
 
-  function submitAsset() {
+  async function submitAsset() {
     const input = document.getElementById('assetTitleInput');
-    const title = input.value.trim();
+    const fileInput = document.getElementById('assetFileInput');
+    const typeSelect = document.getElementById('assetTypeSelect');
+    const file = fileInput.files[0] || null;
+    const title = input.value.trim() || (file ? file.name.replace(/\.[^.]+$/, '') : '');
     if (!title) {
       input.focus();
       return;
     }
-    addAssetFromTitle(title);
-    reset();
+    const confirmBtn = document.getElementById('assetConfirmBtn');
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = '추가 중...';
+    try {
+      await addAssetFromUpload(title, typeSelect.value, file);
+      reset();
+    } catch (err) {
+      bearipShowToast(err.message || '자산 추가에 실패했어요');
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = '추가';
+    }
   }
 
   function reset() {
