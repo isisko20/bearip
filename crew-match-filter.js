@@ -65,4 +65,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   searchInput.addEventListener('input', applyFilter);
   sortSelect.addEventListener('change', applySort);
+
+  // Arriving from a "Creator 찾기" link elsewhere (e.g. MY DNA) pre-selects
+  // the matching role tab.
+  const incomingRole = sessionStorage.getItem('bearip_cm_role_filter');
+  if (incomingRole) {
+    sessionStorage.removeItem('bearip_cm_role_filter');
+    const tab = roleTabs.querySelector(`.od-tab[data-role="${incomingRole}"]`);
+    if (tab) tab.click();
+  }
 });

@@ -228,4 +228,20 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   window.addEventListener('resize', closeMenu);
   window.addEventListener('scroll', closeMenu, true);
+
+  // Search inputs/buttons that aren't wired to real filtering yet (CREW
+  // MATCH's is — it's excluded by id) get honest "준비 중" feedback instead
+  // of silently doing nothing.
+  document.querySelectorAll('.od-search input, .cr-search input').forEach((input) => {
+    if (input.id === 'cmSearchInput') return;
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        bearipShowToast('검색 기능은 아직 준비 중이에요');
+      }
+    });
+  });
+  document.querySelectorAll('.dr-icon-btn[aria-label="검색"]').forEach((btn) => {
+    btn.addEventListener('click', () => bearipShowToast('검색 기능은 아직 준비 중이에요'));
+  });
 });
