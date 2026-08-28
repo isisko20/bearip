@@ -154,6 +154,14 @@ function bearipDeletePortfolioItem(id) {
 // ---- Generic per-browser "membership" sets, e.g. followed IPs, joined IPs,
 // applied-to positions — anywhere a button just needs an on/off toggle that
 // survives reload, keyed by a namespaced localStorage key. ----
+function bearipSetList(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key)) || [];
+  } catch (e) {
+    return [];
+  }
+}
+
 function bearipSetHas(key, id) {
   try {
     const arr = JSON.parse(localStorage.getItem(key)) || [];

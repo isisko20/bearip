@@ -114,7 +114,7 @@
 
     <div class="cm-positions" id="positionsList">
       <div class="cm-empty-state" id="positionsEmpty" hidden>조건에 맞는 포지션이 없어요.</div>
-      <article class="cm-position-card" data-role="visual" data-deadline="06-10" data-remaining="2">
+      <article class="cm-position-card" data-role="visual" data-deadline="06-10" data-remaining="2" data-pos-id="seoul-night-menders_visual-artist" data-ip-title="서울 야행수선단" data-role-title="Visual Artist">
         <div class="cm-position-thumb thumb-1"></div>
         <div class="cm-position-info">
           <div class="cm-position-ip">서울 야행수선단</div>
@@ -124,7 +124,7 @@
         <div class="cm-position-meta"><div class="frac">3/5</div><div class="deadline">~06.10 마감</div></div>
         <button class="cm-apply-btn">지원하기</button>
       </article>
-      <article class="cm-position-card" data-role="story" data-deadline="06-05" data-remaining="2">
+      <article class="cm-position-card" data-role="story" data-deadline="06-05" data-remaining="2" data-pos-id="cat-detective-momo_story-writer" data-ip-title="고양이 탐정 모모" data-role-title="Story Writer">
         <div class="cm-position-thumb thumb-5"></div>
         <div class="cm-position-info">
           <div class="cm-position-ip">고양이 탐정 모모</div>
@@ -134,7 +134,7 @@
         <div class="cm-position-meta"><div class="frac">2/4</div><div class="deadline">~06.05 마감</div></div>
         <button class="cm-apply-btn">지원하기</button>
       </article>
-      <article class="cm-position-card" data-role="video" data-deadline="06-15" data-remaining="2">
+      <article class="cm-position-card" data-role="video" data-deadline="06-15" data-remaining="2" data-pos-id="memory-walking-girl_video-creator" data-ip-title="기억을 걷는 소녀" data-role-title="Video Creator">
         <div class="cm-position-thumb thumb-3"></div>
         <div class="cm-position-info">
           <div class="cm-position-ip">기억을 걷는 소녀</div>
@@ -144,7 +144,7 @@
         <div class="cm-position-meta"><div class="frac">1/3</div><div class="deadline">~06.15 마감</div></div>
         <button class="cm-apply-btn">지원하기</button>
       </article>
-      <article class="cm-position-card" data-role="visual" data-deadline="06-20" data-remaining="2">
+      <article class="cm-position-card" data-role="visual" data-deadline="06-20" data-remaining="2" data-pos-id="star-tower_bg-concept" data-ip-title="별을 품은 탑" data-role-title="배경 컨셉 아티스트">
         <div class="cm-position-thumb thumb-6"></div>
         <div class="cm-position-info">
           <div class="cm-position-ip">별을 품은 탑</div>
@@ -154,7 +154,7 @@
         <div class="cm-position-meta"><div class="frac">0/2</div><div class="deadline">~06.20 마감</div></div>
         <button class="cm-apply-btn">지원하기</button>
       </article>
-      <article class="cm-position-card" data-role="lettering" data-deadline="06-08" data-remaining="1">
+      <article class="cm-position-card" data-role="lettering" data-deadline="06-08" data-remaining="1" data-pos-id="ocean-planet_lettering" data-ip-title="OCEAN PLANET" data-role-title="레터링 스페셜리스트">
         <div class="cm-position-thumb thumb-8"></div>
         <div class="cm-position-info">
           <div class="cm-position-ip">OCEAN PLANET</div>
@@ -260,16 +260,15 @@
         <div class="od-section-head" style="margin-bottom:0">
           <div class="od-section-title">
             <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span>
-            <div><div class="t">나의 매치 현황</div><div class="s">지원 내역과 받은 제안을 한눈에 확인해요</div></div>
+            <div><div class="t">나의 매치 현황</div><div class="s">지원 내역과 제안한 매치를 한눈에 확인해요</div></div>
           </div>
         </div>
         <div class="cm-status-grid">
-          <div class="cm-status-tile"><div class="num">2</div><div class="lbl">지원한 포지션</div></div>
-          <div class="cm-status-tile"><div class="num">1</div><div class="lbl">받은 제안</div></div>
-          <div class="cm-status-tile"><div class="num">1</div><div class="lbl">진행 중 매치</div></div>
+          <div class="cm-status-tile"><div class="num" id="cmStatApplied">0</div><div class="lbl">지원한 포지션</div></div>
+          <div class="cm-status-tile"><div class="num" id="cmStatProposed">0</div><div class="lbl">제안한 매치</div></div>
+          <div class="cm-status-tile"><div class="num" id="cmStatJoined">0</div><div class="lbl">참여 중인 IP</div></div>
         </div>
-        <div class="cm-applied-row"><span class="t">서울 야행수선단 · Visual Artist</span><span class="s pending">검토 중</span></div>
-        <div class="cm-applied-row"><span class="t">OCEAN PLANET · 레터링 스페셜리스트</span><span class="s accepted">수락됨</span></div>
+        <div id="cmAppliedRows"></div>
       </div>
 
       <div class="od-info-panel">
@@ -356,6 +355,7 @@
 <script src="auth-ui.js"></script>
 <script src="open-dna.js"></script>
 <script src="crew-match.js"></script>
+<script src="crew-match-status.js"></script>
 <script src="crew-match-post.js"></script>
 <script src="crew-match-filter.js"></script>
 </body>
