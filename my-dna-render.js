@@ -46,7 +46,21 @@ const DEMO_IP = {
     { name: 'EP01 시놉시스', ver: 'v1.1', date: '2024.05.09', thumb: 'thumb-8', icon: 'file', type: 'story' },
     { name: '콘셉트 아트', ver: 'v1.0', date: '2024.05.07', thumb: 'thumb-7', icon: 'image', type: 'art' },
   ],
+  discussion: [
+    { id: 'dc_seed_1', name: '라라', role: '스토리보드', text: 'EP03 콘티 초안 올렸어요! 배경 톤 관련해서 의견 부탁드려요 🙏', likes: 8, likedByMe: false, thumb: 'thumb-3', createdAt: new Date(Date.now() - 60 * 24 * 2 * 60000).toISOString() },
+    { id: 'dc_seed_2', name: '몽몽', role: '비주얼 가이드', text: '배경/장소 레퍼런스 60%까지 정리했어요. 다음 주까지 마무리할게요.', likes: 5, likedByMe: false, thumb: 'thumb-4', createdAt: new Date(Date.now() - 60 * 24 * 3 * 60000).toISOString() },
+    { id: 'dc_seed_3', name: '판타지 (나)', role: '원작 · 스토리', text: 'Visual Artist 포지션 2명 추가로 모집 시작했습니다. 관심 있으신 분들 CREW MATCH에서 확인해주세요!', likes: 12, likedByMe: false, thumb: 'thumb-2', createdAt: new Date(Date.now() - 60 * 24 * 5 * 60000).toISOString() },
+  ],
 };
+
+function mdFormatRelativeTime(iso) {
+  const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (min < 1) return '방금 전';
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  return `${Math.floor(hr / 24)}일 전`;
+}
 
 let currentIP = null;
 
@@ -145,12 +159,49 @@ function renderAssets() {
   });
 }
 
+function renderDiscussion() {
+  const list = document.getElementById('discussList');
+  if (!list) return;
+  list.innerHTML = '';
+
+  const posts = currentIP.discussion || [];
+  if (posts.length === 0) {
+    list.innerHTML = '<div class="md-discuss-empty">아직 올라온 이야기가 없어요. 첫 소식을 남겨보세요.</div>';
+    return;
+  }
+
+  posts.forEach((post) => {
+    const el = document.createElement('div');
+    el.className = 'md-discuss-item';
+    const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
+    el.innerHTML = `
+      <div class="md-discuss-avatar ${post.thumb || 'thumb-1'}"></div>
+      <div class="md-discuss-body">
+        <div class="md-discuss-head"><span class="n">${esc(post.name)}</span><span class="r">${esc(post.role)}</span><span class="d">${mdFormatRelativeTime(post.createdAt)}</span></div>
+        <div class="md-discuss-text">${esc(post.text)}</div>
+        <div class="md-discuss-meta">
+          <button class="md-discuss-reply" data-id="${post.id}">답글</button>
+          <button class="md-discuss-like${post.likedByMe ? ' liked' : ''}" data-id="${post.id}">좋아요 ${post.likes}</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(el);
+  });
+}
+
+function persistDiscussion() {
+  if (currentIP.id !== 'demo' && typeof bearipUpdateIP === 'function') {
+    bearipUpdateIP(currentIP.id, { discussion: currentIP.discussion });
+  }
+}
+
 function renderAll() {
   renderHeader();
   renderGoals();
   renderStatus();
   renderRoadmap();
   renderAssets();
+  renderDiscussion();
 }
 
 function persistGoalChange(goal) {
@@ -173,4 +224,91 @@ document.addEventListener('DOMContentLoaded', () => {
       renderRoadmap();
     });
   });
+
+  bindAssetAddTile();
 });
+
+function addAssetFromTitle(title) {
+  const cycle = [
+    { type: 'character', icon: 'user', thumb: 'thumb-5' },
+    { type: 'world', icon: 'doc', thumb: 'thumb-2' },
+    { type: 'story', icon: 'file', thumb: 'thumb-8' },
+    { type: 'art', icon: 'image', thumb: 'thumb-7' },
+  ];
+  const pick = cycle[(currentIP.assets || []).length % cycle.length];
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+
+  const asset = { name: title, ver: 'v1.0', date: dateStr, thumb: pick.thumb, icon: pick.icon, type: pick.type };
+  currentIP.assets = [...(currentIP.assets || []), asset];
+  if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { assets: currentIP.assets });
+  renderAssets();
+}
+
+// Turns the "새 자산 추가" tile into an inline title input, in place — no
+// native prompt() dialog, since some embedded/sandboxed browser contexts
+// block those outright.
+function bindAssetAddTile() {
+  const tile = document.getElementById('assetAddTile');
+  if (!tile || tile.dataset.bound) return;
+  tile.dataset.bound = '1';
+
+  function activate() {
+    if (!bearipRequireLogin('my-dna.html')) return;
+    tile.innerHTML = `
+      <div class="md-asset-add-form">
+        <input type="text" id="assetTitleInput" placeholder="자산 이름" maxlength="30">
+        <div class="row">
+          <button type="button" class="confirm" id="assetConfirmBtn">추가</button>
+          <button type="button" class="cancel" id="assetCancelBtn">취소</button>
+        </div>
+      </div>
+    `;
+    const input = document.getElementById('assetTitleInput');
+    input.focus();
+    input.addEventListener('click', (e) => e.stopPropagation());
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitAsset();
+      if (e.key === 'Escape') reset();
+    });
+    document.getElementById('assetConfirmBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      submitAsset();
+    });
+    document.getElementById('assetCancelBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      reset();
+    });
+  }
+
+  function submitAsset() {
+    const input = document.getElementById('assetTitleInput');
+    const title = input.value.trim();
+    if (!title) {
+      input.focus();
+      return;
+    }
+    addAssetFromTitle(title);
+    reset();
+  }
+
+  function reset() {
+    tile.innerHTML = `
+      <span class="md-asset-add-default">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        새 자산 추가
+      </span>
+    `;
+  }
+
+  tile.addEventListener('click', () => {
+    if (tile.querySelector('.md-asset-add-form')) return;
+    activate();
+  });
+  tile.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && !tile.querySelector('.md-asset-add-form')) {
+      e.preventDefault();
+      activate();
+    }
+  });
+}

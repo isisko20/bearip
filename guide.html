@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BEARIP — 가이드</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="dna-room.css">
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<div class="dna-app">
+
+  <!-- ===================== Sidebar ===================== -->
+  <aside class="dr-sidebar">
+    <a class="dr-back-home" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      BEARIP
+    </a>
+    <a class="dr-logo" href="create.html">
+      <svg class="mark" viewBox="0 0 40 40" fill="none">
+        <path d="M15 7C15 7 27 12 27 20C27 28 15 33 15 33" stroke="url(#dnaGradA7)" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M25 7C25 7 13 12 13 20C13 28 25 33 25 33" stroke="url(#dnaGradB7)" stroke-width="2.6" stroke-linecap="round"/>
+        <line x1="15.5" y1="12.5" x2="24.5" y2="12.5" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"/>
+        <line x1="13.5" y1="20" x2="26.5" y2="20" stroke="#818cf8" stroke-width="2" stroke-linecap="round"/>
+        <line x1="15.5" y1="27.5" x2="24.5" y2="27.5" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="dnaGradA7" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#7c4dff"/><stop offset="1" stop-color="#3aa0ff"/></linearGradient>
+          <linearGradient id="dnaGradB7" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#3aa0ff"/><stop offset="1" stop-color="#7c4dff"/></linearGradient>
+        </defs>
+      </svg>
+      <div>
+        <div class="name">DNA <span class="dr-grad-text">ROOM</span></div>
+        <div class="desc">아이디어로 IP를 만들고<br>함께 성장하는 공간</div>
+      </div>
+    </a>
+
+    <nav class="dr-nav">
+      <a href="create.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9"/></svg>
+        <span>홈</span>
+      </a>
+      <a href="my-dna.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+        <span>MY DNA</span>
+      </a>
+      <a href="open-dna.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18 15 15 0 010-18z"/></svg>
+        <span>OPEN DNA</span>
+      </a>
+      <a href="crew-match.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg>
+        <span>CREW MATCH</span>
+      </a>
+      <a class="active" href="guide.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 0c0 1.7-2.5 2-2.5 3.6"/><circle cx="12" cy="16.6" r="0.4" fill="currentColor"/></svg>
+        <span>GUIDE</span>
+      </a>
+    </nav>
+
+    <div class="dr-sidebar-spacer"></div>
+
+    <div class="dr-promo">
+      <div class="lead">창작의 시작,<br>DNA ROOM과 함께</div>
+      <svg class="bear-mini" viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="55" cy="120" rx="26" ry="34" fill="#5b4636"/>
+        <ellipse cx="145" cy="120" rx="26" ry="34" fill="#5b4636"/>
+        <rect x="20" y="90" width="14" height="34" rx="7" fill="#e8ceac" transform="rotate(-150 20 90)"/>
+        <rect x="146" y="150" width="24" height="10" rx="5" fill="#8a6b45" transform="rotate(18 146 150)"/>
+        <rect x="168" y="140" width="14" height="30" rx="6" fill="#8a6b45" transform="rotate(20 168 140)"/>
+        <circle cx="46" cy="48" r="19" fill="#5b4636"/>
+        <circle cx="154" cy="48" r="19" fill="#5b4636"/>
+        <circle cx="46" cy="48" r="9" fill="#7a6250"/>
+        <circle cx="154" cy="48" r="9" fill="#7a6250"/>
+        <ellipse cx="100" cy="120" rx="58" ry="66" fill="#6b5541"/>
+        <path d="M55 150 Q100 175 145 150 L150 205 Q100 222 50 205 Z" fill="#f6efe1"/>
+        <path d="M78 152 Q100 165 122 152 L120 168 Q100 178 80 168 Z" fill="#5f8c5a"/>
+        <circle cx="100" cy="186" r="12" fill="#efe4cf" stroke="#ddcda8" stroke-width="1.5"/>
+        <ellipse cx="100" cy="96" rx="34" ry="28" fill="#8a725c"/>
+        <circle cx="82" cy="88" r="6.5" fill="#241b12"/>
+        <circle cx="118" cy="88" r="6.5" fill="#241b12"/>
+        <ellipse cx="100" cy="104" rx="10" ry="7" fill="#3a2c1f"/>
+        <path d="M92 116 Q100 121 108 116" stroke="#3a2c1f" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <a class="guide-btn" href="guide.html">
+        가이드 보기
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ===================== Main ===================== -->
+  <main class="dr-main">
+
+    <div class="dr-topbar">
+      <button class="dr-icon-btn" aria-label="검색">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </button>
+      <button class="dr-icon-btn" aria-label="알림">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+        <span class="dot"></span>
+      </button>
+      <button class="dr-profile-chip">
+        <span class="avatar">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="6" fill="#fff"/><circle cx="7" cy="7.5" r="2.4" fill="#fff"/><circle cx="17" cy="7.5" r="2.4" fill="#fff"/></svg>
+        </span>
+        <span class="uname">-</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </div>
+
+    <div class="gd-header">
+      <h1>가이드</h1>
+      <p>BEARIP이 처음이시라면 여기서 시작해보세요.</p>
+    </div>
+
+    <!-- 시작하기 -->
+    <section class="gd-panel">
+      <h2>3단계로 시작하기</h2>
+      <div class="sub">로그인부터 첫 크루 매칭까지, 딱 세 걸음이면 충분해요.</div>
+      <div class="gd-steps">
+        <div class="gd-step-card">
+          <div class="gd-step-num">1</div>
+          <h3>로그인하기</h3>
+          <p>닉네임만 입력하면 바로 시작할 수 있어요. 비밀번호는 필요 없어요.</p>
+          <a href="login.html">로그인하러 가기 →</a>
+        </div>
+        <div class="gd-step-card">
+          <div class="gd-step-num">2</div>
+          <h3>IP 만들거나 둘러보기</h3>
+          <p>DNA ROOM에서 새 IP를 만들거나, OPEN DNA에서 다른 사람의 IP를 구경해보세요.</p>
+          <a href="create.html">DNA ROOM 가기 →</a>
+        </div>
+        <div class="gd-step-card">
+          <div class="gd-step-num">3</div>
+          <h3>크루 찾기</h3>
+          <p>CREW MATCH에서 함께할 포지션에 지원하거나, 내 IP에 모집글을 올려보세요.</p>
+          <a href="crew-match.html">CREW MATCH 가기 →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 기능 안내 -->
+    <section class="gd-panel">
+      <h2>공간 둘러보기</h2>
+      <div class="sub">BEARIP은 이렇게 나뉘어 있어요.</div>
+      <div class="gd-features-grid">
+        <a class="gd-feature-card" href="create.html">
+          <div class="gd-feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3C8 3 16 6 16 12C16 18 8 21 8 21"/><path d="M16 3C16 3 8 6 8 12C8 18 16 21 16 21"/><path d="M9 7h6M8 12h8M9 17h6"/></svg></div>
+          <div class="gd-feature-body"><h3>DNA ROOM</h3><p>내 창작 현황과 전체 IP를 한눈에 보는 홈 화면이에요.</p></div>
+        </a>
+        <a class="gd-feature-card" href="my-dna.html">
+          <div class="gd-feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></div>
+          <div class="gd-feature-body"><h3>MY DNA</h3><p>목표 설정, 개발 맵, 자산, 크루와의 디스커션까지 IP 작업공간이에요.</p></div>
+        </a>
+        <a class="gd-feature-card" href="open-dna.html">
+          <div class="gd-feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18 15 15 0 010-18z"/></svg></div>
+          <div class="gd-feature-body"><h3>OPEN DNA</h3><p>공개된 다른 사람의 IP를 둘러보고 참여를 신청할 수 있어요.</p></div>
+        </a>
+        <a class="gd-feature-card" href="crew-match.html">
+          <div class="gd-feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg></div>
+          <div class="gd-feature-body"><h3>CREW MATCH</h3><p>모집 중인 포지션에 지원하거나, 크리에이터에게 직접 제안해요.</p></div>
+        </a>
+        <a class="gd-feature-card" href="consume.html">
+          <div class="gd-feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="10 8 16 12 10 16 10 8"/><circle cx="12" cy="12" r="9"/></svg></div>
+          <div class="gd-feature-body"><h3>CONTENT ROOM</h3><p>라이징 → 챌린지 → 오피셜로 성장하는 완성 콘텐츠를 감상해요.</p></div>
+        </a>
+        <a class="gd-feature-card" href="profile.html">
+          <div class="gd-feature-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></div>
+          <div class="gd-feature-body"><h3>마이페이지</h3><p>프로필, 가능한 포지션, 포트폴리오, 소속 크루를 관리해요.</p></div>
+        </a>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="gd-panel">
+      <h2>자주 묻는 질문</h2>
+      <div class="sub"></div>
+      <div class="gd-faq-list" id="gdFaqList">
+        <div class="gd-faq-item">
+          <button class="gd-faq-q">
+            닉네임만으로 로그인되나요?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="gd-faq-a"><p>네, 지금은 테스트 버전이라 비밀번호 없이 닉네임만으로 로그인돼요. 입력한 정보는 이 브라우저에만 저장되고 다른 사람에게는 보이지 않아요.</p></div>
+        </div>
+        <div class="gd-faq-item">
+          <button class="gd-faq-q">
+            만든 IP는 어디에 저장되나요?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="gd-faq-a"><p>이 브라우저의 로컬 저장소에 저장돼요. 브라우저 데이터를 지우거나 다른 기기·브라우저로 접속하면 보이지 않으니 참고해주세요.</p></div>
+        </div>
+        <div class="gd-faq-item">
+          <button class="gd-faq-q">
+            IP 공개 범위는 어떻게 정하나요?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="gd-faq-a"><p>새 IP를 만들 때 "전체 공개(참여형)"와 "비공개(나만 보기)" 중 선택할 수 있고, 만든 뒤에도 언제든 바꿀 수 있어요.</p></div>
+        </div>
+        <div class="gd-faq-item">
+          <button class="gd-faq-q">
+            라이징·챌린지·오피셜은 어떻게 나뉘나요?
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="gd-faq-a"><p>누구나 검열 후 올리면 라이징, 조회수·좋아요가 쌓이면 챌린지로 승급, 유료 전환을 하면 오피셜이 돼요. TOP 100은 챌린지와 오피셜을 합산한 순위예요.</p></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+<script src="script.js"></script>
+<script src="storage.js"></script>
+<script src="auth-ui.js"></script>
+<script src="guide.js"></script>
+</body>
+</html>

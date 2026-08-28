@@ -15,12 +15,23 @@ document.querySelectorAll('.od-tabs').forEach((group) => {
   });
 });
 
-// Bookmark toggle
+// Bookmark toggle — requires login, persists per IP, restores on reload.
+const OD_BOOKMARK_KEY = 'bearip_bookmarked_ips';
+
+function odSetBookmarkUI(btn, bookmarked) {
+  btn.querySelector('svg').setAttribute('fill', bookmarked ? 'currentColor' : 'none');
+  btn.style.color = bookmarked ? 'var(--od-purple)' : 'var(--od-ink-soft)';
+}
+
 document.querySelectorAll('.od-bookmark').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const svg = btn.querySelector('svg');
-    const filled = svg.getAttribute('fill') === 'currentColor';
-    svg.setAttribute('fill', filled ? 'none' : 'currentColor');
-    btn.style.color = filled ? 'var(--od-ink-soft)' : 'var(--od-purple)';
+  if (btn.dataset.ip && typeof bearipSetHas === 'function') {
+    odSetBookmarkUI(btn, bearipSetHas(OD_BOOKMARK_KEY, btn.dataset.ip));
+  }
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!btn.dataset.ip) return;
+    if (typeof bearipRequireLogin === 'function' && !bearipRequireLogin('open-dna.html')) return;
+    const bookmarked = bearipSetToggle(OD_BOOKMARK_KEY, btn.dataset.ip);
+    odSetBookmarkUI(btn, bookmarked);
   });
 });

@@ -151,6 +151,49 @@ function bearipDeletePortfolioItem(id) {
   bearipSavePortfolio(list);
 }
 
+// ---- Generic per-browser "membership" sets, e.g. followed IPs, joined IPs,
+// applied-to positions — anywhere a button just needs an on/off toggle that
+// survives reload, keyed by a namespaced localStorage key. ----
+function bearipSetHas(key, id) {
+  try {
+    const arr = JSON.parse(localStorage.getItem(key)) || [];
+    return arr.includes(id);
+  } catch (e) {
+    return false;
+  }
+}
+
+// Toggles membership and returns the new state (true = now in the set).
+function bearipSetToggle(key, id) {
+  let arr;
+  try {
+    arr = JSON.parse(localStorage.getItem(key)) || [];
+  } catch (e) {
+    arr = [];
+  }
+  const has = arr.includes(id);
+  arr = has ? arr.filter((x) => x !== id) : arr.concat([id]);
+  localStorage.setItem(key, JSON.stringify(arr));
+  return !has;
+}
+
+// ---- Content comments, keyed per content id (e.g. an episode) ----
+function bearipLoadComments(contentId) {
+  try {
+    const raw = localStorage.getItem('bearip_comments_' + contentId);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function bearipAddComment(contentId, comment) {
+  const list = bearipLoadComments(contentId);
+  list.unshift(comment);
+  localStorage.setItem('bearip_comments_' + contentId, JSON.stringify(list));
+  return comment;
+}
+
 // ---- Notifications ----
 const BEARIP_NOTIFICATIONS_KEY = 'bearip_notifications';
 

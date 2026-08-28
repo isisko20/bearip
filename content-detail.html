@@ -29,7 +29,7 @@
     </button>
   </header>
 
-  <main class="cd-main">
+  <main class="cd-main" data-content-id="seoul-ep01">
 
     <div class="cd-player cr-thumb-7" id="player">
       <span class="cr-tier-badge challenge">CHALLENGE</span>
@@ -48,21 +48,21 @@
 
         <div class="cd-stats-row">
           <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>조회수 18,204</span>
-          <span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.6 8.5 3 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 4 0 6.4 4 4.5 7.5C19 16.5 12 21 12 21z"/></svg>좋아요 2,412</span>
-          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg>댓글 184</span>
+          <span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.6 8.5 3 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 4 0 6.4 4 4.5 7.5C19 16.5 12 21 12 21z"/></svg>좋아요 <span id="likeCount">2,412</span></span>
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg>댓글 <span id="commentCountInline">184</span></span>
           <span>2024.05.20 공개</span>
         </div>
 
         <div class="cd-actions">
-          <button class="cd-action-btn liked" id="likeBtn">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.6 8.5 3 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 4 0 6.4 4 4.5 7.5C19 16.5 12 21 12 21z"/></svg>
+          <button class="cd-action-btn" id="likeBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9.5-9C.6 8.5 3 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 4 0 6.4 4 4.5 7.5C19 16.5 12 21 12 21z"/></svg>
             좋아요
           </button>
-          <button class="cd-action-btn">
+          <button class="cd-action-btn" id="bookmarkBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>
             북마크
           </button>
-          <button class="cd-action-btn">
+          <button class="cd-action-btn" id="shareBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.2 10.6l7.6-4.2M8.2 13.4l7.6 4.2"/></svg>
             공유
           </button>
@@ -101,19 +101,21 @@
         </div>
 
         <div class="cd-panel">
-          <h3>댓글 184</h3>
+          <h3>댓글 <span id="commentCount">184</span></h3>
           <div class="cd-comment-box">
             <span class="av"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="6" fill="#fff"/><circle cx="7" cy="7.5" r="2.4" fill="#fff"/><circle cx="17" cy="7.5" r="2.4" fill="#fff"/></svg></span>
-            <input type="text" placeholder="댓글을 남겨보세요">
-            <button>등록</button>
+            <input type="text" id="commentInput" placeholder="댓글을 남겨보세요">
+            <button id="commentSubmitBtn">등록</button>
           </div>
-          <div class="cd-comment">
-            <div class="av thumb-4"></div>
-            <div class="body"><div class="n">몽몽</div><div class="t">분위기가 진짜 서울 밤 골목 그 자체예요. 다음 화 기다립니다!</div><div class="m"><span>1일 전</span><span>좋아요 34</span></div></div>
-          </div>
-          <div class="cd-comment">
-            <div class="av thumb-5"></div>
-            <div class="body"><div class="n">키키</div><div class="t">단이 캐릭터 매력 있네요, 성장기 기대돼요.</div><div class="m"><span>2일 전</span><span>좋아요 21</span></div></div>
+          <div id="commentList">
+            <div class="cd-comment">
+              <div class="av thumb-4"></div>
+              <div class="body"><div class="n">몽몽</div><div class="t">분위기가 진짜 서울 밤 골목 그 자체예요. 다음 화 기다립니다!</div><div class="m"><span>1일 전</span><span>좋아요 34</span></div></div>
+            </div>
+            <div class="cd-comment">
+              <div class="av thumb-5"></div>
+              <div class="body"><div class="n">키키</div><div class="t">단이 캐릭터 매력 있네요, 성장기 기대돼요.</div><div class="m"><span>2일 전</span><span>좋아요 21</span></div></div>
+            </div>
           </div>
         </div>
       </div>

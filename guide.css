@@ -1,0 +1,50 @@
+/* ================= 가이드 (guide) ================= */
+/* Uses dna-room.css tokens (--dr-*) via the shared .dna-app sidebar shell. */
+
+.gd-header { margin: 14px 0 26px; }
+.gd-header h1 { font-size: 28px; font-weight: 800; }
+.gd-header p { font-size: 13.5px; color: var(--dr-ink-soft); margin-top: 6px; }
+
+.gd-panel { background: var(--dr-panel); border: 1px solid var(--dr-border); border-radius: var(--dr-radius); padding: 24px; box-shadow: var(--dr-shadow); margin-bottom: 20px; }
+.gd-panel h2 { font-size: 15.5px; font-weight: 800; margin-bottom: 4px; }
+.gd-panel .sub { font-size: 12px; color: var(--dr-ink-soft); margin-bottom: 18px; }
+
+/* Quickstart */
+.gd-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.gd-step-card { border: 1px solid var(--dr-border); border-radius: 16px; padding: 18px; }
+.gd-step-num {
+  width: 26px; height: 26px; border-radius: 50%; background: var(--dr-purple); color: #fff;
+  font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+}
+.gd-step-card h3 { font-size: 13.5px; font-weight: 800; margin-bottom: 6px; }
+.gd-step-card p { font-size: 12px; color: var(--dr-ink-soft); line-height: 1.55; margin-bottom: 12px; }
+.gd-step-card a { font-size: 11.5px; font-weight: 700; color: var(--dr-purple); text-decoration: none; }
+.gd-step-card a:hover { text-decoration: underline; }
+
+/* Feature grid */
+.gd-features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.gd-feature-card { display: flex; gap: 14px; border: 1px solid var(--dr-border); border-radius: 16px; padding: 18px; text-decoration: none; color: inherit; transition: background 0.15s; }
+.gd-feature-card:hover { background: var(--dr-bg); }
+.gd-feature-ic { width: 40px; height: 40px; border-radius: 12px; background: var(--dr-active-bg); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.gd-feature-ic svg { width: 19px; height: 19px; color: var(--dr-purple); }
+.gd-feature-body h3 { font-size: 13.5px; font-weight: 800; margin-bottom: 4px; }
+.gd-feature-body p { font-size: 12px; color: var(--dr-ink-soft); line-height: 1.5; }
+
+/* FAQ */
+.gd-faq-list { display: flex; flex-direction: column; gap: 8px; }
+.gd-faq-item { border: 1px solid var(--dr-border); border-radius: 14px; overflow: hidden; }
+.gd-faq-q {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 16px; background: none; border: none; cursor: pointer;
+  font-size: 13px; font-weight: 700; color: var(--dr-ink); text-align: left; font-family: inherit;
+}
+.gd-faq-q svg { width: 15px; height: 15px; color: var(--dr-ink-soft); flex-shrink: 0; transition: transform 0.2s; }
+.gd-faq-item.open .gd-faq-q svg { transform: rotate(180deg); }
+.gd-faq-a { max-height: 0; overflow: hidden; transition: max-height 0.2s ease, padding 0.2s ease; padding: 0 16px; }
+.gd-faq-item.open .gd-faq-a { max-height: 200px; padding: 0 16px 16px; }
+.gd-faq-a p { font-size: 12.5px; color: var(--dr-ink-soft); line-height: 1.6; }
+
+@media (max-width: 860px) {
+  .gd-steps { grid-template-columns: 1fr; }
+  .gd-features-grid { grid-template-columns: 1fr; }
+}

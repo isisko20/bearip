@@ -56,7 +56,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg>
         <span>CREW MATCH</span>
       </a>
-      <a href="#">
+      <a href="guide.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 0c0 1.7-2.5 2-2.5 3.6"/><circle cx="12" cy="16.6" r="0.4" fill="currentColor"/></svg>
         <span>GUIDE</span>
       </a>
@@ -86,7 +86,7 @@
         <ellipse cx="100" cy="104" rx="10" ry="7" fill="#3a2c1f"/>
         <path d="M92 116 Q100 121 108 116" stroke="#3a2c1f" stroke-width="2.5" fill="none" stroke-linecap="round"/>
       </svg>
-      <a class="guide-btn" href="#">
+      <a class="guide-btn" href="guide.html">
         가이드 보기
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>
       </a>
@@ -364,10 +364,12 @@
               <button class="md-pill-btn" data-asset-type="art">아트워크</button>
             </div>
             <div class="md-assets-row" id="assetsRow">
-              <button class="md-asset-add">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                새 자산 추가
-              </button>
+              <div class="md-asset-add" id="assetAddTile" tabindex="0" role="button">
+                <span class="md-asset-add-default">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                  새 자산 추가
+                </span>
+              </div>
             </div>
           </section>
         </div>
@@ -384,36 +386,11 @@
               <span class="md-discuss-avatar-icon">
                 <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="6" fill="#fff"/><circle cx="7" cy="7.5" r="2.4" fill="#fff"/><circle cx="17" cy="7.5" r="2.4" fill="#fff"/></svg>
               </span>
-              <input type="text" placeholder="크루에게 공유할 소식이나 의견을 남겨보세요">
-              <button>게시</button>
+              <input type="text" id="discussInput" placeholder="크루에게 공유할 소식이나 의견을 남겨보세요">
+              <button id="discussPostBtn">게시</button>
             </div>
 
-            <div class="md-discuss-list">
-              <div class="md-discuss-item">
-                <div class="md-discuss-avatar thumb-3"></div>
-                <div class="md-discuss-body">
-                  <div class="md-discuss-head"><span class="n">라라</span><span class="r">스토리보드</span><span class="d">2일 전</span></div>
-                  <div class="md-discuss-text">EP03 콘티 초안 올렸어요! 배경 톤 관련해서 의견 부탁드려요 🙏</div>
-                  <div class="md-discuss-meta"><button>답글 3</button><button>좋아요 8</button></div>
-                </div>
-              </div>
-              <div class="md-discuss-item">
-                <div class="md-discuss-avatar thumb-4"></div>
-                <div class="md-discuss-body">
-                  <div class="md-discuss-head"><span class="n">몽몽</span><span class="r">비주얼 가이드</span><span class="d">3일 전</span></div>
-                  <div class="md-discuss-text">배경/장소 레퍼런스 60%까지 정리했어요. 다음 주까지 마무리할게요.</div>
-                  <div class="md-discuss-meta"><button>답글 1</button><button>좋아요 5</button></div>
-                </div>
-              </div>
-              <div class="md-discuss-item">
-                <div class="md-discuss-avatar thumb-2"></div>
-                <div class="md-discuss-body">
-                  <div class="md-discuss-head"><span class="n">판타지 (나)</span><span class="r">원작 · 스토리</span><span class="d">5일 전</span></div>
-                  <div class="md-discuss-text">Visual Artist 포지션 2명 추가로 모집 시작했습니다. 관심 있으신 분들 CREW MATCH에서 확인해주세요!</div>
-                  <div class="md-discuss-meta"><button>답글 4</button><button>좋아요 12</button></div>
-                </div>
-              </div>
-            </div>
+            <div class="md-discuss-list" id="discussList"></div>
           </section>
         </div>
 
@@ -497,5 +474,6 @@
 <script src="my-dna.js"></script>
 <script src="my-dna-render.js"></script>
 <script src="my-dna-tabs.js"></script>
+<script src="my-dna-discussion.js"></script>
 </body>
 </html>

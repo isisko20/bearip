@@ -133,6 +133,7 @@ function createAndSaveIP() {
     productionProgress: 0,
     roadmap: buildRoadmap(),
     assets: [],
+    discussion: [],
   };
   bearipAddIP(ip);
   bearipAddNotification({

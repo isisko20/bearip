@@ -57,6 +57,12 @@ function ntRender() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Render in whichever theme (light shell / dark CONTENT ROOM) the user
+  // was just browsing in, since this page is reachable from either.
+  if (sessionStorage.getItem('bearip_theme') === 'dark') {
+    document.getElementById('ntRoot').classList.add('theme-dark');
+  }
+
   bearipSeedNotificationsIfEmpty();
   ntRender();
 

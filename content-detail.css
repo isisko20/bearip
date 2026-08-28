@@ -47,7 +47,8 @@
   border: 1px solid var(--cr-border); background: rgba(255,255,255,0.06);
   color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer;
 }
-.cd-action-btn.liked { background: rgba(139,107,255,0.22); border-color: var(--cr-purple); color: var(--cr-purple); }
+.cd-action-btn.liked, .cd-action-btn.active { background: rgba(139,107,255,0.22); border-color: var(--cr-purple); color: var(--cr-purple); }
+.cd-action-btn.active svg { fill: currentColor; }
 .cd-action-btn svg { width: 15px; height: 15px; }
 
 .cd-panel { background: var(--cr-bg-elev); border: 1px solid var(--cr-border); border-radius: 16px; padding: 20px; margin-bottom: 20px; }

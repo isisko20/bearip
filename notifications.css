@@ -40,3 +40,27 @@
 .nt-empty svg { width: 40px; height: 40px; margin-bottom: 14px; opacity: 0.5; }
 .nt-empty .t { font-size: 14px; font-weight: 700; margin-bottom: 6px; color: var(--dr-ink); }
 .nt-empty .s { font-size: 12.5px; }
+
+/* ---------- Dark theme (rendered when reached from CONTENT ROOM) ---------- */
+.dna-app.theme-dark {
+  --dr-bg: #0b0b0f;
+  --dr-bg-soft: #17171d;
+  --dr-panel: #1a1a22;
+  --dr-border: rgba(255,255,255,0.08);
+  --dr-ink: #f5f4f7;
+  --dr-ink-soft: #9c9aa8;
+  --dr-purple: #8b6bff;
+  --dr-purple-2: #a78bff;
+  --dr-blue: #4fb0ff;
+  --dr-active-bg: rgba(139,107,255,0.16);
+  --dr-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+/* --dr-ink is used as the "가이드 보기" pill's background (dark-on-light by
+   design); in dark mode --dr-ink itself becomes light, so pin it back to a
+   solid accent instead of inheriting the (now near-white) ink color. */
+.dna-app.theme-dark .dr-promo .guide-btn { background: var(--dr-purple); }
+
+.dna-app.theme-dark .nt-icon.type-crew { background: rgba(139,107,255,0.18); }
+.dna-app.theme-dark .nt-icon.type-ip { background: rgba(79,176,255,0.18); }
+.dna-app.theme-dark .nt-icon.type-discussion { background: rgba(61,220,132,0.18); color: #3ddc84; }
+.dna-app.theme-dark .nt-item.unread:hover { background: rgba(139,107,255,0.24); }

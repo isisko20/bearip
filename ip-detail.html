@@ -69,13 +69,13 @@
         </div>
 
         <div class="ipd-hero-actions">
-          <button class="ipd-btn-join">참여하기</button>
-          <button class="ipd-btn-follow">
+          <button class="ipd-btn-join" id="ipdJoinBtn" data-ip="seoul-night-menders" data-ip-title="서울 야행수선단">참여하기</button>
+          <button class="ipd-btn-follow" id="ipdFollowBtn" data-ip="seoul-night-menders" data-ip-title="서울 야행수선단">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>
-            팔로우
+            <span class="ipd-follow-label">팔로우</span>
           </button>
           <div class="ipd-hero-foot">
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg>128 팔로워</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg><span id="ipdFollowerCount">128</span> 팔로워</span>
             <span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.6 8.5 3 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 4 0 6.4 4 4.5 7.5C19 16.5 12 21 12 21z"/></svg>342 응원</span>
             <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg>56 활동</span>
           </div>
@@ -153,11 +153,11 @@
           <h2>모집 중인 포지션</h2>
           <div class="ipd-recruit-row">
             <div class="ipd-recruit-info"><div class="r">Visual Artist</div><div class="f">3/5 참여</div></div>
-            <button class="ipd-apply-btn">지원하기</button>
+            <button class="ipd-apply-btn" data-pos="seoul-night-menders_visual-artist" data-pos-title="Visual Artist" data-ip-title="서울 야행수선단">지원하기</button>
           </div>
           <div class="ipd-recruit-row">
             <div class="ipd-recruit-info"><div class="r">배경 컨셉 아티스트</div><div class="f">0/2 참여</div></div>
-            <button class="ipd-apply-btn">지원하기</button>
+            <button class="ipd-apply-btn" data-pos="seoul-night-menders_bg-concept" data-pos-title="배경 컨셉 아티스트" data-ip-title="서울 야행수선단">지원하기</button>
           </div>
         </div>
 
@@ -172,11 +172,11 @@
 
         <div class="ipd-panel">
           <h2>비슷한 IP</h2>
-          <a class="ipd-related-row" href="#">
+          <a class="ipd-related-row bearip-soon" href="#">
             <div class="ipd-related-thumb thumb-5"></div>
             <div class="ipd-related-info"><div class="t">고양이 탐정 모모</div><div class="m">미스터리 · DNA 71%</div></div>
           </a>
-          <a class="ipd-related-row" href="#">
+          <a class="ipd-related-row bearip-soon" href="#">
             <div class="ipd-related-thumb thumb-3"></div>
             <div class="ipd-related-info"><div class="t">기억을 걷는 소녀</div><div class="m">드라마 · DNA 64%</div></div>
           </a>
@@ -190,5 +190,6 @@
 <script src="storage.js"></script>
 <script src="auth-ui.js"></script>
 <script src="open-dna.js"></script>
+<script src="ip-detail.js"></script>
 </body>
 </html>

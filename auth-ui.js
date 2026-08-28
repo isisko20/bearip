@@ -58,12 +58,62 @@ function bearipInjectProfileMenuStyles() {
     .bearip-pm-btn.danger:hover { color: #e0455b; background: rgba(224,69,91,0.1); }
     .bearip-pm-guest-t { font-size: 13px; font-weight: 800; padding: 2px 2px 4px; }
     .bearip-pm-guest-s { font-size: 11.5px; color: var(--pm-ink-soft); padding: 0 2px 12px; line-height: 1.5; }
+
+    .bearip-toast {
+      --pm-purple: var(--dr-purple, var(--od-purple, var(--cr-purple, var(--purple-1, #6d4de6))));
+      --pm-shadow: var(--dr-shadow, var(--od-shadow, var(--cr-shadow, var(--shadow-soft, 0 20px 50px rgba(0,0,0,0.35)))));
+      position: fixed; left: 50%; bottom: 28px; z-index: 1000;
+      padding: 12px 20px; border-radius: 999px;
+      background: var(--pm-purple); color: #fff; font-size: 12.5px; font-weight: 700;
+      box-shadow: var(--pm-shadow); font-family: 'Noto Sans KR', sans-serif;
+      white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis;
+      opacity: 0; pointer-events: none;
+      transform: translateX(-50%) translateY(8px);
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .bearip-toast.show { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
   `;
   document.head.appendChild(style);
 }
 
+let bearipToastEl = null;
+let bearipToastTimer = null;
+function bearipShowToast(message) {
+  bearipInjectProfileMenuStyles();
+  if (!bearipToastEl) {
+    const root = document.querySelector('.dna-app, .od-app, .cr-app, .lg-app, .ni-app') || document.body;
+    bearipToastEl = document.createElement('div');
+    bearipToastEl.className = 'bearip-toast';
+    root.appendChild(bearipToastEl);
+  }
+  bearipToastEl.textContent = message;
+  bearipToastEl.classList.add('show');
+  clearTimeout(bearipToastTimer);
+  bearipToastTimer = setTimeout(() => bearipToastEl.classList.remove('show'), 2200);
+}
+
+document.addEventListener('click', (e) => {
+  const soon = e.target.closest('.bearip-soon');
+  if (soon) {
+    e.preventDefault();
+    bearipShowToast('더 많은 항목은 아직 준비 중이에요');
+  }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   const dest = () => (typeof bearipGetUser === 'function' && bearipGetUser() ? 'profile.html' : 'login.html');
+
+  // Remember which shell theme the user is currently browsing in (light
+  // sidebar/topbar vs dark CONTENT ROOM) so a page like notifications.html —
+  // reachable from any of them — can render in a matching theme instead of
+  // always defaulting to light.
+  const appRoot = document.querySelector('.dna-app, .od-app, .cr-app, .lg-app, .ni-app');
+  // Chameleon pages (like notifications.html) render in whichever theme was
+  // last recorded rather than having one of their own, so they must not
+  // overwrite the flag they just read.
+  if (appRoot && !document.body.classList.contains('chameleon-page')) {
+    sessionStorage.setItem('bearip_theme', appRoot.classList.contains('cr-app') ? 'dark' : 'light');
+  }
 
   if (typeof bearipSeedNotificationsIfEmpty === 'function') bearipSeedNotificationsIfEmpty();
   const unread = typeof bearipGetUnreadCount === 'function' ? bearipGetUnreadCount() : 0;
@@ -93,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   bearipInjectProfileMenuStyles();
-  const root = document.querySelector('.dna-app, .od-app, .cr-app, .lg-app, .ni-app') || document.body;
+  const root = appRoot || document.body;
   const menu = document.createElement('div');
   menu.className = 'bearip-pm';
   root.appendChild(menu);
