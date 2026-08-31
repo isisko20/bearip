@@ -77,7 +77,82 @@ function loadCurrentIP() {
 }
 
 function renderHeader() {
-  document.getElementById('currentIpChip').textContent = `📁 ${currentIP.title}`;
+  document.getElementById('currentIpChipLabel').textContent = currentIP.title;
+}
+
+function renderIpSwitcherMenu() {
+  const menu = document.getElementById('ipSwitcherMenu');
+  if (!menu) return;
+
+  const myIPs = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
+  const rowsHtml = myIPs
+    .map((ip) => {
+      const isActive = ip.id === currentIP.id;
+      const goalLabel = GOAL_LABELS[ip.goal] || '';
+      return `
+        <button type="button" class="md-ip-switcher-row${isActive ? ' active' : ''}" data-switch-ip="${ip.id}">
+          <span class="dot"></span>
+          <span class="info">
+            <span class="t">${bearipEscapeHtml(ip.title || '제목 없는 IP')}</span>
+            <span class="m">${goalLabel} · DNA ${ip.dnaScore || 0}%</span>
+          </span>
+        </button>
+      `;
+    })
+    .join('');
+
+  const emptyHtml = myIPs.length === 0 ? '<div class="md-ip-switcher-empty">아직 만든 IP가 없어요.</div>' : '';
+
+  const isDemoActive = currentIP.id === 'demo';
+  const demoRowHtml = `
+    <button type="button" class="md-ip-switcher-row demo${isDemoActive ? ' active' : ''}" data-switch-ip="demo">
+      <span class="dot"></span>
+      <span class="info">
+        <span class="t">서울 야행수선단 (예시)</span>
+        <span class="m">둘러보기용 데모</span>
+      </span>
+    </button>
+  `;
+
+  menu.innerHTML = `
+    ${emptyHtml}
+    ${rowsHtml}
+    ${demoRowHtml}
+    <div class="md-ip-switcher-divider"></div>
+    <a class="md-ip-switcher-new" href="new-ip.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      새 프로젝트 만들기
+    </a>
+  `;
+
+  menu.querySelectorAll('[data-switch-ip]').forEach((row) => {
+    row.addEventListener('click', () => {
+      const id = row.dataset.switchIp;
+      if (id === currentIP.id) {
+        closeIpSwitcher();
+        return;
+      }
+      if (id === 'demo') {
+        localStorage.removeItem('bearip_current_ip');
+      } else {
+        bearipSetCurrentId(id);
+      }
+      location.reload();
+    });
+  });
+}
+
+function openIpSwitcher() {
+  renderIpSwitcherMenu();
+  document.getElementById('ipSwitcherMenu').hidden = false;
+  document.getElementById('ipSwitcher').classList.add('open');
+}
+
+function closeIpSwitcher() {
+  const menu = document.getElementById('ipSwitcherMenu');
+  if (menu) menu.hidden = true;
+  const wrap = document.getElementById('ipSwitcher');
+  if (wrap) wrap.classList.remove('open');
 }
 
 function renderPublishButton() {
@@ -375,6 +450,21 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAll();
 
   document.getElementById('mdPublishBtn').addEventListener('click', toggleIPVisibility);
+
+  document.getElementById('currentIpChip').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = document.getElementById('ipSwitcherMenu');
+    if (menu.hidden) openIpSwitcher();
+    else closeIpSwitcher();
+  });
+  document.addEventListener('click', (e) => {
+    const wrap = document.getElementById('ipSwitcher');
+    const menu = document.getElementById('ipSwitcherMenu');
+    if (wrap && menu && !menu.hidden && !wrap.contains(e.target)) closeIpSwitcher();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeIpSwitcher();
+  });
 
   document.getElementById('assetsRow').addEventListener('click', (e) => {
     const delBtn = e.target.closest('.md-asset-delete');

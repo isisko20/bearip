@@ -10,12 +10,44 @@
 }
 .md-header h1 { font-size: 32px; font-weight: 800; }
 .md-header p { font-size: 13.5px; color: var(--dr-ink-soft); margin-top: 6px; }
+.md-ip-switcher { position: relative; display: inline-block; margin-top: 10px; }
 .md-current-ip-chip {
   display: inline-flex; align-items: center; gap: 6px;
-  margin-top: 10px; padding: 6px 13px; border-radius: 999px;
+  padding: 6px 13px; border-radius: 999px; border: none; font-family: inherit;
   background: var(--dr-active-bg); color: var(--dr-purple);
-  font-size: 12px; font-weight: 700;
+  font-size: 12px; font-weight: 700; cursor: pointer;
 }
+.md-current-ip-chip .chev { width: 12px; height: 12px; transition: transform 0.15s; }
+.md-ip-switcher.open .md-current-ip-chip .chev { transform: rotate(180deg); }
+
+.md-ip-switcher-menu {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 30;
+  width: 280px; max-height: 340px; overflow-y: auto;
+  background: var(--dr-panel); border: 1px solid var(--dr-border); border-radius: 14px;
+  box-shadow: var(--dr-shadow); padding: 8px;
+}
+.md-ip-switcher-empty { padding: 12px 10px; font-size: 12px; color: var(--dr-ink-soft); }
+.md-ip-switcher-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 10px; border-radius: 10px; border: none; background: none;
+  font-family: inherit; text-align: left; cursor: pointer; color: var(--dr-ink);
+}
+.md-ip-switcher-row:hover { background: var(--dr-bg); }
+.md-ip-switcher-row.active { background: var(--dr-active-bg); }
+.md-ip-switcher-row .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dr-purple); flex-shrink: 0; opacity: 0; }
+.md-ip-switcher-row.active .dot { opacity: 1; }
+.md-ip-switcher-row .info { flex: 1; min-width: 0; }
+.md-ip-switcher-row .t { font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.md-ip-switcher-row .m { font-size: 10.5px; color: var(--dr-ink-soft); margin-top: 1px; }
+.md-ip-switcher-row.demo .t { color: var(--dr-ink-soft); }
+.md-ip-switcher-divider { height: 1px; background: var(--dr-border); margin: 6px 4px; }
+.md-ip-switcher-new {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 9px 10px; border-radius: 10px; text-decoration: none;
+  font-size: 12.5px; font-weight: 700; color: var(--dr-purple);
+}
+.md-ip-switcher-new:hover { background: var(--dr-active-bg); }
+.md-ip-switcher-new svg { width: 14px; height: 14px; }
 
 .md-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 

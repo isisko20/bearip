@@ -117,7 +117,13 @@
       <div>
         <h1>MY DNA</h1>
         <p>당신의 IP를 체계적으로 정리하고, 선택한 목표에 맞게 준비를 도와드려요.</p>
-        <div class="md-current-ip-chip" id="currentIpChip">📁 -</div>
+        <div class="md-ip-switcher" id="ipSwitcher">
+          <button type="button" class="md-current-ip-chip" id="currentIpChip">
+            📁 <span id="currentIpChipLabel">-</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="md-ip-switcher-menu" id="ipSwitcherMenu" hidden></div>
+        </div>
       </div>
       <div class="md-header-actions">
         <button class="md-publish-btn" id="mdPublishBtn">
