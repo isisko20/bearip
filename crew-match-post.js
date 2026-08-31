@@ -117,8 +117,12 @@ function cmRenderPositionCard(pos) {
       <button class="cm-apply-btn">지원하기</button>
     </div>
     <button type="button" class="cm-applicants-toggle">지원자 확인 (${applicantCount})</button>
-    <div class="cm-applicants-panel" hidden></div>
+    <div class="cm-applicants-panel"></div>
   `;
+  // Not the `hidden` attribute — .cm-applicants-panel sets display:flex at
+  // equal specificity to the UA [hidden] rule and would win, leaving the
+  // panel visibly open. style.display is set directly instead, below.
+  el.querySelector('.cm-applicants-panel').style.display = 'none';
   // Reuses crew-match.js's persistence + "나의 매치 현황" refresh so a
   // user-posted listing's apply button behaves exactly like a static one.
   const applyBtn = el.querySelector('.cm-apply-btn');
@@ -138,12 +142,16 @@ function cmRenderPositionCard(pos) {
     if (user) {
       const myPositions = typeof bearipGetMyPositions === 'function' ? bearipGetMyPositions() : [];
       const myPortfolio = typeof bearipLoadPortfolio === 'function' ? bearipLoadPortfolio() : [];
+      // "비공개" portfolio items stay hidden even when applying; "지원할 때
+      // 공개" and "항시 공개" items are exactly what should surface here,
+      // since applying to a position is that visibility condition.
+      const visibleCount = myPortfolio.filter((p) => p.visibility !== 'private').length;
       bearipAddApplicant(pos.id, {
         id: 'app_me_' + pos.id,
         name: user.nickname,
         role: myPositions[0] || '',
         bio: user.bio || '',
-        portfolioCount: myPortfolio.length,
+        portfolioCount: visibleCount,
         appliedAt: new Date().toISOString(),
         status: 'pending',
       });
@@ -151,7 +159,7 @@ function cmRenderPositionCard(pos) {
     const toggleBtn = el.querySelector('.cm-applicants-toggle');
     const panelEl = el.querySelector('.cm-applicants-panel');
     toggleBtn.textContent = `지원자 확인 (${bearipGetApplicants(pos.id).length})`;
-    if (!panelEl.hidden) cmRenderApplicantsPanel(pos, panelEl, fracEl);
+    if (panelEl.style.display !== 'none') cmRenderApplicantsPanel(pos, panelEl, fracEl);
     bearipAddNotification({
       type: 'crew',
       title: '포지션에 지원했어요',
@@ -164,9 +172,9 @@ function cmRenderPositionCard(pos) {
   const applicantsToggle = el.querySelector('.cm-applicants-toggle');
   const applicantsPanel = el.querySelector('.cm-applicants-panel');
   applicantsToggle.addEventListener('click', () => {
-    const opening = applicantsPanel.hidden;
+    const opening = applicantsPanel.style.display === 'none';
     if (opening) cmRenderApplicantsPanel(pos, applicantsPanel, fracEl);
-    applicantsPanel.hidden = !opening;
+    applicantsPanel.style.display = opening ? 'flex' : 'none';
   });
 
   return el;

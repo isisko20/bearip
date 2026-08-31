@@ -148,6 +148,15 @@
 
         <div class="md-tab-panel active" data-tab-panel="overview">
 
+        <!-- 내 프로젝트에 지원한 사람들 (지원자가 있을 때만 표시) -->
+        <section class="md-panel md-applicants-alert" id="mdApplicantsAlert" style="display:none">
+          <div class="md-section-label">
+            <span class="t">지원자 확인</span>
+            <span class="hint">이 IP의 모집글에 지원한 사람들이에요</span>
+          </div>
+          <div id="mdApplicantsList"></div>
+        </section>
+
         <!-- 1. 목표 선택 -->
         <section class="md-panel">
           <div class="md-section-label">
@@ -487,5 +496,6 @@
 <script src="my-dna-render.js"></script>
 <script src="my-dna-tabs.js"></script>
 <script src="my-dna-discussion.js"></script>
+<script src="my-dna-applicants.js"></script>
 </body>
 </html>

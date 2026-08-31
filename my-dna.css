@@ -123,6 +123,32 @@
 }
 .md-panel.flash-highlight { box-shadow: 0 0 0 3px var(--dr-purple); }
 
+/* ---- 지원자 확인 (applicants for this IP's CREW MATCH postings) ---- */
+.md-applicants-alert { border: 1.5px solid var(--dr-purple); background: var(--dr-active-bg); }
+.md-applicant-item + .md-applicant-item { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--dr-border); }
+.md-applicant-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; flex-wrap: wrap; }
+.md-applicant-name {
+  font-weight: 700; background: none; border: none; padding: 0; cursor: pointer; color: var(--dr-ink);
+  text-decoration: underline dotted; text-underline-offset: 3px;
+}
+.md-applicant-name:hover { color: var(--dr-purple); }
+.md-applicant-meta { color: var(--dr-ink-soft); font-size: 11.5px; }
+.md-applicant-actions { margin-left: auto; display: flex; gap: 6px; }
+.md-applicant-accept, .md-applicant-reject {
+  font-size: 10.5px; font-weight: 700; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--dr-border);
+  background: var(--dr-panel); cursor: pointer;
+}
+.md-applicant-accept { color: #2fae66; border-color: #2fae66; }
+.md-applicant-accept:hover { background: #e8f8ef; }
+.md-applicant-reject { color: #d64545; border-color: #d64545; }
+.md-applicant-reject:hover { background: #fbe9e9; }
+.md-applicant-detail {
+  margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: var(--dr-panel); font-size: 11.5px;
+}
+.md-applicant-detail-role { font-weight: 700; color: var(--dr-purple); margin-bottom: 4px; }
+.md-applicant-detail-bio { color: var(--dr-ink); line-height: 1.5; }
+.md-applicant-detail-portfolio { color: var(--dr-ink-soft); margin-top: 6px; }
+
 /* ---- Goal selector ---- */
 .md-goals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .md-goal {

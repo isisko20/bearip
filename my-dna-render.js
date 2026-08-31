@@ -284,7 +284,10 @@ function ensureRoadEditOverlay() {
   overlay = document.createElement('div');
   overlay.className = 'md-road-edit-overlay';
   overlay.id = 'roadEditOverlay';
-  overlay.hidden = true;
+  // Not the `hidden` attribute — its UA display:none rule has the same
+  // specificity as this overlay's own `display:flex` and loses to it, so
+  // the overlay would stay visible. Toggle style.display directly instead.
+  overlay.style.display = 'none';
   overlay.innerHTML = `
     <div class="md-road-edit-box">
       <div class="md-road-edit-head">
@@ -318,14 +321,14 @@ function ensureRoadEditOverlay() {
     bearipShowToast('진행 상황을 업데이트했어요');
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !overlay.hidden) closeRoadEdit();
+    if (e.key === 'Escape' && overlay.style.display !== 'none') closeRoadEdit();
   });
   return overlay;
 }
 
 function closeRoadEdit() {
   const overlay = document.getElementById('roadEditOverlay');
-  if (overlay) overlay.hidden = true;
+  if (overlay) overlay.style.display = 'none';
   roadEditIndex = null;
 }
 
@@ -340,7 +343,7 @@ function openRoadEdit(index) {
     const isCurrent = opt.status === step.status && opt.progress === step.progress;
     return `<button type="button" class="md-road-edit-opt${isCurrent ? ' active' : ''}" data-status="${opt.status}" data-progress="${opt.progress}">${opt.label}</button>`;
   }).join('');
-  overlay.hidden = false;
+  overlay.style.display = 'flex';
 }
 
 function renderAssets() {
@@ -397,7 +400,10 @@ function ensureAssetPreviewOverlay() {
   overlay = document.createElement('div');
   overlay.className = 'md-asset-preview-overlay';
   overlay.id = 'assetPreviewOverlay';
-  overlay.hidden = true;
+  // Not the `hidden` attribute — its UA display:none rule has the same
+  // specificity as this overlay's own `display:flex` and loses to it, so
+  // the overlay would stay visible. Toggle style.display directly instead.
+  overlay.style.display = 'none';
   overlay.innerHTML = `
     <div class="md-asset-preview-box">
       <div class="md-asset-preview-head">
@@ -411,19 +417,20 @@ function ensureAssetPreviewOverlay() {
     </div>
   `;
   (document.querySelector('.dna-app') || document.body).appendChild(overlay);
+  // Delegated on the overlay itself, attached exactly once — same robustness
+  // reasoning as the roadmap-edit popup's close handling.
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) closeAssetPreview();
+    if (e.target === overlay || e.target.closest('#assetPreviewClose')) closeAssetPreview();
   });
-  document.getElementById('assetPreviewClose').addEventListener('click', closeAssetPreview);
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !overlay.hidden) closeAssetPreview();
+    if (e.key === 'Escape' && overlay.style.display !== 'none') closeAssetPreview();
   });
   return overlay;
 }
 
 function closeAssetPreview() {
   const overlay = document.getElementById('assetPreviewOverlay');
-  if (overlay) overlay.hidden = true;
+  if (overlay) overlay.style.display = 'none';
   document.body.style.overflow = '';
   if (mdPreviewObjectUrl) {
     URL.revokeObjectURL(mdPreviewObjectUrl);
@@ -447,7 +454,7 @@ async function openAssetPreview(index) {
   document.getElementById('assetPreviewTitle').textContent = asset.name;
   meta.textContent = '';
   body.innerHTML = '<div class="md-asset-preview-loading">불러오는 중...</div>';
-  overlay.hidden = false;
+  overlay.style.display = 'flex';
   document.body.style.overflow = 'hidden';
 
   if (asset.imageData) {
