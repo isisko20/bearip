@@ -108,7 +108,11 @@
 .cm-applicants-panel { border-top: 1px solid var(--od-border); padding-top: 10px; display: flex; flex-direction: column; gap: 10px; }
 .cm-applicants-empty { font-size: 12px; color: var(--od-ink-soft); }
 .cm-applicant-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
-.cm-applicant-name { font-weight: 700; }
+.cm-applicant-name {
+  font-weight: 700; background: none; border: none; padding: 0; cursor: pointer; color: var(--od-ink);
+  text-decoration: underline dotted; text-underline-offset: 3px;
+}
+.cm-applicant-name:hover { color: var(--od-purple); }
 .cm-applicant-time { color: var(--od-ink-soft); font-size: 11px; }
 .cm-applicant-actions { margin-left: auto; display: flex; gap: 6px; align-items: center; }
 .cm-applicant-accept, .cm-applicant-reject {
@@ -119,6 +123,12 @@
 .cm-applicant-accept:hover { background: #e6f7ee; }
 .cm-applicant-reject { color: #d64545; border-color: #d64545; }
 .cm-applicant-reject:hover { background: #fbe9e9; }
+.cm-applicant-detail {
+  margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: var(--od-bg); font-size: 11.5px;
+}
+.cm-applicant-detail-role { font-weight: 700; color: var(--od-purple); margin-bottom: 4px; }
+.cm-applicant-detail-bio { color: var(--od-ink); line-height: 1.5; }
+.cm-applicant-detail-portfolio { color: var(--od-ink-soft); margin-top: 6px; }
 .cm-applicant-actions .s { font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
 .cm-applicant-actions .s.accepted { background: #e6f7ee; color: var(--od-green); }
 .cm-applicant-actions .s.rejected { background: #fbe9e9; color: #d64545; }

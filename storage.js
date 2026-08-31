@@ -102,8 +102,24 @@ function bearipSeedApplicantsIfEmpty(positionId) {
   if (map[positionId]) return map[positionId];
   const now = Date.now();
   const seed = [
-    { id: 'app_seed_1_' + positionId, name: '몽몽', appliedAt: new Date(now - 60 * 24 * 2 * 60000).toISOString(), status: 'pending' },
-    { id: 'app_seed_2_' + positionId, name: '라라', appliedAt: new Date(now - 60 * 24 * 60000).toISOString(), status: 'pending' },
+    {
+      id: 'app_seed_1_' + positionId,
+      name: '몽몽',
+      role: '비주얼 가이드',
+      bio: '분위기와 색감 위주로 작업해요. 최근엔 배경 컨셉 위주로 작업하고 있어요.',
+      portfolioCount: 4,
+      appliedAt: new Date(now - 60 * 24 * 2 * 60000).toISOString(),
+      status: 'pending',
+    },
+    {
+      id: 'app_seed_2_' + positionId,
+      name: '라라',
+      role: '스토리보드',
+      bio: '장면 연출과 흐름 짜는 걸 좋아합니다. 웹툰 콘티 작업 경험이 있어요.',
+      portfolioCount: 2,
+      appliedAt: new Date(now - 60 * 24 * 60000).toISOString(),
+      status: 'pending',
+    },
   ];
   map[positionId] = seed;
   bearipSaveApplicantsMap(map);

@@ -53,14 +53,28 @@ function cmRenderApplicantsPanel(pos, panelEl, fracEl) {
              <button type="button" class="cm-applicant-reject" data-app-id="${a.id}">거절</button>`
           : `<span class="s ${a.status}">${CM_APPLICANT_STATUS_LABEL[a.status]}</span>`;
       return `
-        <div class="cm-applicant-row">
-          <span class="cm-applicant-name">${bearipEscapeHtml(a.name)}</span>
-          <span class="cm-applicant-time">${cmFormatRelativeTime(a.appliedAt)}</span>
-          <span class="cm-applicant-actions">${actions}</span>
+        <div class="cm-applicant-item">
+          <div class="cm-applicant-row">
+            <button type="button" class="cm-applicant-name" data-info-id="${a.id}">${bearipEscapeHtml(a.name)}</button>
+            <span class="cm-applicant-time">${cmFormatRelativeTime(a.appliedAt)}</span>
+            <span class="cm-applicant-actions">${actions}</span>
+          </div>
+          <div class="cm-applicant-detail" id="applicant-detail-${a.id}" hidden>
+            <div class="cm-applicant-detail-role">${bearipEscapeHtml(a.role || '역할 미지정')}</div>
+            <div class="cm-applicant-detail-bio">${bearipEscapeHtml(a.bio || '아직 작성된 소개가 없어요.')}</div>
+            ${a.portfolioCount ? `<div class="cm-applicant-detail-portfolio">포트폴리오 ${a.portfolioCount}개</div>` : ''}
+          </div>
         </div>
       `;
     })
     .join('');
+
+  panelEl.querySelectorAll('.cm-applicant-name').forEach((nameBtn) => {
+    nameBtn.addEventListener('click', () => {
+      const detail = document.getElementById(`applicant-detail-${nameBtn.dataset.infoId}`);
+      if (detail) detail.hidden = !detail.hidden;
+    });
+  });
 
   panelEl.querySelectorAll('.cm-applicant-accept, .cm-applicant-reject').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -122,7 +136,17 @@ function cmRenderPositionCard(pos) {
       return;
     }
     if (user) {
-      bearipAddApplicant(pos.id, { id: 'app_me_' + pos.id, name: user.nickname, appliedAt: new Date().toISOString(), status: 'pending' });
+      const myPositions = typeof bearipGetMyPositions === 'function' ? bearipGetMyPositions() : [];
+      const myPortfolio = typeof bearipLoadPortfolio === 'function' ? bearipLoadPortfolio() : [];
+      bearipAddApplicant(pos.id, {
+        id: 'app_me_' + pos.id,
+        name: user.nickname,
+        role: myPositions[0] || '',
+        bio: user.bio || '',
+        portfolioCount: myPortfolio.length,
+        appliedAt: new Date().toISOString(),
+        status: 'pending',
+      });
     }
     const toggleBtn = el.querySelector('.cm-applicants-toggle');
     const panelEl = el.querySelector('.cm-applicants-panel');
