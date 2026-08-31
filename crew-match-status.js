@@ -35,9 +35,23 @@ function cmRenderMatchStatus() {
     .map((id) => {
       const label = cmPositionLabel(id);
       const text = label ? `${bearipEscapeHtml(label.ip)} · ${bearipEscapeHtml(label.role)}` : bearipEscapeHtml(id);
-      return `<div class="cm-applied-row"><span class="t">${text}</span><span class="s pending">검토 중</span></div>`;
+      return `<div class="cm-applied-row"><span class="t">${text}</span><span class="cm-applied-right"><span class="s pending">검토 중</span><button type="button" class="cm-applied-cancel" data-pos-id="${bearipEscapeHtml(id)}">지원 취소</button></span></div>`;
     })
     .join('');
 }
 
-document.addEventListener('DOMContentLoaded', cmRenderMatchStatus);
+document.addEventListener('DOMContentLoaded', () => {
+  cmRenderMatchStatus();
+
+  document.getElementById('cmAppliedRows').addEventListener('click', (e) => {
+    const btn = e.target.closest('.cm-applied-cancel');
+    if (!btn) return;
+    const posId = btn.dataset.posId;
+    bearipSetToggle('bearip_applied_positions', posId);
+    bearipShowToast('지원을 취소했어요');
+    // Keep any currently-rendered apply button for this position in sync.
+    const otherBtn = document.querySelector(`[data-pos-id="${CSS.escape(posId)}"] .cm-apply-btn`);
+    if (otherBtn && typeof cmSetApplyUI === 'function') cmSetApplyUI(otherBtn, false);
+    cmRenderMatchStatus();
+  });
+});

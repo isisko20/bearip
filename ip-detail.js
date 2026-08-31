@@ -18,8 +18,7 @@ function ipdSetFollowUI(btn, following) {
 }
 
 function ipdSetApplyUI(btn, applied) {
-  btn.textContent = applied ? '지원 완료' : '지원하기';
-  btn.disabled = applied;
+  btn.textContent = applied ? '지원 취소' : '지원하기';
   btn.classList.toggle('is-done', applied);
 }
 
@@ -188,7 +187,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.querySelectorAll('.ipd-apply-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (btn.disabled) return;
       if (!bearipRequireLogin('ip-detail.html')) return;
       const nowApplied = bearipSetToggle(IPD_APPLY_KEY, btn.dataset.pos);
       ipdSetApplyUI(btn, nowApplied);
@@ -199,6 +197,8 @@ document.addEventListener('DOMContentLoaded', () => {
           message: `${btn.dataset.ipTitle} · ${btn.dataset.posTitle}에 지원했어요. 결과를 기다려주세요.`,
           link: 'profile.html',
         });
+      } else {
+        bearipShowToast('지원을 취소했어요');
       }
     });
   });

@@ -65,6 +65,79 @@ function bearipAddPosition(position) {
   return position;
 }
 
+function bearipUpdatePosition(id, patch) {
+  const list = bearipLoadPositions();
+  const idx = list.findIndex((p) => p.id === id);
+  if (idx === -1) return null;
+  list[idx] = Object.assign({}, list[idx], patch);
+  bearipSavePositions(list);
+  return list[idx];
+}
+
+// ---- Applicants for postings the current user owns (CREW MATCH 모집글) ----
+const BEARIP_APPLICANTS_KEY = 'bearip_position_applicants';
+
+function bearipLoadApplicantsMap() {
+  try {
+    const raw = localStorage.getItem(BEARIP_APPLICANTS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function bearipSaveApplicantsMap(map) {
+  localStorage.setItem(BEARIP_APPLICANTS_KEY, JSON.stringify(map));
+}
+
+function bearipGetApplicants(positionId) {
+  return bearipLoadApplicantsMap()[positionId] || [];
+}
+
+// Seeds two example applicants the first time a posting's list is read, so
+// "지원자 확인" has something to demonstrate immediately — same pattern as
+// MY DNA's seeded discussion comments and the seeded notifications.
+function bearipSeedApplicantsIfEmpty(positionId) {
+  const map = bearipLoadApplicantsMap();
+  if (map[positionId]) return map[positionId];
+  const now = Date.now();
+  const seed = [
+    { id: 'app_seed_1_' + positionId, name: '몽몽', appliedAt: new Date(now - 60 * 24 * 2 * 60000).toISOString(), status: 'pending' },
+    { id: 'app_seed_2_' + positionId, name: '라라', appliedAt: new Date(now - 60 * 24 * 60000).toISOString(), status: 'pending' },
+  ];
+  map[positionId] = seed;
+  bearipSaveApplicantsMap(map);
+  return seed;
+}
+
+function bearipAddApplicant(positionId, applicant) {
+  const map = bearipLoadApplicantsMap();
+  const list = map[positionId] || [];
+  const existingIdx = list.findIndex((a) => a.name === applicant.name);
+  if (existingIdx !== -1) list[existingIdx] = applicant;
+  else list.push(applicant);
+  map[positionId] = list;
+  bearipSaveApplicantsMap(map);
+  return applicant;
+}
+
+function bearipRemoveApplicantByName(positionId, name) {
+  const map = bearipLoadApplicantsMap();
+  map[positionId] = (map[positionId] || []).filter((a) => a.name !== name);
+  bearipSaveApplicantsMap(map);
+}
+
+function bearipUpdateApplicantStatus(positionId, applicantId, status) {
+  const map = bearipLoadApplicantsMap();
+  const list = map[positionId] || [];
+  const idx = list.findIndex((a) => a.id === applicantId);
+  if (idx === -1) return null;
+  list[idx] = Object.assign({}, list[idx], { status });
+  map[positionId] = list;
+  bearipSaveApplicantsMap(map);
+  return list[idx];
+}
+
 // ---- Mock login / current user (no backend — nickname-only) ----
 const BEARIP_USER_KEY = 'bearip_user';
 

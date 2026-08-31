@@ -26,6 +26,61 @@ function cmGuessRole(tags) {
   return 'other';
 }
 
+const CM_APPLICANT_STATUS_LABEL = { pending: '검토 중', accepted: '수락됨', rejected: '거절됨' };
+
+function cmFormatRelativeTime(iso) {
+  const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (min < 1) return '방금 전';
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  return `${Math.floor(hr / 24)}일 전`;
+}
+
+// Renders the 지원자 확인 list for a posting the current user owns —
+// pending applicants get 승낙/거절 buttons, decided ones show a status badge.
+function cmRenderApplicantsPanel(pos, panelEl, fracEl) {
+  const applicants = bearipSeedApplicantsIfEmpty(pos.id);
+  if (!applicants.length) {
+    panelEl.innerHTML = '<div class="cm-applicants-empty">아직 지원자가 없어요.</div>';
+    return;
+  }
+  panelEl.innerHTML = applicants
+    .map((a) => {
+      const actions =
+        a.status === 'pending'
+          ? `<button type="button" class="cm-applicant-accept" data-app-id="${a.id}">승낙</button>
+             <button type="button" class="cm-applicant-reject" data-app-id="${a.id}">거절</button>`
+          : `<span class="s ${a.status}">${CM_APPLICANT_STATUS_LABEL[a.status]}</span>`;
+      return `
+        <div class="cm-applicant-row">
+          <span class="cm-applicant-name">${bearipEscapeHtml(a.name)}</span>
+          <span class="cm-applicant-time">${cmFormatRelativeTime(a.appliedAt)}</span>
+          <span class="cm-applicant-actions">${actions}</span>
+        </div>
+      `;
+    })
+    .join('');
+
+  panelEl.querySelectorAll('.cm-applicant-accept, .cm-applicant-reject').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const accepting = btn.classList.contains('cm-applicant-accept');
+      const updated = bearipUpdateApplicantStatus(pos.id, btn.dataset.appId, accepting ? 'accepted' : 'rejected');
+      if (!updated) return;
+      if (accepting) {
+        const newFilled = Math.min((pos.filled || 0) + 1, pos.count);
+        const savedPos = bearipUpdatePosition(pos.id, { filled: newFilled });
+        if (savedPos) {
+          pos.filled = savedPos.filled;
+          if (fracEl) fracEl.textContent = `${pos.filled}/${pos.count}`;
+        }
+      }
+      bearipShowToast(accepting ? '지원자를 수락했어요' : '지원자를 거절했어요');
+      cmRenderApplicantsPanel(pos, panelEl, fracEl);
+    });
+  });
+}
+
 function cmRenderPositionCard(pos) {
   const el = document.createElement('article');
   el.className = 'cm-position-card';
@@ -35,25 +90,44 @@ function cmRenderPositionCard(pos) {
   el.dataset.posId = pos.id;
   const tagsHtml = (pos.tags || []).map((t) => `<span>${t}</span>`).join('');
   const filled = pos.filled || 0;
+  const applicantCount = bearipSeedApplicantsIfEmpty(pos.id).length;
   el.innerHTML = `
-    <div class="cm-position-thumb ${pos.thumb}"></div>
-    <div class="cm-position-info">
-      <div class="cm-position-ip">${pos.ipTitle}</div>
-      <div class="cm-position-role">${pos.role} 모집</div>
-      <div class="cm-position-tags">${tagsHtml}</div>
+    <div class="cm-position-row">
+      <div class="cm-position-thumb ${pos.thumb}"></div>
+      <div class="cm-position-info">
+        <div class="cm-position-ip">${pos.ipTitle}</div>
+        <div class="cm-position-role">${pos.role} 모집</div>
+        <div class="cm-position-tags">${tagsHtml}</div>
+      </div>
+      <div class="cm-position-meta"><div class="frac">${filled}/${pos.count}</div><div class="deadline">${pos.deadlineText}</div></div>
+      <button class="cm-apply-btn">지원하기</button>
     </div>
-    <div class="cm-position-meta"><div class="frac">${filled}/${pos.count}</div><div class="deadline">${pos.deadlineText}</div></div>
-    <button class="cm-apply-btn">지원하기</button>
+    <button type="button" class="cm-applicants-toggle">지원자 확인 (${applicantCount})</button>
+    <div class="cm-applicants-panel" hidden></div>
   `;
   // Reuses crew-match.js's persistence + "나의 매치 현황" refresh so a
   // user-posted listing's apply button behaves exactly like a static one.
   const applyBtn = el.querySelector('.cm-apply-btn');
+  const fracEl = el.querySelector('.cm-position-meta .frac');
   cmSetApplyUI(applyBtn, bearipSetHas(CM_APPLY_KEY, pos.id));
   applyBtn.addEventListener('click', () => {
     if (!bearipRequireLogin('crew-match.html')) return;
     const applied = bearipSetToggle(CM_APPLY_KEY, pos.id);
     cmSetApplyUI(applyBtn, applied);
-    if (!applied) return;
+    const user = bearipGetUser();
+    if (!applied) {
+      if (user) bearipRemoveApplicantByName(pos.id, user.nickname);
+      bearipShowToast('지원을 취소했어요');
+      if (typeof cmRenderMatchStatus === 'function') cmRenderMatchStatus();
+      return;
+    }
+    if (user) {
+      bearipAddApplicant(pos.id, { id: 'app_me_' + pos.id, name: user.nickname, appliedAt: new Date().toISOString(), status: 'pending' });
+    }
+    const toggleBtn = el.querySelector('.cm-applicants-toggle');
+    const panelEl = el.querySelector('.cm-applicants-panel');
+    toggleBtn.textContent = `지원자 확인 (${bearipGetApplicants(pos.id).length})`;
+    if (!panelEl.hidden) cmRenderApplicantsPanel(pos, panelEl, fracEl);
     bearipAddNotification({
       type: 'crew',
       title: '포지션에 지원했어요',
@@ -62,6 +136,15 @@ function cmRenderPositionCard(pos) {
     });
     if (typeof cmRenderMatchStatus === 'function') cmRenderMatchStatus();
   });
+
+  const applicantsToggle = el.querySelector('.cm-applicants-toggle');
+  const applicantsPanel = el.querySelector('.cm-applicants-panel');
+  applicantsToggle.addEventListener('click', () => {
+    const opening = applicantsPanel.hidden;
+    if (opening) cmRenderApplicantsPanel(pos, applicantsPanel, fracEl);
+    applicantsPanel.hidden = !opening;
+  });
+
   return el;
 }
 

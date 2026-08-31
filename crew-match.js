@@ -5,15 +5,13 @@ const CM_APPLY_KEY = 'bearip_applied_positions';
 const CM_PROPOSE_KEY = 'bearip_proposed_creators';
 
 function cmSetApplyUI(btn, applied) {
-  btn.textContent = applied ? '지원 완료' : '지원하기';
-  btn.disabled = applied;
-  btn.style.opacity = applied ? '0.6' : '';
+  btn.textContent = applied ? '지원 취소' : '지원하기';
+  btn.classList.toggle('applied', applied);
 }
 
 function cmSetProposeUI(btn, proposed) {
-  btn.textContent = proposed ? '제안 완료' : '매치 제안';
-  btn.disabled = proposed;
-  btn.style.opacity = proposed ? '0.6' : '';
+  btn.textContent = proposed ? '제안 취소' : '매치 제안';
+  btn.classList.toggle('proposed', proposed);
 }
 
 document.querySelectorAll('.cm-apply-btn').forEach((btn) => {
@@ -30,7 +28,11 @@ document.querySelectorAll('.cm-apply-btn').forEach((btn) => {
     if (posId) {
       const applied = bearipSetToggle(CM_APPLY_KEY, posId);
       cmSetApplyUI(btn, applied);
-      if (!applied) return; // toggled back off — no notification
+      if (!applied) {
+        bearipShowToast('지원을 취소했어요');
+        if (typeof cmRenderMatchStatus === 'function') cmRenderMatchStatus();
+        return;
+      }
     } else {
       cmSetApplyUI(btn, true);
     }
@@ -57,7 +59,11 @@ document.querySelectorAll('.cm-propose-btn').forEach((btn) => {
     if (name) {
       const proposed = bearipSetToggle(CM_PROPOSE_KEY, name);
       cmSetProposeUI(btn, proposed);
-      if (!proposed) return;
+      if (!proposed) {
+        bearipShowToast('제안을 취소했어요');
+        if (typeof cmRenderMatchStatus === 'function') cmRenderMatchStatus();
+        return;
+      }
     } else {
       cmSetProposeUI(btn, true);
     }
