@@ -80,6 +80,43 @@ function renderHeader() {
   document.getElementById('currentIpChip').textContent = `📁 ${currentIP.title}`;
 }
 
+function renderPublishButton() {
+  const btn = document.getElementById('mdPublishBtn');
+  const label = document.getElementById('mdPublishBtnLabel');
+  if (!btn || !label) return;
+
+  if (currentIP.id === 'demo') {
+    btn.classList.add('locked');
+    btn.classList.remove('published');
+    label.textContent = '이미 OPEN DNA에 공개돼 있어요';
+    return;
+  }
+  btn.classList.remove('locked');
+  const isPublic = currentIP.visibility === 'public';
+  btn.classList.toggle('published', isPublic);
+  label.textContent = isPublic ? '공개됨 · 비공개로 전환' : 'OPEN DNA에 공개하기';
+}
+
+function toggleIPVisibility() {
+  if (currentIP.id === 'demo') return;
+  if (!bearipRequireLogin('my-dna.html')) return;
+  const nowPublic = currentIP.visibility !== 'public';
+  currentIP.visibility = nowPublic ? 'public' : 'private';
+  bearipUpdateIP(currentIP.id, { visibility: currentIP.visibility });
+  renderPublishButton();
+  if (nowPublic) {
+    bearipAddNotification({
+      type: 'ip',
+      title: 'OPEN DNA에 공개됐어요',
+      message: `'${currentIP.title}'가 OPEN DNA 갤러리에 공개됐어요.`,
+      link: 'open-dna.html',
+    });
+    bearipShowToast('OPEN DNA에 공개됐어요. 갤러리에서 확인해보세요.');
+  } else {
+    bearipShowToast('비공개로 전환했어요.');
+  }
+}
+
 function renderGoals() {
   document.querySelectorAll('.md-goal').forEach((btn) => {
     btn.classList.remove('active');
@@ -318,6 +355,7 @@ function persistDiscussion() {
 
 function renderAll() {
   renderHeader();
+  renderPublishButton();
   renderGoals();
   renderStatus();
   renderRoadmap();
@@ -335,6 +373,8 @@ function persistGoalChange(goal) {
 document.addEventListener('DOMContentLoaded', () => {
   loadCurrentIP();
   renderAll();
+
+  document.getElementById('mdPublishBtn').addEventListener('click', toggleIPVisibility);
 
   document.getElementById('assetsRow').addEventListener('click', (e) => {
     const delBtn = e.target.closest('.md-asset-delete');

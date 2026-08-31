@@ -96,7 +96,7 @@ document.addEventListener('click', (e) => {
   const soon = e.target.closest('.bearip-soon');
   if (soon) {
     e.preventDefault();
-    bearipShowToast('더 많은 항목은 아직 준비 중이에요');
+    bearipShowToast(soon.dataset.soonMessage || '더 많은 항목은 아직 준비 중이에요');
   }
 });
 

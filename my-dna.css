@@ -17,6 +17,18 @@
   font-size: 12px; font-weight: 700;
 }
 
+.md-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.md-publish-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border-radius: 999px; border: 1.5px solid var(--dr-purple);
+  background: var(--dr-purple); color: #fff; font-size: 12.5px; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+}
+.md-publish-btn svg { width: 14px; height: 14px; }
+.md-publish-btn.published { background: var(--dr-panel); color: #2fae63; border-color: #2fae63; }
+.md-publish-btn.locked { background: var(--dr-panel); color: var(--dr-ink-soft); border-color: var(--dr-border); cursor: default; }
+
 .md-help-btn {
   display: flex;
   align-items: center;

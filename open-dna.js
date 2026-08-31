@@ -23,7 +23,9 @@ function odSetBookmarkUI(btn, bookmarked) {
   btn.style.color = bookmarked ? 'var(--od-purple)' : 'var(--od-ink-soft)';
 }
 
-document.querySelectorAll('.od-bookmark').forEach((btn) => {
+// Shared so dynamically-inserted cards (e.g. open-dna-published.js) can wire
+// their own bookmark buttons the same way without duplicating this logic.
+function odWireBookmarkButton(btn) {
   if (btn.dataset.ip && typeof bearipSetHas === 'function') {
     odSetBookmarkUI(btn, bearipSetHas(OD_BOOKMARK_KEY, btn.dataset.ip));
   }
@@ -34,4 +36,6 @@ document.querySelectorAll('.od-bookmark').forEach((btn) => {
     const bookmarked = bearipSetToggle(OD_BOOKMARK_KEY, btn.dataset.ip);
     odSetBookmarkUI(btn, bookmarked);
   });
-});
+}
+
+document.querySelectorAll('.od-bookmark').forEach(odWireBookmarkButton);
