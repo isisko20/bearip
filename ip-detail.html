@@ -52,17 +52,17 @@
 
     <!-- Hero -->
     <section class="ipd-hero">
-      <div class="ipd-hero-bg thumb-1" style="position:absolute;inset:0"></div>
+      <div class="ipd-hero-bg thumb-1" id="ipdHeroBg" style="position:absolute;inset:0"></div>
       <div class="ipd-hero-scrim"></div>
       <div class="ipd-hero-body">
         <div class="ipd-hero-top">
-          <span class="stage">RISING</span>
-          <span class="genre">판타지 · 웹툰 · 영상</span>
+          <span class="stage" id="ipdHeroStage">RISING</span>
+          <span class="genre" id="ipdHeroGenre">판타지 · 웹툰 · 영상</span>
         </div>
-        <h1>서울 야행수선단</h1>
-        <p class="ipd-hero-tagline">밤이 숨기고, 수선단이 바로잡는다. 낮 동안 어긋난 서울의 틈을 밤마다 몰래 고쳐놓는 이들의 이야기.</p>
+        <h1 id="ipdHeroTitle">서울 야행수선단</h1>
+        <p class="ipd-hero-tagline" id="ipdHeroTagline">밤이 숨기고, 수선단이 바로잡는다. 낮 동안 어긋난 서울의 틈을 밤마다 몰래 고쳐놓는 이들의 이야기.</p>
 
-        <div class="ipd-hero-stats">
+        <div class="ipd-hero-stats" id="ipdHeroStats">
           <div class="ipd-hero-stat"><div class="label">DNA</div><div class="value">78%</div><div class="bar"><div class="bar-fill" style="width:78%"></div></div></div>
           <div class="ipd-hero-stat"><div class="label">준비도</div><div class="value">62%</div><div class="bar"><div class="bar-fill" style="width:62%"></div></div></div>
           <div class="ipd-hero-stat"><div class="label">제작 진행</div><div class="value">41%</div><div class="bar"><div class="bar-fill" style="width:41%"></div></div></div>
@@ -76,8 +76,8 @@
           </button>
           <div class="ipd-hero-foot">
             <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg><span id="ipdFollowerCount">128</span> 팔로워</span>
-            <span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.6 8.5 3 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 4 0 6.4 4 4.5 7.5C19 16.5 12 21 12 21z"/></svg>342 응원</span>
-            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg>56 활동</span>
+            <span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.6 8.5 3 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 4 0 6.4 4 4.5 7.5C19 16.5 12 21 12 21z"/></svg><span id="ipdCheerCount">342</span> 응원</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg><span id="ipdActivityCount">56</span> 활동</span>
           </div>
         </div>
       </div>
@@ -116,7 +116,7 @@
 
         <!-- 콘텐츠/회차 -->
         <section class="ipd-panel">
-          <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>콘텐츠 (3화)</h2>
+          <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>콘텐츠 (<span id="ipdEpCount">3</span>화)</h2>
           <div class="ipd-ep-list">
             <a class="ipd-ep-card" href="content-detail.html">
               <div class="ipd-ep-thumb thumb-7"><span class="badge">CHALLENGE</span></div>
@@ -163,11 +163,11 @@
 
         <div class="ipd-panel">
           <h2>IP 정보</h2>
-          <div class="ipd-info-row"><span class="k">장르</span><span class="v">판타지</span></div>
-          <div class="ipd-info-row"><span class="k">목표 포맷</span><span class="v">웹툰, 영상</span></div>
-          <div class="ipd-info-row"><span class="k">시작일</span><span class="v">2024.03.02</span></div>
-          <div class="ipd-info-row"><span class="k">공개 범위</span><span class="v">전체 공개 (참여형)</span></div>
-          <div class="ipd-info-row"><span class="k">단계</span><span class="v">RISING</span></div>
+          <div class="ipd-info-row"><span class="k">장르</span><span class="v" id="ipdInfoGenre">판타지</span></div>
+          <div class="ipd-info-row"><span class="k">목표 포맷</span><span class="v" id="ipdInfoFormat">웹툰, 영상</span></div>
+          <div class="ipd-info-row"><span class="k">시작일</span><span class="v" id="ipdInfoStart">2024.03.02</span></div>
+          <div class="ipd-info-row"><span class="k">공개 범위</span><span class="v" id="ipdInfoVis">전체 공개 (참여형)</span></div>
+          <div class="ipd-info-row"><span class="k">단계</span><span class="v" id="ipdInfoStage">RISING</span></div>
         </div>
 
         <div class="ipd-panel">

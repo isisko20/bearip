@@ -1,8 +1,8 @@
 // Renders IPs the user has published from MY DNA (ip.visibility === 'public')
 // as real cards in the "지금 성장 중인 OPEN DNA" grid, ahead of the mock
-// placeholder slots. There's no dynamic IP-detail page yet, so "IP 보기" /
-// "참여하기" honestly say so via the site-wide .bearip-soon toast pattern
-// instead of linking somewhere that doesn't exist.
+// placeholder slots. "IP 보기" / "참여하기" pass the IP id to ip-detail.html
+// via a one-shot sessionStorage flag, which ip-detail.js reads to rewrite
+// the (otherwise static, demo-only) detail page for this IP.
 
 const OD_GOAL_TAG = { webnovel: 'WEBNOVEL', webtoon: 'WEBTOON', video: 'VIDEO', multi: 'MULTI' };
 
@@ -65,8 +65,8 @@ function odBuildPublishedCard(ip, index) {
         <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg>0</span><span class="lbl">활동</span></div>
       </div>
       <div class="od-card-actions">
-        <button class="od-btn-outline bearip-soon" data-soon-message="상세 페이지는 아직 준비 중이에요">IP 보기</button>
-        <button class="od-btn-solid bearip-soon" data-soon-message="상세 페이지는 아직 준비 중이에요">참여하기</button>
+        <button class="od-btn-outline" data-view-ip="${ip.id}">IP 보기</button>
+        <button class="od-btn-solid" data-view-ip="${ip.id}">참여하기</button>
       </div>
     </div>
   `;
@@ -86,5 +86,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (firstMock) container.insertBefore(card, firstMock);
     else container.appendChild(card);
     card.querySelectorAll('.od-bookmark').forEach(odWireBookmarkButton);
+    card.querySelectorAll('[data-view-ip]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        sessionStorage.setItem('bearip_view_ip_id', btn.dataset.viewIp);
+        location.href = 'ip-detail.html';
+      });
+    });
   });
 });

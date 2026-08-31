@@ -23,7 +23,132 @@ function ipdSetApplyUI(btn, applied) {
   btn.classList.toggle('is-done', applied);
 }
 
+const IPD_GOAL_LABELS = { webnovel: '웹소설', webtoon: '웹툰', video: '영상', multi: '멀티포맷' };
+
+// Rewrites the static (서울 야행수선단) markup in place for a user-created IP,
+// if the visitor arrived here via a "IP 보기 / 참여하기" click from OPEN DNA
+// (open-dna-published.js sets this one-shot flag before navigating). There's
+// no real multi-user data for this prototype, so anything we can't honestly
+// derive from the IP itself (crew roster, past updates, published episodes)
+// is shown as an empty state instead of being left as fake demo content.
+function ipdApplyDynamicIP() {
+  const viewId = sessionStorage.getItem('bearip_view_ip_id');
+  sessionStorage.removeItem('bearip_view_ip_id');
+  if (!viewId || viewId === 'seoul-night-menders') return;
+
+  const ip = (typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : []).find((i) => i.id === viewId);
+  if (!ip) return;
+
+  const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
+  const goalLabel = IPD_GOAL_LABELS[ip.goal] || '';
+
+  document.title = `BEARIP — ${ip.title}`;
+  document.getElementById('ipdHeroTitle').textContent = ip.title;
+  document.getElementById('ipdHeroTagline').textContent = ip.logline || '아직 로그라인이 없어요.';
+  document.getElementById('ipdHeroGenre').textContent = [...(ip.genres || []), goalLabel].filter(Boolean).join(' · ') || '미지정';
+
+  const imageAsset = (ip.assets || []).find((a) => a.imageData);
+  const heroBg = document.getElementById('ipdHeroBg');
+  if (imageAsset) {
+    heroBg.classList.remove('thumb-1');
+    heroBg.style.backgroundImage = `url('${imageAsset.imageData}')`;
+    heroBg.style.backgroundSize = 'cover';
+    heroBg.style.backgroundPosition = 'center';
+  } else {
+    heroBg.className = `ipd-hero-bg thumb-${(ip.id.length % 8) + 1}`;
+  }
+
+  const stats = document.querySelectorAll('#ipdHeroStats .ipd-hero-stat');
+  const setStat = (el, value) => {
+    el.querySelector('.value').textContent = `${value}%`;
+    el.querySelector('.bar-fill').style.width = `${value}%`;
+  };
+  setStat(stats[0], ip.dnaScore || 0);
+  setStat(stats[1], ip.readinessScore || 0);
+  setStat(stats[2], ip.productionProgress || 0);
+
+  const joinBtn = document.getElementById('ipdJoinBtn');
+  joinBtn.dataset.ip = ip.id;
+  joinBtn.dataset.ipTitle = ip.title;
+  const followBtn = document.getElementById('ipdFollowBtn');
+  followBtn.dataset.ip = ip.id;
+  followBtn.dataset.ipTitle = ip.title;
+
+  // No real follower/cheer/activity tracking for user IPs yet — honest zeros
+  // rather than carrying over the demo's fixed numbers.
+  document.getElementById('ipdFollowerCount').textContent = '0';
+  document.getElementById('ipdCheerCount').textContent = '0';
+  document.getElementById('ipdActivityCount').textContent = '0';
+
+  const descEl = document.querySelector('.ipd-panel p.desc');
+  if (descEl) descEl.textContent = ip.synopsis || ip.logline || '아직 작성된 소개가 없어요.';
+
+  const user = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
+  const creatorsWrap = document.querySelector('.ipd-creators');
+  if (creatorsWrap) {
+    creatorsWrap.innerHTML = `
+      <div class="ipd-creator-row">
+        <div class="ipd-creator-avatar thumb-2"></div>
+        <div class="ipd-creator-info"><div class="n">${esc(user ? user.nickname : '나')}</div><div class="r">오너</div></div>
+        <span class="ipd-creator-badge">오너</span>
+      </div>
+      <div class="ipd-creators-empty">아직 합류한 크루가 없어요. CREW MATCH에서 모집해보세요.</div>
+    `;
+  }
+
+  document.getElementById('ipdEpCount').textContent = '0';
+  const epList = document.querySelector('.ipd-ep-list');
+  if (epList) epList.innerHTML = '<div class="ipd-ep-empty">아직 등록된 회차가 없어요.</div>';
+
+  const feed = document.querySelector('.ipd-feed');
+  if (feed) {
+    if (ip.createdAt) {
+      const d = new Date(ip.createdAt);
+      const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+      feed.innerHTML = `<div class="ipd-feed-item"><div class="ipd-feed-dot"></div><div class="ipd-feed-text"><div class="t">IP가 생성됐어요</div><div class="d">${dateStr}</div></div></div>`;
+    } else {
+      feed.innerHTML = '<div class="ipd-feed-empty">아직 업데이트가 없어요.</div>';
+    }
+  }
+
+  const recruitPanel = document.querySelector('.ipd-recruit-row') ? document.querySelector('.ipd-recruit-row').closest('.ipd-panel') : null;
+  if (recruitPanel) {
+    recruitPanel.querySelectorAll('.ipd-recruit-row').forEach((row) => row.remove());
+    const positions = (typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : []).filter((p) => p.ipTitle === ip.title);
+    if (positions.length === 0) {
+      recruitPanel.insertAdjacentHTML('beforeend', '<div class="ipd-recruit-empty">아직 모집 중인 포지션이 없어요.</div>');
+    } else {
+      positions.forEach((pos) => {
+        recruitPanel.insertAdjacentHTML(
+          'beforeend',
+          `<div class="ipd-recruit-row">
+            <div class="ipd-recruit-info"><div class="r">${esc(pos.role)}</div><div class="f">${pos.filled || 0}/${pos.count} 참여</div></div>
+            <button class="ipd-apply-btn" data-pos="${esc(pos.id)}" data-pos-title="${esc(pos.role)}" data-ip-title="${esc(ip.title)}">지원하기</button>
+          </div>`
+        );
+      });
+    }
+  }
+
+  const infoGenre = document.getElementById('ipdInfoGenre');
+  if (infoGenre) infoGenre.textContent = (ip.genres && ip.genres[0]) || '미지정';
+  const infoFormat = document.getElementById('ipdInfoFormat');
+  if (infoFormat) infoFormat.textContent = goalLabel || '미지정';
+  const infoStart = document.getElementById('ipdInfoStart');
+  if (infoStart) {
+    infoStart.textContent = ip.createdAt
+      ? new Date(ip.createdAt).toISOString().slice(0, 10).replace(/-/g, '.')
+      : '-';
+  }
+  const infoVis = document.getElementById('ipdInfoVis');
+  if (infoVis) infoVis.textContent = '전체 공개 (참여형)';
+  const infoStage = document.getElementById('ipdInfoStage');
+  if (infoStage) infoStage.textContent = 'RISING';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  ipdApplyDynamicIP();
+
   const joinBtn = document.getElementById('ipdJoinBtn');
   const followBtn = document.getElementById('ipdFollowBtn');
   const followerCountEl = document.getElementById('ipdFollowerCount');
