@@ -252,7 +252,7 @@ function bearipSeedNotificationsIfEmpty() {
   const seed = [
     {
       type: 'system',
-      title: 'BEARIP에 오신 걸 환영해요',
+      title: 'Thinkit에 오신 걸 환영해요',
       message: '프로필을 채우고 CREW MATCH에서 함께할 크루를 찾아보세요.',
       link: 'profile.html',
       minutesAgo: 60 * 24 * 3,

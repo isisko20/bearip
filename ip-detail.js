@@ -42,7 +42,7 @@ function ipdApplyDynamicIP() {
   const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
   const goalLabel = IPD_GOAL_LABELS[ip.goal] || '';
 
-  document.title = `BEARIP — ${ip.title}`;
+  document.title = `Thinkit — ${ip.title}`;
   document.getElementById('ipdHeroTitle').textContent = ip.title;
   document.getElementById('ipdHeroTagline').textContent = ip.logline || '아직 로그라인이 없어요.';
   document.getElementById('ipdHeroGenre').textContent = [...(ip.genres || []), goalLabel].filter(Boolean).join(' · ') || '미지정';
