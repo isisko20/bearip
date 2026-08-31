@@ -61,6 +61,7 @@
 .cd-creator-info .n { font-size: 13.5px; font-weight: 700; }
 .cd-creator-info .r { font-size: 11px; color: var(--cr-ink-soft); }
 .cd-follow-btn { font-size: 11.5px; font-weight: 700; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--cr-border); background: none; color: #fff; cursor: pointer; }
+.cd-follow-btn.following { background: var(--cr-purple); border-color: var(--cr-purple); }
 
 .cd-ep-strip { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
 .cd-ep-strip::-webkit-scrollbar { display: none; }

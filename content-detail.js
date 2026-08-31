@@ -39,6 +39,32 @@ document.addEventListener('DOMContentLoaded', () => {
     bookmarkBtn.classList.toggle('active', bookmarked);
   });
 
+  // No real video file behind this demo episode — an honest "not yet" beat
+  // instead of a silent click on the most prominent button on the page.
+  const player = document.getElementById('player');
+  if (player) {
+    player.addEventListener('click', () => {
+      bearipShowToast('영상 재생 기능은 아직 준비 중이에요');
+    });
+  }
+
+  // Follows the same creator/IP relationship as ip-detail.js's follow button
+  // (shared key + id), so following here and there stay in sync.
+  const CD_FOLLOW_KEY = 'bearip_followed_ips';
+  const CD_FOLLOW_ID = 'seoul-night-menders';
+  const followBtn = document.getElementById('cdFollowBtn');
+  if (followBtn) {
+    const setFollowUI = (following) => {
+      followBtn.textContent = following ? '팔로잉' : '팔로우';
+      followBtn.classList.toggle('following', following);
+    };
+    setFollowUI(bearipSetHas(CD_FOLLOW_KEY, CD_FOLLOW_ID));
+    followBtn.addEventListener('click', () => {
+      if (!bearipRequireLogin('content-detail.html')) return;
+      setFollowUI(bearipSetToggle(CD_FOLLOW_KEY, CD_FOLLOW_ID));
+    });
+  }
+
   shareBtn.addEventListener('click', () => {
     const url = location.href;
     if (navigator.clipboard && navigator.clipboard.writeText) {

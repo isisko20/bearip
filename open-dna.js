@@ -39,3 +39,26 @@ function odWireBookmarkButton(btn) {
 }
 
 document.querySelectorAll('.od-bookmark').forEach(odWireBookmarkButton);
+
+// Sort dropdown — reorders real .od-card elements by real per-card data
+// attributes (set in the HTML for the demo card, and in
+// open-dna-published.js for user-published cards). .mock-slot placeholders
+// have no real data to sort by, so they always stay pinned at the end.
+const odSortSelect = document.getElementById('odSortSelect');
+if (odSortSelect) {
+  const OD_SORTERS = {
+    latest: (a, b) => (b.dataset.created || '').localeCompare(a.dataset.created || ''),
+    popular: (a, b) => (parseInt(b.dataset.followers, 10) || 0) - (parseInt(a.dataset.followers, 10) || 0),
+    dna: (a, b) => (parseInt(b.dataset.dna, 10) || 0) - (parseInt(a.dataset.dna, 10) || 0),
+    recruiting: (a, b) => (parseInt(b.dataset.recruiting, 10) || 0) - (parseInt(a.dataset.recruiting, 10) || 0),
+  };
+  odSortSelect.addEventListener('change', () => {
+    const container = document.querySelector('.od-cards');
+    const sorter = OD_SORTERS[odSortSelect.value];
+    if (!container || !sorter) return;
+    const cards = [...container.querySelectorAll('.od-card')].sort(sorter);
+    const mocks = [...container.querySelectorAll('.mock-slot')];
+    cards.forEach((c) => container.appendChild(c));
+    mocks.forEach((m) => container.appendChild(m));
+  });
+}

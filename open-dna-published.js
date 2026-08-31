@@ -37,9 +37,15 @@ function odBuildPublishedCard(ip, index) {
     latestWorkHtml = `<div class="od-latest-label">Latest Work</div><div class="od-latest-row">${thumbs}${more}</div>`;
   }
 
+  const isRecruiting = (typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : []).some((p) => p.ipTitle === ip.title);
+
   const card = document.createElement('article');
   card.className = 'od-card';
   card.dataset.ipId = ip.id;
+  card.dataset.created = (ip.createdAt || '').slice(0, 10) || '1970-01-01';
+  card.dataset.dna = dna;
+  card.dataset.followers = 0;
+  card.dataset.recruiting = isRecruiting ? '1' : '0';
   card.innerHTML = `
     <div class="od-card-banner ${bannerClass}"${bannerStyle}>
       <span class="od-stage-badge rising">MY IP</span>
