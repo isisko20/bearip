@@ -352,11 +352,11 @@ html, body {
   background: radial-gradient(closest-side, rgba(42,36,29,0.16), transparent 75%);
 }
 
-.bear {
+.brand-spark {
   position: relative;
   z-index: 1;
-  width: 200px;
-  filter: drop-shadow(0 18px 20px rgba(42,36,29,0.18));
+  width: 110px;
+  filter: drop-shadow(0 12px 16px rgba(42,36,29,0.18));
 }
 
 .hero-note {
