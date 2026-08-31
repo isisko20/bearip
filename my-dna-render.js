@@ -218,6 +218,14 @@ function renderStatus() {
   document.getElementById('productionBar').style.width = currentIP.productionProgress + '%';
 }
 
+function jumpToRoadmap() {
+  const panel = document.getElementById('roadmapContainer').closest('.md-panel');
+  if (!panel) return;
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  panel.classList.add('flash-highlight');
+  setTimeout(() => panel.classList.remove('flash-highlight'), 900);
+}
+
 function renderRoadmap() {
   document.getElementById('roadmapTitle').textContent = `${GOAL_LABELS[currentIP.goal]} 개발 맵`;
   document.getElementById('roadmapGoalBadge').textContent = `선택한 목표: ${GOAL_LABELS[currentIP.goal]}`;
@@ -228,6 +236,8 @@ function renderRoadmap() {
   currentIP.roadmap.forEach((step, i) => {
     const stepEl = document.createElement('div');
     stepEl.className = 'md-road-step' + (step.status === 'done' ? ' done' : step.status === 'progress' ? ' progress' : '');
+    stepEl.dataset.index = i;
+    stepEl.tabIndex = 0;
 
     const isRing = step.status === 'progress';
     const wrapAttrs = isRing ? ` style="--p:${step.progress}"` : '';
@@ -248,6 +258,81 @@ function renderRoadmap() {
       container.insertAdjacentHTML('beforeend', ARROW_HTML);
     }
   });
+}
+
+function recomputeProductionProgress() {
+  const steps = currentIP.roadmap || [];
+  if (!steps.length) return;
+  const avg = Math.round(steps.reduce((sum, s) => sum + (s.progress || 0), 0) / steps.length);
+  currentIP.productionProgress = avg;
+  if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { productionProgress: avg });
+}
+
+const ROAD_EDIT_OPTIONS = [
+  { status: 'todo', progress: 0, label: '시작 전' },
+  { status: 'progress', progress: 25, label: '진행 중 25%' },
+  { status: 'progress', progress: 50, label: '진행 중 50%' },
+  { status: 'progress', progress: 75, label: '진행 중 75%' },
+  { status: 'done', progress: 100, label: '완료' },
+];
+
+function ensureRoadEditOverlay() {
+  let overlay = document.getElementById('roadEditOverlay');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.className = 'md-road-edit-overlay';
+  overlay.id = 'roadEditOverlay';
+  overlay.hidden = true;
+  overlay.innerHTML = `
+    <div class="md-road-edit-box">
+      <div class="md-road-edit-head">
+        <span id="roadEditTitle"></span>
+        <button type="button" class="md-road-edit-close" id="roadEditClose" aria-label="닫기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="md-road-edit-options" id="roadEditOptions"></div>
+    </div>
+  `;
+  (document.querySelector('.dna-app') || document.body).appendChild(overlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeRoadEdit();
+  });
+  document.getElementById('roadEditClose').addEventListener('click', closeRoadEdit);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.hidden) closeRoadEdit();
+  });
+  return overlay;
+}
+
+function closeRoadEdit() {
+  const overlay = document.getElementById('roadEditOverlay');
+  if (overlay) overlay.hidden = true;
+}
+
+function openRoadEdit(index) {
+  const step = (currentIP.roadmap || [])[index];
+  if (!step) return;
+  const overlay = ensureRoadEditOverlay();
+  document.getElementById('roadEditTitle').textContent = step.label.replace(/<br>/g, ' ');
+  const optionsWrap = document.getElementById('roadEditOptions');
+  optionsWrap.innerHTML = ROAD_EDIT_OPTIONS.map((opt) => {
+    const isCurrent = opt.status === step.status && opt.progress === step.progress;
+    return `<button type="button" class="md-road-edit-opt${isCurrent ? ' active' : ''}" data-status="${opt.status}" data-progress="${opt.progress}">${opt.label}</button>`;
+  }).join('');
+  optionsWrap.querySelectorAll('.md-road-edit-opt').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      currentIP.roadmap[index].status = btn.dataset.status;
+      currentIP.roadmap[index].progress = parseInt(btn.dataset.progress, 10);
+      if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { roadmap: currentIP.roadmap });
+      recomputeProductionProgress();
+      renderRoadmap();
+      renderStatus();
+      closeRoadEdit();
+      bearipShowToast('진행 상황을 업데이트했어요');
+    });
+  });
+  overlay.hidden = false;
 }
 
 function renderAssets() {
@@ -464,6 +549,22 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeIpSwitcher();
+  });
+
+  document.querySelectorAll('.md-status-card').forEach((card) => {
+    card.addEventListener('click', jumpToRoadmap);
+  });
+
+  document.getElementById('roadmapContainer').addEventListener('click', (e) => {
+    const step = e.target.closest('.md-road-step');
+    if (step) openRoadEdit(parseInt(step.dataset.index, 10));
+  });
+  document.getElementById('roadmapContainer').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const step = e.target.closest('.md-road-step');
+    if (!step) return;
+    e.preventDefault();
+    openRoadEdit(parseInt(step.dataset.index, 10));
   });
 
   document.getElementById('assetsRow').addEventListener('click', (e) => {

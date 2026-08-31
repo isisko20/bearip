@@ -117,7 +117,9 @@
   border-radius: var(--dr-radius);
   padding: 22px;
   box-shadow: var(--dr-shadow);
+  transition: box-shadow 0.2s;
 }
+.md-panel.flash-highlight { box-shadow: 0 0 0 3px var(--dr-purple); }
 
 /* ---- Goal selector ---- */
 .md-goals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
@@ -157,7 +159,8 @@
 
 /* ---- IP status cards ---- */
 .md-status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.md-status-card { border: 1px solid var(--dr-border); border-radius: 18px; padding: 18px; }
+.md-status-card { border: 1px solid var(--dr-border); border-radius: 18px; padding: 18px; cursor: pointer; transition: border-color 0.15s; }
+.md-status-card:hover { border-color: var(--dr-purple); }
 .md-status-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
 .md-status-left { display: flex; align-items: center; gap: 12px; }
 .md-status-ic { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -180,9 +183,35 @@
 
 /* ---- Roadmap ---- */
 .md-roadmap { display: flex; align-items: flex-start; overflow-x: auto; padding: 6px 2px 4px; }
-.md-road-step { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 94px; flex-shrink: 0; text-align: center; }
+.md-road-step { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 94px; flex-shrink: 0; text-align: center; cursor: pointer; border-radius: 12px; padding: 6px 4px; transition: background 0.15s; }
+.md-road-step:hover, .md-road-step:focus-visible { background: var(--dr-bg-soft); outline: none; }
 .md-road-arrow { width: 24px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--dr-border); margin-top: 26px; }
 .md-road-arrow svg { width: 15px; height: 15px; }
+
+.md-road-edit-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(20,16,30,0.5);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.md-road-edit-box {
+  background: var(--dr-panel); border-radius: 16px; padding: 18px;
+  max-width: 340px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.md-road-edit-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.md-road-edit-head span { font-size: 14px; font-weight: 800; color: var(--dr-ink); }
+.md-road-edit-close {
+  width: 26px; height: 26px; border-radius: 50%; border: none; background: var(--dr-bg);
+  color: var(--dr-ink-soft); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+}
+.md-road-edit-close:hover { background: var(--dr-border); color: var(--dr-ink); }
+.md-road-edit-close svg { width: 13px; height: 13px; }
+.md-road-edit-options { display: flex; flex-direction: column; gap: 8px; }
+.md-road-edit-opt {
+  padding: 10px 14px; border-radius: 10px; border: 1px solid var(--dr-border); background: var(--dr-bg);
+  font-size: 12.5px; font-weight: 700; color: var(--dr-ink); text-align: left; cursor: pointer; font-family: inherit;
+}
+.md-road-edit-opt:hover { border-color: var(--dr-purple); }
+.md-road-edit-opt.active { background: var(--dr-active-bg); border-color: var(--dr-purple); color: var(--dr-purple); }
 
 .md-road-ic-wrap { position: relative; width: 52px; height: 52px; }
 .md-road-ic {

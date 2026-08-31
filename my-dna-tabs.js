@@ -46,7 +46,22 @@ document.querySelectorAll('.md-need-actions .md-pill-btn').forEach((btn) => {
       location.href = 'crew-match.html';
       return;
     }
-    const label = btn.classList.contains('ai') ? 'AI와 만들기' : '직접 작업하기';
-    bearipShowToast(`${label} 기능은 아직 준비 중이에요`);
+    if (btn.classList.contains('ai')) {
+      bearipShowToast('AI와 만들기 기능은 아직 준비 중이에요');
+      return;
+    }
+    // "내가 직접" — jump to ASSETS and open the upload form, pre-filled with
+    // this need's title so the resulting asset stays traceable to the need.
+    const needCard = btn.closest('.md-need-card');
+    const needTitle = needCard ? needCard.querySelector('.md-need-title').textContent.trim() : '';
+    const assetsTab = document.querySelector('#mdTabs [data-tab-target="assets"]');
+    if (assetsTab) assetsTab.click();
+    const tile = document.getElementById('assetAddTile');
+    if (tile && !tile.querySelector('.md-asset-add-form')) tile.click();
+    const titleInput = document.getElementById('assetTitleInput');
+    if (titleInput) titleInput.value = needTitle;
+    const typeSelect = document.getElementById('assetTypeSelect');
+    if (typeSelect && needCard && needCard.dataset.assetType) typeSelect.value = needCard.dataset.assetType;
+    if (tile) tile.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
 });
