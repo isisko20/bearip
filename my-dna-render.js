@@ -276,6 +276,8 @@ const ROAD_EDIT_OPTIONS = [
   { status: 'done', progress: 100, label: '완료' },
 ];
 
+let roadEditIndex = null;
+
 function ensureRoadEditOverlay() {
   let overlay = document.getElementById('roadEditOverlay');
   if (overlay) return overlay;
@@ -295,10 +297,26 @@ function ensureRoadEditOverlay() {
     </div>
   `;
   (document.querySelector('.dna-app') || document.body).appendChild(overlay);
+  // Everything delegated on the overlay itself, attached exactly once, so
+  // none of it depends on a freshly-rebuilt child element having been wired
+  // correctly on this particular open — closest() also gives the small close
+  // icon a more forgiving click target than its own bounding box.
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) closeRoadEdit();
+    if (e.target === overlay || e.target.closest('#roadEditClose')) {
+      closeRoadEdit();
+      return;
+    }
+    const optBtn = e.target.closest('.md-road-edit-opt');
+    if (!optBtn || roadEditIndex === null) return;
+    currentIP.roadmap[roadEditIndex].status = optBtn.dataset.status;
+    currentIP.roadmap[roadEditIndex].progress = parseInt(optBtn.dataset.progress, 10);
+    if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { roadmap: currentIP.roadmap });
+    recomputeProductionProgress();
+    renderRoadmap();
+    renderStatus();
+    closeRoadEdit();
+    bearipShowToast('진행 상황을 업데이트했어요');
   });
-  document.getElementById('roadEditClose').addEventListener('click', closeRoadEdit);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !overlay.hidden) closeRoadEdit();
   });
@@ -308,30 +326,20 @@ function ensureRoadEditOverlay() {
 function closeRoadEdit() {
   const overlay = document.getElementById('roadEditOverlay');
   if (overlay) overlay.hidden = true;
+  roadEditIndex = null;
 }
 
 function openRoadEdit(index) {
   const step = (currentIP.roadmap || [])[index];
   if (!step) return;
   const overlay = ensureRoadEditOverlay();
+  roadEditIndex = index;
   document.getElementById('roadEditTitle').textContent = step.label.replace(/<br>/g, ' ');
   const optionsWrap = document.getElementById('roadEditOptions');
   optionsWrap.innerHTML = ROAD_EDIT_OPTIONS.map((opt) => {
     const isCurrent = opt.status === step.status && opt.progress === step.progress;
     return `<button type="button" class="md-road-edit-opt${isCurrent ? ' active' : ''}" data-status="${opt.status}" data-progress="${opt.progress}">${opt.label}</button>`;
   }).join('');
-  optionsWrap.querySelectorAll('.md-road-edit-opt').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      currentIP.roadmap[index].status = btn.dataset.status;
-      currentIP.roadmap[index].progress = parseInt(btn.dataset.progress, 10);
-      if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { roadmap: currentIP.roadmap });
-      recomputeProductionProgress();
-      renderRoadmap();
-      renderStatus();
-      closeRoadEdit();
-      bearipShowToast('진행 상황을 업데이트했어요');
-    });
-  });
   overlay.hidden = false;
 }
 

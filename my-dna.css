@@ -202,7 +202,7 @@
 .md-road-edit-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .md-road-edit-head span { font-size: 14px; font-weight: 800; color: var(--dr-ink); }
 .md-road-edit-close {
-  width: 26px; height: 26px; border-radius: 50%; border: none; background: var(--dr-bg);
+  width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--dr-bg);
   color: var(--dr-ink-soft); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
 }
 .md-road-edit-close:hover { background: var(--dr-border); color: var(--dr-ink); }
