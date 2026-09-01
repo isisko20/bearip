@@ -22,6 +22,7 @@ function odBuildPublishedCard(ip, index) {
   const byline = bylineParts.join(' · ');
 
   const formatTag = OD_GOAL_TAG[ip.goal] || 'IP';
+  if (typeof bearipEnsureDnaBreakdown === 'function') bearipEnsureDnaBreakdown(ip);
   const dna = ip.dnaScore || 0;
   const readiness = ip.readinessScore || 0;
   const production = ip.productionProgress || 0;
@@ -60,7 +61,7 @@ function odBuildPublishedCard(ip, index) {
       <p class="od-card-tagline">${esc(ip.logline || '아직 로그라인이 없어요')}</p>
       <div class="od-format-tags"><span class="od-format-tag">${formatTag}</span></div>
       <div class="od-stat-row">
-        <div class="od-stat"><div class="label">DNA</div><div class="value">${dna}%</div><div class="bar"><div class="bar-fill" style="width:${dna}%"></div></div></div>
+        <button type="button" class="od-stat od-stat-dna" data-dna-report="${ip.id}"><div class="label">DNA</div><div class="value">${dna}%</div><div class="bar"><div class="bar-fill" style="width:${dna}%"></div></div></button>
         <div class="od-stat"><div class="label">준비도</div><div class="value">${readiness}%</div><div class="bar"><div class="bar-fill" style="width:${readiness}%"></div></div></div>
         <div class="od-stat"><div class="label">제작 진행</div><div class="value">${production}%</div><div class="bar"><div class="bar-fill" style="width:${production}%"></div></div></div>
       </div>

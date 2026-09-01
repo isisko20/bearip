@@ -32,3 +32,70 @@ document.addEventListener('DOMContentLoaded', () => {
     ipCountStat.textContent = base + ips.length;
   }
 });
+
+// "IP DNA 현황" summary — shows the 6-category breakdown (shared with MY DNA
+// and OPEN DNA via storage.js) for the user's most recently created real IP.
+// With no real IPs yet, shows a "Create Your Contents" empty state instead
+// of demo numbers, since there's nothing actually in progress to report.
+function renderDnaStatus() {
+  const body = document.getElementById('drDnaStatusBody');
+  if (!body || typeof bearipLoadIPs !== 'function') return;
+
+  const ips = bearipLoadIPs();
+  const subEl = document.getElementById('drDnaStatusSub');
+
+  if (!ips.length) {
+    if (subEl) subEl.textContent = '아직 진행 중인 IP가 없어요';
+    body.innerHTML = `
+      <div class="dr-dna-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        <div class="t">아직 만든 IP가 없어요</div>
+        <div class="s">첫 IP를 만들면 항목별 완성도를 여기서 확인할 수 있어요.</div>
+        <button type="button" class="btn" id="drDnaEmptyCreateBtn">Create Your Contents</button>
+      </div>
+    `;
+    const createBtn = document.getElementById('drDnaEmptyCreateBtn');
+    if (createBtn) {
+      createBtn.addEventListener('click', () => {
+        if (typeof bearipRequireLogin === 'function' && !bearipRequireLogin('new-ip.html')) return;
+        location.href = 'new-ip.html';
+      });
+    }
+    return;
+  }
+
+  const ip = ips[0]; // bearipAddIP unshifts, so index 0 is the most recent
+  bearipEnsureDnaBreakdown(ip);
+  if (subEl) subEl.textContent = `'${ip.title || '제목 없는 IP'}'의 항목별 완성도예요`;
+
+  const tilesHtml = BEARIP_DNA_CATEGORIES.map((cat, i) => {
+    const value = (ip.dnaBreakdown && ip.dnaBreakdown[cat.key]) || 0;
+    return `
+      <div class="dr-dna-tile">
+        <div class="dr-dna-tile-ic">${cat.icon}</div>
+        <div class="dr-dna-tile-num">0${i + 1}</div>
+        <div class="dr-dna-tile-label">${cat.label}</div>
+        <div class="dr-dna-tile-value">${value}%</div>
+        <div class="dr-dna-tile-tip">${bearipDnaTip(cat.key, value)}</div>
+      </div>
+    `;
+  }).join('');
+
+  body.innerHTML = `
+    <div class="dr-dna-body">
+      <div class="dr-dna-tiles">${tilesHtml}</div>
+      <div class="dr-dna-score-panel">
+        <div class="dr-dna-score-ring" style="--p:${ip.dnaScore}">
+          <div class="dr-dna-score-ring-inner">
+            <span class="v">${ip.dnaScore}%</span>
+            <span class="t">${bearipDnaScoreTier(ip.dnaScore)}</span>
+          </div>
+        </div>
+        <p class="dr-dna-score-hint">6개 항목의 평균으로 계산돼요.</p>
+        <a class="dr-dna-status-link" href="my-dna.html">MY DNA에서 자세히 보기 →</a>
+      </div>
+    </div>
+  `;
+}
+
+document.addEventListener('DOMContentLoaded', renderDnaStatus);

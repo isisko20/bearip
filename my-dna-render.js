@@ -29,7 +29,7 @@ const DEMO_IP = {
   title: '서울 야행수선단',
   goal: 'webtoon',
   dnaScore: 68,
-  dnaBreakdown: { concept: 90, world: 65, character: 85, story: 55, visual: 75, assets: 40 },
+  dnaBreakdown: { ...BEARIP_DEMO_DNA_BREAKDOWN },
   readinessScore: 57,
   productionProgress: 23,
   roadmap: [
@@ -76,16 +76,9 @@ function loadCurrentIP() {
   const stored = typeof bearipGetCurrentIP === 'function' ? bearipGetCurrentIP() : null;
   currentIP = stored || DEMO_IP;
   // Older IPs (created before the DNA breakdown feature) only have a single
-  // dnaScore number — seed all 6 categories from it so nothing looks broken,
-  // then let the score itself become the derived average going forward.
-  if (!currentIP.dnaBreakdown) {
-    const seed = currentIP.dnaScore || 0;
-    currentIP.dnaBreakdown = { concept: seed, world: seed, character: seed, story: seed, visual: seed, assets: seed };
-    recomputeDnaScore();
-    if (currentIP.id !== 'demo' && typeof bearipUpdateIP === 'function') {
-      bearipUpdateIP(currentIP.id, { dnaBreakdown: currentIP.dnaBreakdown, dnaScore: currentIP.dnaScore });
-    }
-  }
+  // dnaScore number — this seeds all 6 categories from it so nothing looks
+  // broken, then the score itself becomes the derived average going forward.
+  bearipEnsureDnaBreakdown(currentIP);
 }
 
 function renderHeader() {
@@ -283,46 +276,14 @@ function jumpToRoadmap() {
 
 const MD_SCORE_LABELS = { dnaScore: 'DNA SCORE', readinessScore: 'READINESS SCORE (준비도)' };
 
-const MD_DNA_CATEGORIES = [
-  { key: 'concept', label: 'CONCEPT', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg>' },
-  { key: 'world', label: 'WORLD', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18 15 15 0 010-18z"/></svg>' },
-  { key: 'character', label: 'CHARACTER', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M2.5 20c0-3.4 2.8-5.6 6.5-5.6s6.5 2.2 6.5 5.6"/><path d="M15.5 14.6c2 .2 3.6 1.7 4 3.6"/></svg>' },
-  { key: 'story', label: 'STORY / CANON', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5C4 3.7 4.7 3 5.5 3H18a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2z"/><path d="M6 3v18M9 8h7M9 12h7"/></svg>' },
-  { key: 'visual', label: 'VISUAL', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 100 18c1.1 0 2-.9 2-2 0-.6-.2-1-.5-1.4-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 004-4c0-4.4-4-7.5-9-7.5z"/><circle cx="7.5" cy="10.5" r="1.1" fill="currentColor"/><circle cx="11" cy="7.5" r="1.1" fill="currentColor"/><circle cx="15" cy="8.5" r="1.1" fill="currentColor"/></svg>' },
-  { key: 'assets', label: 'WORLD ASSETS', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>' },
-];
-
-const MD_DNA_TIPS = {
-  concept: { high: '세계관의 핵심 컨셉이 잘 정리되어 있어요!', mid: '핵심 컨셉을 조금 더 다듬어보세요.', low: '핵심 컨셉 정리가 필요해요.' },
-  world: { high: '세계의 규칙과 배경이 탄탄해요!', mid: '세계의 규칙과 배경을 더 구체화해보세요.', low: '세계관 설정이 필요해요.' },
-  character: { high: '캐릭터 설정이 탄탄해요! 관계도를 확장해보세요.', mid: '캐릭터 관계도를 확장해보세요.', low: '캐릭터 설정이 필요해요.' },
-  story: { high: '메인 플롯과 에피소드 구성이 탄탄해요!', mid: '메인 플롯과 에피소드 구상이 필요해요.', low: '스토리 라인 정리가 필요해요.' },
-  visual: { high: '비주얼 스타일이 잘 정립되어 있어요!', mid: '비주얼 스타일을 더 다듬어보세요.', low: '비주얼 스타일 정립이 필요해요.' },
-  assets: { high: '장소, 소품, 상징이 잘 채워져 있어요!', mid: '장소, 소품, 상징을 더 채워보세요.', low: '월드 자산 정리가 필요해요.' },
-};
-
-function mdDnaTip(key, value) {
-  const tier = value >= 70 ? 'high' : value >= 40 ? 'mid' : 'low';
-  return (MD_DNA_TIPS[key] && MD_DNA_TIPS[key][tier]) || '';
-}
-
-function mdDnaScoreTier(score) {
-  if (score >= 80) return 'Great!';
-  if (score >= 60) return 'Good!';
-  if (score >= 40) return 'Fair';
-  return 'Just Started';
-}
-
-// DNA SCORE is the average of the 6 breakdown categories — it is no longer
-// set directly. Each category is still a plain manual number for now, so a
-// future 관리자 승인 flow or AI evaluation can fill the same fields later
-// without changing this UI's data model, just which code path writes to it.
+// DNA SCORE is the average of the 6 breakdown categories (BEARIP_DNA_CATEGORIES
+// in storage.js, shared with OPEN DNA and DNA ROOM home) — it is no longer set
+// directly. Each category is still a plain manual number for now, so a future
+// 관리자 승인 flow or AI evaluation can fill the same fields later without
+// changing this UI's data model, just which code path writes to it.
 function recomputeDnaScore() {
-  const bd = currentIP.dnaBreakdown;
-  if (!bd) return;
-  const keys = MD_DNA_CATEGORIES.map((c) => c.key);
-  const avg = Math.round(keys.reduce((sum, k) => sum + (bd[k] || 0), 0) / keys.length);
-  currentIP.dnaScore = avg;
+  if (!currentIP.dnaBreakdown) return;
+  currentIP.dnaScore = bearipRecomputeDnaScore(currentIP.dnaBreakdown);
 }
 
 function ensureDnaReportOverlay() {
@@ -376,7 +337,7 @@ function closeDnaReport() {
 function renderDnaReportTiles() {
   const wrap = document.getElementById('dnaReportTiles');
   if (!wrap) return;
-  wrap.innerHTML = MD_DNA_CATEGORIES.map((cat, i) => {
+  wrap.innerHTML = BEARIP_DNA_CATEGORIES.map((cat, i) => {
     const value = (currentIP.dnaBreakdown && currentIP.dnaBreakdown[cat.key]) || 0;
     return `
       <button type="button" class="md-dna-tile" data-key="${cat.key}">
@@ -384,14 +345,14 @@ function renderDnaReportTiles() {
         <div class="md-dna-tile-num">0${i + 1}</div>
         <div class="md-dna-tile-label">${cat.label}</div>
         <div class="md-dna-tile-value">${value}%</div>
-        <div class="md-dna-tile-tip">${mdDnaTip(cat.key, value)}</div>
+        <div class="md-dna-tile-tip">${bearipDnaTip(cat.key, value)}</div>
       </button>
     `;
   }).join('');
   const scoreValueEl = document.getElementById('dnaReportScoreValue');
   const scoreTierEl = document.getElementById('dnaReportScoreTier');
   if (scoreValueEl) scoreValueEl.textContent = currentIP.dnaScore + '%';
-  if (scoreTierEl) scoreTierEl.textContent = mdDnaScoreTier(currentIP.dnaScore);
+  if (scoreTierEl) scoreTierEl.textContent = bearipDnaScoreTier(currentIP.dnaScore);
   const ring = document.getElementById('dnaReportRing');
   if (ring) ring.style.setProperty('--p', currentIP.dnaScore);
 }
@@ -473,7 +434,7 @@ function openScoreEdit(field) {
   let current;
   if (field.startsWith('bd:')) {
     const key = field.slice(3);
-    const cat = MD_DNA_CATEGORIES.find((c) => c.key === key);
+    const cat = BEARIP_DNA_CATEGORIES.find((c) => c.key === key);
     label = cat ? cat.label : key;
     current = (currentIP.dnaBreakdown && currentIP.dnaBreakdown[key]) || 0;
   } else {

@@ -96,6 +96,64 @@ function bearipUpdateIP(id, patch) {
   return ips[idx];
 }
 
+// ---- Shared "IP DNA 현황" breakdown metadata ----
+// Used by MY DNA (my-dna-render.js), OPEN DNA's DNA report popup, and the
+// DNA ROOM home summary, so all three stay in sync with one definition.
+const BEARIP_DNA_CATEGORIES = [
+  { key: 'concept', label: 'CONCEPT', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/></svg>' },
+  { key: 'world', label: 'WORLD', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18 15 15 0 010-18z"/></svg>' },
+  { key: 'character', label: 'CHARACTER', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M2.5 20c0-3.4 2.8-5.6 6.5-5.6s6.5 2.2 6.5 5.6"/><path d="M15.5 14.6c2 .2 3.6 1.7 4 3.6"/></svg>' },
+  { key: 'story', label: 'STORY / CANON', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5C4 3.7 4.7 3 5.5 3H18a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2z"/><path d="M6 3v18M9 8h7M9 12h7"/></svg>' },
+  { key: 'visual', label: 'VISUAL', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 100 18c1.1 0 2-.9 2-2 0-.6-.2-1-.5-1.4-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 004-4c0-4.4-4-7.5-9-7.5z"/><circle cx="7.5" cy="10.5" r="1.1" fill="currentColor"/><circle cx="11" cy="7.5" r="1.1" fill="currentColor"/><circle cx="15" cy="8.5" r="1.1" fill="currentColor"/></svg>' },
+  { key: 'assets', label: 'WORLD ASSETS', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>' },
+];
+
+const BEARIP_DNA_TIPS = {
+  concept: { high: '세계관의 핵심 컨셉이 잘 정리되어 있어요!', mid: '핵심 컨셉을 조금 더 다듬어보세요.', low: '핵심 컨셉 정리가 필요해요.' },
+  world: { high: '세계의 규칙과 배경이 탄탄해요!', mid: '세계의 규칙과 배경을 더 구체화해보세요.', low: '세계관 설정이 필요해요.' },
+  character: { high: '캐릭터 설정이 탄탄해요! 관계도를 확장해보세요.', mid: '캐릭터 관계도를 확장해보세요.', low: '캐릭터 설정이 필요해요.' },
+  story: { high: '메인 플롯과 에피소드 구성이 탄탄해요!', mid: '메인 플롯과 에피소드 구상이 필요해요.', low: '스토리 라인 정리가 필요해요.' },
+  visual: { high: '비주얼 스타일이 잘 정립되어 있어요!', mid: '비주얼 스타일을 더 다듬어보세요.', low: '비주얼 스타일 정립이 필요해요.' },
+  assets: { high: '장소, 소품, 상징이 잘 채워져 있어요!', mid: '장소, 소품, 상징을 더 채워보세요.', low: '월드 자산 정리가 필요해요.' },
+};
+
+function bearipDnaTip(key, value) {
+  const tier = value >= 70 ? 'high' : value >= 40 ? 'mid' : 'low';
+  return (BEARIP_DNA_TIPS[key] && BEARIP_DNA_TIPS[key][tier]) || '';
+}
+
+function bearipDnaScoreTier(score) {
+  if (score >= 80) return 'Great!';
+  if (score >= 60) return 'Good!';
+  if (score >= 40) return 'Fair';
+  return 'Just Started';
+}
+
+function bearipRecomputeDnaScore(breakdown) {
+  if (!breakdown) return 0;
+  const keys = BEARIP_DNA_CATEGORIES.map((c) => c.key);
+  return Math.round(keys.reduce((sum, k) => sum + (breakdown[k] || 0), 0) / keys.length);
+}
+
+// The demo IP's breakdown ("서울 야행수선단") — shared so MY DNA, OPEN DNA's
+// static demo card, and the DNA ROOM home never show mismatched numbers for
+// the same example project.
+const BEARIP_DEMO_DNA_BREAKDOWN = { concept: 90, world: 65, character: 85, story: 55, visual: 75, assets: 40 };
+
+// Older/incomplete IPs may only have a single dnaScore number. Seeds all 6
+// categories from it (so nothing looks broken) and persists the migration,
+// idempotently — safe to call on every read.
+function bearipEnsureDnaBreakdown(ip) {
+  if (ip.dnaBreakdown) return ip.dnaBreakdown;
+  const seed = ip.dnaScore || 0;
+  const breakdown = {};
+  BEARIP_DNA_CATEGORIES.forEach((c) => { breakdown[c.key] = seed; });
+  ip.dnaBreakdown = breakdown;
+  ip.dnaScore = bearipRecomputeDnaScore(breakdown);
+  if (ip.id && ip.id !== 'demo') bearipUpdateIP(ip.id, { dnaBreakdown: breakdown, dnaScore: ip.dnaScore });
+  return breakdown;
+}
+
 function bearipGetCurrentIP() {
   const id = localStorage.getItem(BEARIP_CURRENT_KEY);
   if (!id) return null;
