@@ -208,6 +208,49 @@ function renderGoals() {
   }
 }
 
+const MD_GENRE_OPTIONS = ['무협', '판타지', 'SF', '미스터리', '로맨스', '드라마', '액션', '코미디', '호러'];
+
+function renderGenreTags() {
+  const wrap = document.getElementById('mdGenreTags');
+  if (!wrap) return;
+  const genres = currentIP.genres || [];
+  wrap.innerHTML = genres.length
+    ? genres
+        .map(
+          (g) => `
+        <span class="md-genre-tag">#${bearipEscapeHtml(g)}<button type="button" class="md-genre-remove" data-genre="${bearipEscapeHtml(g)}" aria-label="태그 삭제">×</button></span>
+      `
+        )
+        .join('')
+    : '<span class="md-genre-empty">아직 장르 태그가 없어요.</span>';
+  wrap.querySelectorAll('.md-genre-remove').forEach((btn) => {
+    btn.addEventListener('click', () => toggleGenre(btn.dataset.genre));
+  });
+  renderGenrePicker();
+}
+
+function renderGenrePicker() {
+  const picker = document.getElementById('mdGenrePicker');
+  if (!picker) return;
+  const genres = currentIP.genres || [];
+  picker.innerHTML = MD_GENRE_OPTIONS.map(
+    (g) => `<button type="button" class="md-genre-picker-chip${genres.includes(g) ? ' active' : ''}" data-genre="${g}">${g}</button>`
+  ).join('');
+  picker.querySelectorAll('.md-genre-picker-chip').forEach((btn) => {
+    btn.addEventListener('click', () => toggleGenre(btn.dataset.genre));
+  });
+}
+
+function toggleGenre(genre) {
+  const genres = (currentIP.genres || []).slice();
+  const idx = genres.indexOf(genre);
+  if (idx === -1) genres.push(genre);
+  else genres.splice(idx, 1);
+  currentIP.genres = genres;
+  if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { genres });
+  renderGenreTags();
+}
+
 function renderStatus() {
   document.getElementById('dnaScoreValue').textContent = currentIP.dnaScore + '%';
   document.getElementById('dnaScoreBar').style.width = currentIP.dnaScore + '%';
@@ -224,6 +267,71 @@ function jumpToRoadmap() {
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   panel.classList.add('flash-highlight');
   setTimeout(() => panel.classList.remove('flash-highlight'), 900);
+}
+
+const MD_SCORE_LABELS = { dnaScore: 'DNA SCORE', readinessScore: 'READINESS SCORE (준비도)' };
+
+// Manual, creator-set score for now — the field itself (currentIP.dnaScore /
+// readinessScore) is a plain number, so a future 관리자 승인 flow or AI
+// evaluation can fill the same field later without changing this UI's data
+// model, just which code path writes to it.
+function ensureScoreEditOverlay() {
+  let overlay = document.getElementById('scoreEditOverlay');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.className = 'md-road-edit-overlay';
+  overlay.id = 'scoreEditOverlay';
+  overlay.style.display = 'none';
+  overlay.innerHTML = `
+    <div class="md-road-edit-box">
+      <div class="md-road-edit-head">
+        <span id="scoreEditTitle"></span>
+        <button type="button" class="md-road-edit-close" id="scoreEditClose" aria-label="닫기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="md-score-edit-body">
+        <div class="md-score-edit-value" id="scoreEditValue">0%</div>
+        <input type="range" min="0" max="100" step="1" id="scoreEditSlider">
+        <p class="md-score-edit-note">직접 설정한 값이에요. 언제든 다시 조정할 수 있어요.</p>
+      </div>
+    </div>
+  `;
+  (document.querySelector('.dna-app') || document.body).appendChild(overlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('#scoreEditClose')) closeScoreEdit();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.style.display !== 'none') closeScoreEdit();
+  });
+  const slider = document.getElementById('scoreEditSlider');
+  slider.addEventListener('input', () => {
+    document.getElementById('scoreEditValue').textContent = slider.value + '%';
+  });
+  slider.addEventListener('change', () => {
+    const field = overlay.dataset.field;
+    const value = parseInt(slider.value, 10);
+    currentIP[field] = value;
+    if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { [field]: value });
+    renderStatus();
+    bearipShowToast('설정을 저장했어요');
+  });
+  return overlay;
+}
+
+function closeScoreEdit() {
+  const overlay = document.getElementById('scoreEditOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function openScoreEdit(field) {
+  const overlay = ensureScoreEditOverlay();
+  overlay.dataset.field = field;
+  document.getElementById('scoreEditTitle').textContent = `${MD_SCORE_LABELS[field]} 설정`;
+  const slider = document.getElementById('scoreEditSlider');
+  slider.value = currentIP[field] || 0;
+  document.getElementById('scoreEditValue').textContent = slider.value + '%';
+  overlay.style.display = 'flex';
 }
 
 function renderRoadmap() {
@@ -532,6 +640,7 @@ function renderAll() {
   renderHeader();
   renderPublishButton();
   renderGoals();
+  renderGenreTags();
   renderStatus();
   renderRoadmap();
   renderAssets();
@@ -551,6 +660,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('mdPublishBtn').addEventListener('click', toggleIPVisibility);
 
+  document.getElementById('mdGenreAddBtn').addEventListener('click', () => {
+    const picker = document.getElementById('mdGenrePicker');
+    picker.style.display = picker.style.display === 'none' ? 'flex' : 'none';
+  });
+
   document.getElementById('currentIpChip').addEventListener('click', (e) => {
     e.stopPropagation();
     const menu = document.getElementById('ipSwitcherMenu');
@@ -566,9 +680,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape') closeIpSwitcher();
   });
 
-  document.querySelectorAll('.md-status-card').forEach((card) => {
-    card.addEventListener('click', jumpToRoadmap);
-  });
+  const dnaCard = document.querySelector('.md-status-card.purple');
+  if (dnaCard) dnaCard.addEventListener('click', () => openScoreEdit('dnaScore'));
+  const readinessCard = document.querySelector('.md-status-card.blue');
+  if (readinessCard) readinessCard.addEventListener('click', () => openScoreEdit('readinessScore'));
+  const productionCard = document.querySelector('.md-status-card.green');
+  if (productionCard) productionCard.addEventListener('click', jumpToRoadmap);
 
   document.getElementById('roadmapContainer').addEventListener('click', (e) => {
     const step = e.target.closest('.md-road-step');
