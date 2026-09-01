@@ -116,6 +116,7 @@ function createAndSaveIP() {
     createdAt: new Date().toISOString(),
     // A brand-new IP always starts at 0% — nothing has been produced yet.
     dnaScore: 0,
+    dnaBreakdown: { concept: 0, world: 0, character: 0, story: 0, visual: 0, assets: 0 },
     readinessScore: 0,
     productionProgress: 0,
     roadmap: bearipBuildRoadmap(selectedGoal, null),
