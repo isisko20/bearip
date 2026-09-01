@@ -649,9 +649,14 @@ function renderAll() {
 
 function persistGoalChange(goal) {
   currentIP.goal = goal;
+  // Each goal has its own production pipeline — rebuild the roadmap's steps
+  // for it, keeping progress on any step (matched by key) shared with the
+  // previous goal instead of silently discarding it.
+  currentIP.roadmap = bearipBuildRoadmap(goal, currentIP.roadmap);
   if (currentIP.id !== 'demo' && typeof bearipUpdateIP === 'function') {
-    bearipUpdateIP(currentIP.id, { goal });
+    bearipUpdateIP(currentIP.id, { goal, roadmap: currentIP.roadmap });
   }
+  recomputeProductionProgress();
 }
 
 document.addEventListener('DOMContentLoaded', () => {

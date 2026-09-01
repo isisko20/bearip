@@ -104,19 +104,6 @@ prevBtn.addEventListener('click', () => {
   }
 });
 
-function buildRoadmap() {
-  return [
-    { key: 'story', label: '스토리' },
-    { key: 'character', label: '캐릭터<br>디자인' },
-    { key: 'visual', label: '비주얼<br>가이드' },
-    { key: 'background', label: '배경/장소' },
-    { key: 'storyboard', label: '콘티' },
-    { key: 'art', label: '작화' },
-    { key: 'lettering', label: '레터링/<br>검수' },
-    { key: 'upload', label: '업로드/<br>연재' },
-  ].map((s) => Object.assign({ status: 'todo', progress: 0 }, s));
-}
-
 function createAndSaveIP() {
   const ip = {
     id: 'ip_' + Date.now(),
@@ -131,7 +118,7 @@ function createAndSaveIP() {
     dnaScore: 0,
     readinessScore: 0,
     productionProgress: 0,
-    roadmap: buildRoadmap(),
+    roadmap: bearipBuildRoadmap(selectedGoal, null),
     assets: [],
     discussion: [],
   };

@@ -2,6 +2,70 @@
 const BEARIP_IPS_KEY = 'bearip_ips';
 const BEARIP_CURRENT_KEY = 'bearip_current_ip';
 
+// Each goal (목표 포맷) has a genuinely different production pipeline, so the
+// roadmap's steps depend on which one is selected — not just its title.
+// Shared between new-ip.js (initial creation) and my-dna-render.js
+// (switching goals later) so both produce the same step set for a goal.
+const BEARIP_ROADMAP_TEMPLATES = {
+  webnovel: [
+    { key: 'story', label: '스토리<br>기획' },
+    { key: 'character', label: '캐릭터<br>설정' },
+    { key: 'visual', label: '세계관<br>구축' },
+    { key: 'storyboard', label: '초고<br>집필' },
+    { key: 'lettering', label: '퇴고/<br>교정' },
+    { key: 'art', label: '표지<br>디자인' },
+    { key: 'upload', label: '업로드/<br>연재' },
+  ],
+  webtoon: [
+    { key: 'story', label: '스토리' },
+    { key: 'character', label: '캐릭터<br>디자인' },
+    { key: 'visual', label: '비주얼<br>가이드' },
+    { key: 'background', label: '배경/장소' },
+    { key: 'storyboard', label: '콘티' },
+    { key: 'art', label: '작화' },
+    { key: 'lettering', label: '레터링/<br>검수' },
+    { key: 'upload', label: '업로드/<br>연재' },
+  ],
+  video: [
+    { key: 'story', label: '시나리오' },
+    { key: 'character', label: '캐릭터/<br>컨셉 디자인' },
+    { key: 'storyboard', label: '스토리보드' },
+    { key: 'art', label: '촬영/제작' },
+    { key: 'lettering', label: '편집/<br>사운드' },
+    { key: 'upload', label: '업로드/<br>공개' },
+  ],
+  multi: [
+    { key: 'story', label: '스토리' },
+    { key: 'character', label: '캐릭터<br>디자인' },
+    { key: 'visual', label: '비주얼<br>가이드' },
+    { key: 'background', label: '세계관/<br>설정' },
+    { key: 'storyboard', label: '포맷별<br>기획' },
+    { key: 'art', label: '웹툰/영상<br>제작' },
+    { key: 'lettering', label: '현지화/<br>검수' },
+    { key: 'upload', label: '멀티<br>배포' },
+  ],
+};
+
+// Builds the roadmap for a goal, preserving status/progress for any step
+// that also exists in the previous roadmap (matched by key) — switching
+// goals shouldn't silently discard progress on shared steps like 스토리.
+function bearipBuildRoadmap(goal, previousRoadmap) {
+  const template = BEARIP_ROADMAP_TEMPLATES[goal] || BEARIP_ROADMAP_TEMPLATES.webtoon;
+  const prevByKey = {};
+  (previousRoadmap || []).forEach((s) => {
+    prevByKey[s.key] = s;
+  });
+  return template.map((step) => {
+    const prev = prevByKey[step.key];
+    return {
+      key: step.key,
+      label: step.label,
+      status: prev ? prev.status : 'todo',
+      progress: prev ? prev.progress : 0,
+    };
+  });
+}
+
 function bearipLoadIPs() {
   try {
     const raw = localStorage.getItem(BEARIP_IPS_KEY);
