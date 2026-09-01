@@ -37,15 +37,43 @@ function cmFormatRelativeTime(iso) {
   return `${Math.floor(hr / 24)}일 전`;
 }
 
+// Resolves the IP a posting recruits for, by title (positions only store
+// ipTitle, not an id — same lookup convention as my-dna-applicants.js).
+// Falls back to the shared demo breakdown for the demo project.
+function cmResolveIpForPosition(pos) {
+  if (pos.ipTitle === CM_DEMO_IP.title) {
+    return { title: CM_DEMO_IP.title, dnaBreakdown: BEARIP_DEMO_DNA_BREAKDOWN, dnaScore: bearipRecomputeDnaScore(BEARIP_DEMO_DNA_BREAKDOWN) };
+  }
+  const ips = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
+  const ip = ips.find((i) => i.title === pos.ipTitle);
+  if (!ip) return null;
+  bearipEnsureDnaBreakdown(ip);
+  return ip;
+}
+
 // Renders the 지원자 확인 list for a posting the current user owns —
 // pending applicants get 승낙/거절 buttons, decided ones show a status badge.
+// A DNA 현황 badge up top gives the reviewer the project's current
+// completeness while they go through applicants (reuses OPEN DNA's
+// read-only report popup, since open-dna.js is loaded on this page too).
 function cmRenderApplicantsPanel(pos, panelEl, fracEl) {
   const applicants = bearipSeedApplicantsIfEmpty(pos.id);
+  const projectIp = cmResolveIpForPosition(pos);
+  const dnaHtml = projectIp
+    ? `<button type="button" class="cm-applicants-dna">
+         <span class="lbl">${bearipEscapeHtml(pos.ipTitle)} DNA 현황</span>
+         <span class="val">${projectIp.dnaScore}%</span>
+         <span class="tier">${bearipDnaScoreTier(projectIp.dnaScore)}</span>
+       </button>`
+    : '';
+
   if (!applicants.length) {
-    panelEl.innerHTML = '<div class="cm-applicants-empty">아직 지원자가 없어요.</div>';
+    panelEl.innerHTML = dnaHtml + '<div class="cm-applicants-empty">아직 지원자가 없어요.</div>';
+    const emptyDnaBtn = panelEl.querySelector('.cm-applicants-dna');
+    if (emptyDnaBtn) emptyDnaBtn.addEventListener('click', () => odOpenDnaReport(pos.ipTitle, projectIp.dnaBreakdown, projectIp.dnaScore));
     return;
   }
-  panelEl.innerHTML = applicants
+  panelEl.innerHTML = dnaHtml + applicants
     .map((a) => {
       const actions =
         a.status === 'pending'
@@ -68,6 +96,11 @@ function cmRenderApplicantsPanel(pos, panelEl, fracEl) {
       `;
     })
     .join('');
+
+  const dnaBtn = panelEl.querySelector('.cm-applicants-dna');
+  if (dnaBtn && projectIp) {
+    dnaBtn.addEventListener('click', () => odOpenDnaReport(pos.ipTitle, projectIp.dnaBreakdown, projectIp.dnaScore));
+  }
 
   panelEl.querySelectorAll('.cm-applicant-name').forEach((nameBtn) => {
     nameBtn.addEventListener('click', () => {
