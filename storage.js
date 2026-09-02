@@ -154,6 +154,22 @@ function bearipEnsureDnaBreakdown(ip) {
   return breakdown;
 }
 
+// ---- Unified growth stage (OPEN DNA badges + CONTENT ROOM rows) ----
+// Both pages used to show a stage word with nothing real behind it (OPEN
+// DNA's real published cards were hardcoded "MY IP", CONTENT ROOM's rows
+// were almost entirely mock cards). This derives one real stage straight
+// from dnaScore, so "how developed is this IP" means the same thing
+// everywhere instead of two separate, disconnected labels.
+const BEARIP_STAGE_LABELS = { seed: 'SEED', rising: 'RISING', challenge: 'CHALLENGE', official: 'OFFICIAL' };
+
+function bearipGrowthStage(dnaScore) {
+  const score = dnaScore || 0;
+  if (score >= 90) return 'official';
+  if (score >= 70) return 'challenge';
+  if (score >= 25) return 'rising';
+  return 'seed';
+}
+
 function bearipGetCurrentIP() {
   const id = localStorage.getItem(BEARIP_CURRENT_KEY);
   if (!id) return null;

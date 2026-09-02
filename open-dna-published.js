@@ -16,16 +16,18 @@ function odBuildPublishedCard(ip, index) {
   const avatarThumb = `thumb-${((index + 3) % 8) + 1}`;
   const initials = esc(ip.title || 'IP').slice(0, 6);
 
-  const bylineParts = [];
-  if (ip.genres && ip.genres[0]) bylineParts.push(esc(ip.genres[0]));
-  bylineParts.push('성장 중');
-  const byline = bylineParts.join(' · ');
-
   const formatTag = OD_GOAL_TAG[ip.goal] || 'IP';
   if (typeof bearipEnsureDnaBreakdown === 'function') bearipEnsureDnaBreakdown(ip);
   const dna = ip.dnaScore || 0;
   const readiness = ip.readinessScore || 0;
   const production = ip.productionProgress || 0;
+  const stage = bearipGrowthStage(dna);
+  const stageLabel = BEARIP_STAGE_LABELS[stage];
+
+  const bylineParts = [];
+  if (ip.genres && ip.genres[0]) bylineParts.push(esc(ip.genres[0]));
+  bylineParts.push(stageLabel);
+  const byline = bylineParts.join(' · ');
 
   const imageAssets = (ip.assets || []).filter((a) => a.imageData);
   let latestWorkHtml = '';
@@ -49,7 +51,7 @@ function odBuildPublishedCard(ip, index) {
   card.dataset.recruiting = isRecruiting ? '1' : '0';
   card.innerHTML = `
     <div class="od-card-banner ${bannerClass}"${bannerStyle}>
-      <span class="od-stage-badge rising">MY IP</span>
+      <span class="od-stage-badge ${stage}">${stageLabel}</span>
       <div class="od-card-avatar ${avatarThumb}">${initials}</div>
     </div>
     <div class="od-card-body">

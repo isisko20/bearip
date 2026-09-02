@@ -48,10 +48,10 @@
     <div class="cr-hero-content">
       <span class="cr-hero-badge">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 5-3.2 8-7 9-3.8-1-7-4-7-9V6z"/></svg>
-        CHALLENGE · 오늘의 추천
+        RISING · 오늘의 추천
       </span>
       <h1>서울 야행수선단</h1>
-      <p>밤이 숨기고, 수선단이 바로잡는다. 낮 동안 어긋난 서울의 틈을 밤마다 몰래 고쳐놓는 이들의 이야기. OPEN DNA에서 시작해 챌린지로 승급한 대표작입니다.</p>
+      <p>밤이 숨기고, 수선단이 바로잡는다. 낮 동안 어긋난 서울의 틈을 밤마다 몰래 고쳐놓는 이들의 이야기. OPEN DNA에서 시작해 라이징 단계로 올라온 대표작입니다.</p>
       <div class="cr-hero-actions">
         <button class="cr-btn-play" onclick="location.href='content-detail.html'">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -80,7 +80,11 @@
       <div class="cr-carousel">
         <button class="cr-arrow prev" aria-label="이전"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
         <div class="cr-carousel-track">
-          <div class="cr-mock-card"><div class="placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6v6H9z"/></svg><div class="t">모의 선택 영역</div></div></div>
+          <article class="cr-card" onclick="location.href='content-detail.html'">
+            <div class="poster cr-thumb-7"><span class="cr-tier-badge rising">RISING</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+            <div class="title">서울 야행수선단</div>
+            <div class="meta">조회수 18K · 좋아요 2.4K</div>
+          </article>
           <div class="cr-mock-card"><div class="placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6v6H9z"/></svg><div class="t">모의 선택 영역</div></div></div>
           <div class="cr-mock-card"><div class="placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6v6H9z"/></svg><div class="t">모의 선택 영역</div></div></div>
           <div class="cr-mock-card"><div class="placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6v6H9z"/></svg><div class="t">모의 선택 영역</div></div></div>
@@ -103,11 +107,6 @@
       <div class="cr-carousel">
         <button class="cr-arrow prev" aria-label="이전"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
         <div class="cr-carousel-track">
-          <article class="cr-card" onclick="location.href='content-detail.html'">
-            <div class="poster cr-thumb-7"><span class="cr-tier-badge challenge">CHALLENGE</span><div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
-            <div class="title">서울 야행수선단</div>
-            <div class="meta">조회수 18K · 좋아요 2.4K</div>
-          </article>
           <div class="cr-mock-card"><div class="placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6v6H9z"/></svg><div class="t">모의 선택 영역</div></div></div>
           <div class="cr-mock-card"><div class="placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6v6H9z"/></svg><div class="t">모의 선택 영역</div></div></div>
           <div class="cr-mock-card"><div class="placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6v6H9z"/></svg><div class="t">모의 선택 영역</div></div></div>
@@ -167,5 +166,6 @@
 <script src="storage.js"></script>
 <script src="auth-ui.js"></script>
 <script src="content-room.js"></script>
+<script src="content-room-published.js"></script>
 </body>
 </html>

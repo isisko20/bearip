@@ -145,6 +145,7 @@
 .od-legend-item.seed .od-legend-dot { background: #eef0f3; color: var(--od-gray); }
 .od-legend-item.rising .od-legend-dot { background: #e6f7ee; color: var(--od-green); }
 .od-legend-item.joinable .od-legend-dot { background: #fdf1e4; color: var(--od-orange); }
+.od-legend-item.challenge .od-legend-dot { background: #fdf1e4; color: var(--od-orange); }
 .od-legend-item.official .od-legend-dot { background: #e7f3ff; color: var(--od-blue); }
 .od-legend-item .name { font-size: 11.5px; font-weight: 800; line-height: 1.2; }
 .od-legend-item .desc { font-size: 10px; color: var(--od-ink-soft); line-height: 1.2; }
@@ -186,6 +187,7 @@
 .od-stage-badge { position: absolute; top: 12px; right: 12px; padding: 5px 12px; border-radius: 999px; background: #fff; font-size: 10.5px; font-weight: 800; box-shadow: 0 4px 10px rgba(0,0,0,0.18); }
 .od-stage-badge.rising { color: var(--od-green); }
 .od-stage-badge.joinable { color: var(--od-orange); }
+.od-stage-badge.challenge { color: var(--od-orange); }
 .od-stage-badge.seed { color: var(--od-gray); }
 .od-stage-badge.official { color: var(--od-blue); }
 

@@ -141,8 +141,16 @@ function ipdApplyDynamicIP() {
   }
   const infoVis = document.getElementById('ipdInfoVis');
   if (infoVis) infoVis.textContent = '전체 공개 (참여형)';
+
+  // Same growth-stage computation OPEN DNA and CONTENT ROOM use, so this
+  // page never shows a different stage than wherever the user arrived from.
+  const stageLabel = typeof bearipGrowthStage === 'function' && typeof BEARIP_STAGE_LABELS === 'object'
+    ? BEARIP_STAGE_LABELS[bearipGrowthStage(ip.dnaScore || 0)]
+    : 'RISING';
   const infoStage = document.getElementById('ipdInfoStage');
-  if (infoStage) infoStage.textContent = 'RISING';
+  if (infoStage) infoStage.textContent = stageLabel;
+  const heroStage = document.getElementById('ipdHeroStage');
+  if (heroStage) heroStage.textContent = stageLabel;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
