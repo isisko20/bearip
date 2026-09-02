@@ -99,3 +99,44 @@ function renderDnaStatus() {
 }
 
 document.addEventListener('DOMContentLoaded', renderDnaStatus);
+
+// "내 프로젝트 목록" — a compact, clickable strip of every real IP the user
+// has, so they can jump straight into any of them from the home page
+// without scrolling to the MY DNA carousel below. Hidden entirely when
+// there are no real IPs yet (the empty state is already covered by the
+// "Create Your Contents" prompt in the DNA 현황 section beneath it).
+function renderMyProjectsList() {
+  const section = document.getElementById('drMyProjects');
+  const row = document.getElementById('drProjectChipRow');
+  if (!section || !row || typeof bearipLoadIPs !== 'function') return;
+
+  const ips = bearipLoadIPs();
+  if (!ips.length) {
+    section.style.display = 'none';
+    return;
+  }
+
+  const current = typeof bearipGetCurrentIP === 'function' ? bearipGetCurrentIP() : null;
+  const currentId = current ? current.id : null;
+
+  row.innerHTML = ips
+    .map((ip) => {
+      const active = ip.id === currentId;
+      return `
+        <button type="button" class="dr-project-chip${active ? ' active' : ''}" data-ip-id="${ip.id}">
+          <span class="t">${bearipEscapeHtml(ip.title || '제목 없는 IP')}</span>
+          <span class="d">DNA ${ip.dnaScore || 0}%</span>
+        </button>
+      `;
+    })
+    .join('');
+
+  row.querySelectorAll('.dr-project-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      bearipSetCurrentId(chip.dataset.ipId);
+      location.href = 'my-dna.html';
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', renderMyProjectsList);

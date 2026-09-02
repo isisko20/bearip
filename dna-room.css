@@ -301,6 +301,30 @@
 }
 .dr-new-ip-btn svg { width: 15px; height: 15px; }
 
+/* ---------- 내 프로젝트 목록 ---------- */
+.dr-my-projects {
+  background: var(--dr-panel);
+  border: 1px solid var(--dr-border);
+  border-radius: var(--dr-radius);
+  padding: 18px 22px;
+  box-shadow: var(--dr-shadow);
+  margin-bottom: 26px;
+}
+.dr-my-projects-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.dr-my-projects-head .t { font-size: 15px; font-weight: 800; }
+
+.dr-project-chip-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 2px; }
+.dr-project-chip {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; flex-shrink: 0;
+  padding: 9px 16px; border-radius: 999px; border: 1px solid var(--dr-border); background: var(--dr-bg);
+  cursor: pointer; font-family: inherit; text-align: left; min-width: 120px;
+}
+.dr-project-chip:hover { border-color: var(--dr-purple); }
+.dr-project-chip.active { background: var(--dr-active-bg); border-color: var(--dr-purple); }
+.dr-project-chip .t { font-size: 12.5px; font-weight: 800; color: var(--dr-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+.dr-project-chip .d { font-size: 10.5px; font-weight: 700; color: var(--dr-purple); }
+.dr-my-projects-empty { font-size: 12px; color: var(--dr-ink-soft); padding: 4px 2px; }
+
 /* ---------- IP DNA 현황 ---------- */
 .dr-dna-status {
   background: var(--dr-panel);
