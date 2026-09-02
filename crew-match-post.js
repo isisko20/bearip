@@ -37,18 +37,56 @@ function cmFormatRelativeTime(iso) {
   return `${Math.floor(hr / 24)}일 전`;
 }
 
-// Resolves the IP a posting recruits for, by title (positions only store
-// ipTitle, not an id — same lookup convention as my-dna-applicants.js).
-// Falls back to the shared demo breakdown for the demo project.
-function cmResolveIpForPosition(pos) {
-  if (pos.ipTitle === CM_DEMO_IP.title) {
+// The other static browse-list projects (besides the demo IP) aren't backed
+// by a real IP object anywhere — these are their fixed breakdowns, so their
+// DNA badges are real and clickable like everything else on those cards
+// (e.g. 지원하기 already works for them) instead of silently doing nothing.
+const CM_MOCK_DNA_BREAKDOWNS = {
+  '고양이 탐정 모모': { concept: 85, world: 60, character: 90, story: 55, visual: 70, assets: 66 },
+  '기억을 걷는 소녀': { concept: 70, world: 55, character: 75, story: 60, visual: 65, assets: 59 },
+  '별을 품은 탑': { concept: 65, world: 70, character: 55, story: 50, visual: 68, assets: 46 },
+  'OCEAN PLANET': { concept: 60, world: 65, character: 40, story: 45, visual: 58, assets: 50 },
+};
+
+// Resolves the IP behind a project title (positions only store ipTitle, not
+// an id — same lookup convention as my-dna-applicants.js): the demo IP's
+// shared breakdown, a real user-created IP, or one of the other static
+// browse-list projects' fixed breakdown above.
+function cmResolveIpByTitle(ipTitle) {
+  if (ipTitle === CM_DEMO_IP.title) {
     return { title: CM_DEMO_IP.title, dnaBreakdown: BEARIP_DEMO_DNA_BREAKDOWN, dnaScore: bearipRecomputeDnaScore(BEARIP_DEMO_DNA_BREAKDOWN) };
   }
   const ips = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
-  const ip = ips.find((i) => i.title === pos.ipTitle);
-  if (!ip) return null;
-  bearipEnsureDnaBreakdown(ip);
-  return ip;
+  const ip = ips.find((i) => i.title === ipTitle);
+  if (ip) {
+    bearipEnsureDnaBreakdown(ip);
+    return ip;
+  }
+  const mock = CM_MOCK_DNA_BREAKDOWNS[ipTitle];
+  if (mock) return { title: ipTitle, dnaBreakdown: mock, dnaScore: bearipRecomputeDnaScore(mock) };
+  return null;
+}
+
+function cmResolveIpForPosition(pos) {
+  return cmResolveIpByTitle(pos.ipTitle);
+}
+
+// One delegated listener covers every DNA badge on the browse list — the 5
+// static cards already in the DOM at load, and any user-posted cards
+// inserted later by cmRenderPositionCard, without needing to wire each card
+// individually.
+const cmPositionsListEl = document.getElementById('positionsList');
+if (cmPositionsListEl) {
+  cmPositionsListEl.addEventListener('click', (e) => {
+    const badge = e.target.closest('.cm-position-dna');
+    if (!badge) return;
+    const card = badge.closest('.cm-position-card');
+    const ipTitle = card ? card.dataset.ipTitle : null;
+    if (!ipTitle) return;
+    const resolved = cmResolveIpByTitle(ipTitle);
+    if (!resolved) return;
+    odOpenDnaReport(ipTitle, resolved.dnaBreakdown, resolved.dnaScore);
+  });
 }
 
 // Renders the 지원자 확인 list for a posting the current user owns —
@@ -135,9 +173,14 @@ function cmRenderPositionCard(pos) {
   el.dataset.deadline = '99-99'; // sorts after dated posts under "마감 임박순"
   el.dataset.remaining = String(pos.count - (pos.filled || 0));
   el.dataset.posId = pos.id;
+  el.dataset.ipTitle = pos.ipTitle;
   const tagsHtml = (pos.tags || []).map((t) => `<span>${t}</span>`).join('');
   const filled = pos.filled || 0;
   const applicantCount = bearipSeedApplicantsIfEmpty(pos.id).length;
+  const cardIp = cmResolveIpForPosition(pos);
+  const dnaBadgeHtml = cardIp
+    ? `<button type="button" class="cm-position-dna"><span class="lbl">DNA</span><span class="val">${cardIp.dnaScore}%</span></button>`
+    : '';
   el.innerHTML = `
     <div class="cm-position-row">
       <div class="cm-position-thumb ${pos.thumb}"></div>
@@ -145,6 +188,7 @@ function cmRenderPositionCard(pos) {
         <div class="cm-position-ip">${pos.ipTitle}</div>
         <div class="cm-position-role">${pos.role} 모집</div>
         <div class="cm-position-tags">${tagsHtml}</div>
+        ${dnaBadgeHtml}
       </div>
       <div class="cm-position-meta"><div class="frac">${filled}/${pos.count}</div><div class="deadline">${pos.deadlineText}</div></div>
       <button class="cm-apply-btn">지원하기</button>

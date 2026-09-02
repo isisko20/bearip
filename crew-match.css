@@ -86,6 +86,14 @@
 .cm-position-role { font-size: 15px; font-weight: 800; margin: 2px 0 6px; }
 .cm-position-tags { display: flex; gap: 6px; flex-wrap: wrap; }
 .cm-position-tags span { font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--od-bg); color: var(--od-ink-soft); }
+.cm-position-dna {
+  display: inline-flex; align-items: center; gap: 5px; margin-top: 8px;
+  padding: 4px 10px; border-radius: 999px; border: 1px solid var(--od-border); background: none;
+  cursor: pointer; font-family: inherit;
+}
+.cm-position-dna:hover { border-color: var(--od-purple); }
+.cm-position-dna .lbl { font-size: 10px; font-weight: 700; color: var(--od-ink-soft); }
+.cm-position-dna .val { font-size: 11.5px; font-weight: 800; color: var(--od-purple); }
 .cm-position-meta { text-align: right; flex-shrink: 0; margin-right: 6px; }
 .cm-position-meta .frac { font-size: 13px; font-weight: 800; color: var(--od-purple); }
 .cm-position-meta .deadline { font-size: 10.5px; color: var(--od-ink-soft); margin-top: 4px; }
