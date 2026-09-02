@@ -170,6 +170,14 @@ function bearipGrowthStage(dnaScore) {
   return 'seed';
 }
 
+function bearipFormatCount(n) {
+  return (n || 0).toLocaleString('ko-KR');
+}
+
+function bearipParseCount(text) {
+  return parseInt(String(text).replace(/,/g, ''), 10) || 0;
+}
+
 function bearipGetCurrentIP() {
   const id = localStorage.getItem(BEARIP_CURRENT_KEY);
   if (!id) return null;

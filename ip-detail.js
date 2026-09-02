@@ -38,6 +38,12 @@ function ipdApplyDynamicIP() {
   const ip = (typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : []).find((i) => i.id === viewId);
   if (!ip) return;
 
+  // CONTENT ROOM's cards and TOP 100 ranking read views/likes straight off
+  // the IP, so — unlike the demo's follower/cheer numbers, which have
+  // always been session-local only — this needs to actually persist.
+  ip.views = (ip.views || 0) + 1;
+  bearipUpdateIP(ip.id, { views: ip.views });
+
   const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
   const goalLabel = IPD_GOAL_LABELS[ip.goal] || '';
 
@@ -73,11 +79,15 @@ function ipdApplyDynamicIP() {
   followBtn.dataset.ip = ip.id;
   followBtn.dataset.ipTitle = ip.title;
 
-  // No real follower/cheer/activity tracking for user IPs yet — honest zeros
-  // rather than carrying over the demo's fixed numbers.
+  // No real follower/activity tracking for user IPs yet — honest zeros
+  // rather than carrying over the demo's fixed numbers. 좋아요 is real,
+  // though: it's the same count CONTENT ROOM and TOP 100 read.
   document.getElementById('ipdFollowerCount').textContent = '0';
-  document.getElementById('ipdCheerCount').textContent = '0';
   document.getElementById('ipdActivityCount').textContent = '0';
+  const cheerBtn = document.getElementById('ipdCheerBtn');
+  cheerBtn.dataset.ip = ip.id;
+  cheerBtn.dataset.ipTitle = ip.title;
+  document.getElementById('ipdCheerCount').textContent = bearipFormatCount(ip.likes || 0);
 
   const descEl = document.querySelector('.ipd-panel p.desc');
   if (descEl) descEl.textContent = ip.synopsis || ip.logline || '아직 작성된 소개가 없어요.';
@@ -191,6 +201,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const nowFollowing = bearipSetToggle(IPD_FOLLOW_KEY, followBtn.dataset.ip);
     ipdSetFollowUI(followBtn, nowFollowing);
     followerCountEl.textContent = baseFollowerCount + (nowFollowing ? 1 : 0);
+  });
+
+  // 좋아요 (응원) — real IPs persist the count into ip.likes so CONTENT
+  // ROOM's cards and the TOP 100 ranking reflect it; the demo project has
+  // no real storage record, so it falls back to a session-local count like
+  // the follow button already does for it.
+  const cheerBtn = document.getElementById('ipdCheerBtn');
+  const cheerCountEl = document.getElementById('ipdCheerCount');
+  const IPD_LIKE_KEY = 'bearip_liked_ips';
+  const baseCheerCount = bearipParseCount(cheerCountEl.textContent);
+  const alreadyCheered = bearipSetHas(IPD_LIKE_KEY, cheerBtn.dataset.ip);
+  cheerBtn.classList.toggle('active', alreadyCheered);
+  if (!bearipLoadIPs().some((i) => i.id === cheerBtn.dataset.ip)) {
+    cheerCountEl.textContent = bearipFormatCount(baseCheerCount + (alreadyCheered ? 1 : 0));
+  }
+
+  cheerBtn.addEventListener('click', () => {
+    if (!bearipRequireLogin('ip-detail.html')) return;
+    const nowCheered = bearipSetToggle(IPD_LIKE_KEY, cheerBtn.dataset.ip);
+    cheerBtn.classList.toggle('active', nowCheered);
+    const realIp = bearipLoadIPs().find((i) => i.id === cheerBtn.dataset.ip);
+    if (realIp) {
+      const likes = Math.max(0, (realIp.likes || 0) + (nowCheered ? 1 : -1));
+      bearipUpdateIP(realIp.id, { likes });
+      cheerCountEl.textContent = bearipFormatCount(likes);
+    } else {
+      cheerCountEl.textContent = bearipFormatCount(baseCheerCount + (nowCheered ? 1 : 0));
+    }
   });
 
   document.querySelectorAll('.ipd-apply-btn').forEach((btn) => {

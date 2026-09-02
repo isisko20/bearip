@@ -122,6 +122,8 @@ function createAndSaveIP() {
     roadmap: bearipBuildRoadmap(selectedGoal, null),
     assets: [],
     discussion: [],
+    views: 0,
+    likes: 0,
   };
   bearipAddIP(ip);
   bearipAddNotification({
