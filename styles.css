@@ -61,6 +61,23 @@ html, body {
   padding: 22px 48px;
   gap: 24px;
 }
+.landing-dark .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(8, 7, 14, 0.6);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.landing-dark .site-header::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--purple-2), #ff9a3c, transparent);
+  opacity: 0.5;
+}
 
 .logo {
   display: flex;
@@ -78,7 +95,7 @@ html, body {
   justify-content: center;
   flex-shrink: 0;
 }
-.landing-dark .logo-mark { background: linear-gradient(135deg, var(--purple-1), var(--blue-1)); }
+.landing-dark .logo-mark { background: linear-gradient(135deg, var(--purple-1), var(--blue-1)); box-shadow: 0 4px 18px rgba(106,63,214,0.5); }
 
 .logo-mark svg { width: 24px; height: 24px; }
 
@@ -112,8 +129,26 @@ html, body {
   transition: opacity 0.2s;
 }
 .main-nav a:hover { opacity: 1; }
-.landing-dark .main-nav a { color: rgba(255,255,255,0.75); }
-.landing-dark .main-nav a:hover { color: #fff; }
+.landing-dark .main-nav a {
+  position: relative;
+  color: rgba(255,255,255,0.75);
+  padding-bottom: 4px;
+  letter-spacing: 1.5px;
+  transition: color 0.2s;
+}
+.landing-dark .main-nav a::after {
+  content: "";
+  position: absolute;
+  left: 50%; right: 50%; bottom: 0;
+  height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--purple-2), #ff9a3c);
+  transition: left 0.25s ease, right 0.25s ease;
+}
+.landing-dark .main-nav a:hover {
+  color: #fff;
+  text-shadow: 0 0 14px rgba(185,140,255,0.6);
+}
+.landing-dark .main-nav a:hover::after { left: 0; right: 0; }
 
 .header-actions { display: flex; align-items: center; gap: 12px; }
 
@@ -123,7 +158,8 @@ html, body {
   color: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
 .lp-icon-btn svg { width: 16px; height: 16px; }
-.lp-icon-btn:hover { border-color: rgba(255,255,255,0.35); color: #fff; }
+.lp-icon-btn { transition: border-color 0.2s, color 0.2s, box-shadow 0.2s; }
+.lp-icon-btn:hover { border-color: rgba(185,140,255,0.5); color: #fff; box-shadow: 0 0 16px rgba(106,63,214,0.35); }
 
 .dr-profile-chip {
   display: flex;
@@ -145,7 +181,8 @@ html, body {
 .dr-profile-chip .avatar svg { width: 16px; height: 16px; }
 .dr-profile-chip .uname { font-size: 13px; font-weight: 700; color: var(--ink); }
 .dr-profile-chip svg.chev { width: 13px; height: 13px; color: var(--ink-soft); }
-.landing-dark .dr-profile-chip { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.16); padding: 9px 16px; box-shadow: none; }
+.landing-dark .dr-profile-chip { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.16); padding: 9px 16px; box-shadow: none; transition: border-color 0.2s, box-shadow 0.2s; }
+.landing-dark .dr-profile-chip:hover { border-color: rgba(185,140,255,0.5); box-shadow: 0 0 16px rgba(106,63,214,0.3); }
 .landing-dark .dr-profile-chip .uname { color: #fff; }
 
 .lp-signup-btn {
@@ -153,8 +190,9 @@ html, body {
   font-size: 13px; font-weight: 800; color: #fff; white-space: nowrap;
   background: linear-gradient(120deg, var(--purple-1), var(--blue-1));
   box-shadow: 0 10px 24px rgba(106,63,214,0.35);
+  transition: filter 0.2s, box-shadow 0.2s, transform 0.2s;
 }
-.lp-signup-btn:hover { filter: brightness(1.08); }
+.lp-signup-btn:hover { filter: brightness(1.1); box-shadow: 0 10px 30px rgba(106,63,214,0.55); transform: translateY(-1px); }
 .landing-dark .dr-profile-chip .uname { white-space: nowrap; }
 
 /* ---------- Hero ---------- */
