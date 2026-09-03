@@ -1,18 +1,18 @@
 /* ================= DNA ROOM dashboard ================= */
 
 .dna-app {
-  --dr-bg: #f6f6fb;
-  --dr-bg-soft: #eeecf7;
-  --dr-panel: #ffffff;
-  --dr-border: #e9e7f3;
-  --dr-ink: #201d33;
-  --dr-ink-soft: #8b879c;
-  --dr-purple: #6d4de6;
-  --dr-purple-2: #8f6bff;
-  --dr-blue: #3aa0ff;
-  --dr-active-bg: #efeaff;
+  --dr-bg: #0d0b14;
+  --dr-bg-soft: #17131f;
+  --dr-panel: #1a1625;
+  --dr-border: rgba(255,255,255,0.1);
+  --dr-ink: #f5f4f7;
+  --dr-ink-soft: #9c96ab;
+  --dr-purple: #8f6bff;
+  --dr-purple-2: #b98cff;
+  --dr-blue: #4fb0ff;
+  --dr-active-bg: rgba(143,107,255,0.18);
   --dr-radius: 22px;
-  --dr-shadow: 0 12px 34px rgba(43, 32, 92, 0.07);
+  --dr-shadow: 0 12px 34px rgba(0, 0, 0, 0.45);
 
   display: flex;
   min-height: 100vh;
@@ -117,7 +117,7 @@
 
 .dr-promo {
   margin-top: 20px;
-  background: linear-gradient(180deg, #efeaff 0%, #f8f6ff 100%);
+  background: linear-gradient(180deg, rgba(143,107,255,0.16) 0%, rgba(143,107,255,0.05) 100%);
   border-radius: 20px;
   padding: 18px 14px 16px;
   text-align: center;
@@ -184,7 +184,7 @@
   width: 7px; height: 7px;
   border-radius: 50%;
   background: #ff5470;
-  border: 1.5px solid #fff;
+  border: 1.5px solid var(--dr-panel);
 }
 
 .dr-profile-chip {
@@ -257,7 +257,7 @@
   position: absolute;
   width: 42px; height: 42px;
   border-radius: 12px;
-  background: rgba(255,255,255,0.85);
+  background: var(--dr-panel);
   border: 1px solid var(--dr-border);
   box-shadow: var(--dr-shadow);
   display: flex; align-items: center; justify-content: center;

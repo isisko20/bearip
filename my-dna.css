@@ -139,9 +139,9 @@
   background: var(--dr-panel); cursor: pointer;
 }
 .md-applicant-accept { color: #2fae66; border-color: #2fae66; }
-.md-applicant-accept:hover { background: #e8f8ef; }
+.md-applicant-accept:hover { background: rgba(61,220,132,0.14); }
 .md-applicant-reject { color: #d64545; border-color: #d64545; }
-.md-applicant-reject:hover { background: #fbe9e9; }
+.md-applicant-reject:hover { background: rgba(229,72,77,0.14); }
 .md-applicant-detail {
   margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: var(--dr-panel); font-size: 11.5px;
 }
@@ -223,9 +223,9 @@
 .md-status-left { display: flex; align-items: center; gap: 12px; }
 .md-status-ic { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .md-status-ic svg { width: 20px; height: 20px; }
-.md-status-card.purple .md-status-ic { background: #efeaff; color: var(--dr-purple); }
-.md-status-card.blue .md-status-ic { background: #e7f3ff; color: var(--dr-blue); }
-.md-status-card.green .md-status-ic { background: #e8f8ef; color: #2fae66; }
+.md-status-card.purple .md-status-ic { background: rgba(143,107,255,0.16); color: var(--dr-purple); }
+.md-status-card.blue .md-status-ic { background: rgba(79,176,255,0.16); color: var(--dr-blue); }
+.md-status-card.green .md-status-ic { background: rgba(61,220,132,0.16); color: #2fae66; }
 .md-status-label { font-size: 11px; font-weight: 800; letter-spacing: 0.3px; color: var(--dr-ink-soft); }
 .md-status-info { width: 15px; height: 15px; color: var(--dr-ink-soft); flex-shrink: 0; margin-top: 2px; }
 .md-status-value { font-size: 26px; font-weight: 800; margin: 2px 0 2px; }
@@ -355,8 +355,8 @@
   font-size: 10.5px; font-weight: 700; padding: 7px 11px; border-radius: 999px;
   border: 1px solid var(--dr-border); background: var(--dr-bg); cursor: pointer; color: var(--dr-ink);
 }
-.md-pill-btn.ai { background: #efeaff; border-color: transparent; color: var(--dr-purple); }
-.md-pill-btn.creator { background: #fff2e6; border-color: transparent; color: #d9791f; }
+.md-pill-btn.ai { background: rgba(143,107,255,0.16); border-color: transparent; color: var(--dr-purple); }
+.md-pill-btn.creator { background: rgba(217,121,31,0.18); border-color: transparent; color: #e0954a; }
 .md-pill-btn.active { background: var(--dr-purple); border-color: transparent; color: #fff; }
 
 /* Asset filter chips */
@@ -490,7 +490,7 @@
 }
 
 .md-tip-card {
-  background: linear-gradient(160deg, #efeaff, #f8f6ff);
+  background: linear-gradient(160deg, rgba(143,107,255,0.16), rgba(143,107,255,0.05));
   border-radius: var(--dr-radius);
   padding: 18px;
 }
