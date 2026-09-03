@@ -226,8 +226,12 @@ html, body {
 }
 .lp-scene-label.left { left: 30px; }
 .lp-scene-label.right { right: 30px; text-align: right; }
-.lp-scene-label .t { font-size: clamp(16px, 2.4vw, 24px); font-weight: 800; color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,0.5); }
-.lp-scene-label .s { font-size: clamp(10px, 1.2vw, 13px); color: rgba(255,255,255,0.75); margin-top: 4px; text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+.lp-scene-label .t { font-size: clamp(26px, 4.2vw, 44px); font-weight: 800; color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,0.6); }
+.lp-scene-label .s { font-size: clamp(12px, 1.4vw, 15px); color: rgba(255,255,255,0.8); margin-top: 6px; text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+
+.hl { font-family: 'Playfair Display', serif; font-style: italic; }
+.hl.purple { background: linear-gradient(120deg, var(--purple-2), var(--blue-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hl.orange { background: linear-gradient(120deg, #ffb454, #ff6a5c); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 /* ---------- Bottom CTA ---------- */
 .lp-cta-row { display: flex; gap: 20px; width: 100%; max-width: 1100px; }
@@ -249,7 +253,8 @@ html, body {
 .lp-cta.right .arrow { margin-left: 0; margin-right: auto; }
 .lp-cta .arrow svg { width: 16px; height: 16px; color: #fff; }
 .lp-cta .txt { display: flex; flex-direction: column; gap: 2px; }
-.lp-cta .t { font-size: 17px; font-weight: 800; color: #fff; }
+.lp-cta .t { font-size: 20px; font-weight: 800; color: #fff; }
+.lp-cta .t .hl { font-size: 1.15em; }
 .lp-cta .s { font-size: 11.5px; color: rgba(255,255,255,0.6); }
 .lp-cta:hover { border-color: rgba(255,255,255,0.35); }
 
