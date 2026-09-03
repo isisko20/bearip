@@ -41,6 +41,7 @@
   width: 30px; height: 30px; border-radius: 9px;
   background: linear-gradient(150deg, var(--cr-purple), var(--cr-blue));
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  box-shadow: 0 0 12px rgba(139,107,255,0.5);
 }
 .cr-logo .mark svg { width: 16px; height: 16px; color: #fff; }
 .cr-logo .name { font-size: 15px; font-weight: 800; letter-spacing: 0.2px; }
@@ -58,8 +59,10 @@
 .cr-search svg { width: 14px; height: 14px; flex-shrink: 0; }
 .cr-search input { border: none; background: none; outline: none; font-size: 13px; flex: 1; color: var(--cr-ink); min-width: 0; }
 
-.cr-profile { width: 34px; height: 34px; border-radius: 50%; background: #6b5541; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+.cr-profile { width: 34px; height: 34px; border-radius: 50%; background: #6b5541; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: box-shadow 0.2s; }
 .cr-profile svg { width: 19px; height: 19px; }
+.cr-profile:hover { box-shadow: 0 0 14px rgba(139,107,255,0.45); }
+.cr-back-home { transition: color 0.2s; }
 
 /* ---------- Hero ---------- */
 .cr-hero { position: relative; height: 56vh; min-height: 380px; max-height: 560px; margin-top: -78px; overflow: hidden; }
