@@ -278,9 +278,16 @@ html, body {
 }
 .lp-ws-map .node.main { background: linear-gradient(120deg, var(--purple-1), var(--blue-1)); color: #fff; }
 
-/* Center: neural tree */
-.lp-tree-column { display: flex; align-items: center; justify-content: center; padding: 10px; }
-.lp-tree { width: 190px; max-width: 22vw; }
+/* Center: neural tree artwork — a wide scene image, cropped to just the
+   glowing tree by sizing this column much narrower than the source image
+   and letting background-size:cover do the centered crop for us. */
+.lp-tree-column {
+  min-width: 230px;
+  border-radius: 24px;
+  background-image: url('assets/hero-tree-bg.png');
+  background-size: cover;
+  background-position: 53% center;
+}
 
 /* Right panel: content grid */
 .lp-content-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -327,8 +334,7 @@ html, body {
   .site-header { padding: 18px 20px; }
   .main-nav { display: none; }
   .lp-stage { grid-template-columns: 1fr; }
-  .lp-tree-column { order: -1; }
-  .lp-tree { width: 140px; max-width: 40vw; }
+  .lp-tree-column { order: -1; min-width: 0; width: 150px; height: 300px; margin: 0 auto; }
   .lp-cta-row { flex-direction: column; }
 }
 
