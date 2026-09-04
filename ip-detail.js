@@ -234,18 +234,40 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.ipd-apply-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       if (!bearipRequireLogin('ip-detail.html')) return;
-      const nowApplied = bearipSetToggle(IPD_APPLY_KEY, btn.dataset.pos);
+      const posId = btn.dataset.pos;
+      const nowApplied = bearipSetToggle(IPD_APPLY_KEY, posId);
       ipdSetApplyUI(btn, nowApplied);
-      if (nowApplied) {
-        bearipAddNotification({
-          type: 'crew',
-          title: '포지션에 지원했어요',
-          message: `${btn.dataset.ipTitle} · ${btn.dataset.posTitle}에 지원했어요. 결과를 기다려주세요.`,
-          link: 'profile.html',
-        });
-      } else {
+      const user = bearipGetUser();
+
+      if (!nowApplied) {
+        if (user) bearipRemoveApplicantByName(posId, user.nickname);
         bearipShowToast('지원을 취소했어요');
+        return;
       }
+
+      // Creates the same real applicant record CREW MATCH's own apply
+      // button does, so the IP owner actually sees this applicant in
+      // 지원자 확인 instead of the click only toggling local UI state.
+      if (user) {
+        const myPositions = typeof bearipGetMyPositions === 'function' ? bearipGetMyPositions() : [];
+        const myPortfolio = typeof bearipLoadPortfolio === 'function' ? bearipLoadPortfolio() : [];
+        const visibleCount = myPortfolio.filter((p) => p.visibility !== 'private').length;
+        bearipAddApplicant(posId, {
+          id: 'app_me_' + posId,
+          name: user.nickname,
+          role: myPositions[0] || '',
+          bio: user.bio || '',
+          portfolioCount: visibleCount,
+          appliedAt: new Date().toISOString(),
+          status: 'pending',
+        });
+      }
+      bearipAddNotification({
+        type: 'crew',
+        title: '포지션에 지원했어요',
+        message: `${btn.dataset.ipTitle} · ${btn.dataset.posTitle}에 지원했어요. 결과를 기다려주세요.`,
+        link: 'profile.html',
+      });
     });
   });
 });

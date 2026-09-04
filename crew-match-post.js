@@ -95,7 +95,7 @@ if (cmPositionsListEl) {
 // completeness while they go through applicants (reuses OPEN DNA's
 // read-only report popup, since open-dna.js is loaded on this page too).
 function cmRenderApplicantsPanel(pos, panelEl, fracEl) {
-  const applicants = bearipSeedApplicantsIfEmpty(pos.id);
+  const applicants = bearipGetApplicants(pos.id);
   const projectIp = cmResolveIpForPosition(pos);
   const dnaHtml = projectIp
     ? `<button type="button" class="cm-applicants-dna">
@@ -176,7 +176,7 @@ function cmRenderPositionCard(pos) {
   el.dataset.ipTitle = pos.ipTitle;
   const tagsHtml = (pos.tags || []).map((t) => `<span>${t}</span>`).join('');
   const filled = pos.filled || 0;
-  const applicantCount = bearipSeedApplicantsIfEmpty(pos.id).length;
+  const applicantCount = bearipGetApplicants(pos.id).length;
   const cardIp = cmResolveIpForPosition(pos);
   const dnaBadgeHtml = cardIp
     ? `<button type="button" class="cm-position-dna"><span class="lbl">DNA</span><span class="val">${cardIp.dnaScore}%</span></button>`

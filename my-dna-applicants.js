@@ -21,7 +21,7 @@ function mdRenderApplicantsAlert() {
   );
   const rows = [];
   positions.forEach((pos) => {
-    const applicants = typeof bearipSeedApplicantsIfEmpty === 'function' ? bearipSeedApplicantsIfEmpty(pos.id) : [];
+    const applicants = typeof bearipGetApplicants === 'function' ? bearipGetApplicants(pos.id) : [];
     applicants.filter((a) => a.status === 'pending').forEach((a) => rows.push({ pos, applicant: a }));
   });
 

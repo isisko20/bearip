@@ -86,6 +86,8 @@ function renderHeader(user) {
 function renderStats() {
   const ips = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
   document.getElementById('pfStatIps').textContent = ips.length;
+  const appliedEl = document.getElementById('pfStatApplied');
+  if (appliedEl) appliedEl.textContent = bearipSetList('bearip_applied_positions').length;
 }
 
 function renderPositionsChips() {
