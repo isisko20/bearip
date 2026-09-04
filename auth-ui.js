@@ -72,6 +72,15 @@ function bearipInjectProfileMenuStyles() {
       transition: opacity .18s ease, transform .18s ease;
     }
     .bearip-toast.show { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+
+    .bearip-back-btn {
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; margin-right: 8px;
+      border: 1px solid var(--pm-border); background: var(--pm-panel); color: var(--pm-ink-soft);
+      display: inline-flex; align-items: center; justify-content: center; padding: 0; cursor: pointer;
+      transition: color .15s, border-color .15s;
+    }
+    .bearip-back-btn svg { width: 13px; height: 13px; }
+    .bearip-back-btn:hover { color: var(--pm-ink); border-color: var(--pm-purple); }
   `;
   document.head.appendChild(style);
 }
@@ -117,23 +126,21 @@ document.addEventListener('DOMContentLoaded', () => {
     sessionStorage.setItem('bearip_shell_theme', appRoot.classList.contains('cr-app') ? 'dark' : 'light');
   }
 
-  // "Back to X" links (.dr-back-home / .od-back-home / .cr-back-home) always
-  // pointed at one fixed page (usually index.html), so leaving it via that
-  // link — from deep inside MY DNA, say — dropped the user all the way back
-  // to the marketing landing page instead of wherever they actually came
-  // from. When there's a real same-origin previous page in this tab's
-  // history, go there instead; the link's own href stays as the fallback
-  // for a fresh tab / bookmarked / directly-typed visit (and still works
-  // untouched for a modifier-click into a new tab).
-  document.querySelectorAll('.dr-back-home, .od-back-home, .cr-back-home').forEach((link) => {
-    link.addEventListener('click', (e) => {
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-      const ref = document.referrer;
-      if (ref && ref.indexOf(location.origin) === 0 && ref !== location.href) {
-        e.preventDefault();
-        history.back();
-      }
-    });
+  // "Back to X" (.dr-back-home / .od-back-home / .cr-back-home) is a plain,
+  // fixed-destination link again — it always goes to the same place, same
+  // as before. A separate, independent 뒤로가기 button (inserted just before
+  // it) does the actual history navigation instead, so the two controls
+  // each do exactly one predictable thing rather than one link trying to
+  // be both.
+  bearipInjectProfileMenuStyles();
+  document.querySelectorAll('.dr-back-home, .od-back-home, .cr-back-home').forEach((homeLink) => {
+    const backBtn = document.createElement('button');
+    backBtn.type = 'button';
+    backBtn.className = 'bearip-back-btn';
+    backBtn.setAttribute('aria-label', '뒤로가기');
+    backBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>';
+    backBtn.addEventListener('click', () => history.back());
+    homeLink.parentNode.insertBefore(backBtn, homeLink);
   });
 
   if (typeof bearipSeedNotificationsIfEmpty === 'function') bearipSeedNotificationsIfEmpty();
@@ -169,6 +176,16 @@ document.addEventListener('DOMContentLoaded', () => {
   menu.className = 'bearip-pm';
   root.appendChild(menu);
 
+  // OPEN DNA / CREW MATCH / IP DETAIL are the only pages with a real light/
+  // dark mode (DNA ROOM, MY DNA, and CONTENT ROOM each have just one fixed
+  // theme) — so the toggle only shows up in the menu on those pages.
+  const themedPage = !!(appRoot && appRoot.classList.contains('od-app'));
+  function themeToggleRowHtml() {
+    if (!themedPage) return '';
+    const isDark = document.documentElement.dataset.theme === 'dark';
+    return `<button class="bearip-pm-btn" data-action="toggle-theme">${isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}</button>`;
+  }
+
   function renderMenu() {
     const u = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
     if (u) {
@@ -183,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="bearip-pm-divider"></div>
         <button class="bearip-pm-btn primary" data-action="profile">내 정보 수정 →</button>
         <button class="bearip-pm-btn" data-action="notifications">알림함</button>
+        ${themeToggleRowHtml()}
         <button class="bearip-pm-btn danger" data-action="logout">로그아웃</button>
       `;
     } else {
@@ -190,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="bearip-pm-guest-t">로그인이 필요해요</div>
         <div class="bearip-pm-guest-s">닉네임만 입력하면 바로 시작할 수 있어요.</div>
         <button class="bearip-pm-btn primary" data-action="login">로그인하기 →</button>
+        ${themeToggleRowHtml()}
       `;
     }
   }
@@ -241,6 +260,11 @@ document.addEventListener('DOMContentLoaded', () => {
       location.href = 'notifications.html';
     } else if (action === 'login') {
       bearipGoToLogin();
+    } else if (action === 'toggle-theme') {
+      const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = next;
+      if (typeof bearipSetTheme === 'function') bearipSetTheme(next);
+      closeMenu();
     }
   });
 
