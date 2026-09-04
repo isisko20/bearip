@@ -59,6 +59,23 @@ function bearipInjectProfileMenuStyles() {
     .bearip-pm-guest-t { font-size: 13px; font-weight: 800; padding: 2px 2px 4px; }
     .bearip-pm-guest-s { font-size: 11.5px; color: var(--pm-ink-soft); padding: 0 2px 12px; line-height: 1.5; }
 
+    .bearip-pm-switch-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 10px; margin-bottom: 4px; font-size: 12.5px; font-weight: 700; color: var(--pm-ink);
+    }
+    .bearip-pm-switch {
+      position: relative; width: 38px; height: 22px; flex-shrink: 0;
+      border: none; border-radius: 999px; background: var(--pm-border);
+      padding: 0; cursor: pointer; transition: background 0.18s ease;
+    }
+    .bearip-pm-switch .knob {
+      position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+      border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+      transition: transform 0.18s ease;
+    }
+    .bearip-pm-switch.on { background: var(--pm-purple); }
+    .bearip-pm-switch.on .knob { transform: translateX(16px); }
+
     .bearip-toast {
       --pm-purple: var(--dr-purple, var(--od-purple, var(--cr-purple, var(--purple-1, #6d4de6))));
       --pm-shadow: var(--dr-shadow, var(--od-shadow, var(--cr-shadow, var(--shadow-soft, 0 20px 50px rgba(0,0,0,0.35)))));
@@ -184,7 +201,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function themeToggleRowHtml() {
     if (!themedPage) return '';
     const isDark = document.documentElement.dataset.theme === 'dark';
-    return `<button class="bearip-pm-btn" data-action="toggle-theme">${isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}</button>`;
+    return `
+      <div class="bearip-pm-switch-row">
+        <span>다크 모드</span>
+        <button type="button" class="bearip-pm-switch${isDark ? ' on' : ''}" data-action="toggle-theme" role="switch" aria-checked="${isDark}" aria-label="다크 모드 전환">
+          <span class="knob"></span>
+        </button>
+      </div>`;
   }
 
   function renderMenu() {
@@ -265,7 +288,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
       document.documentElement.dataset.theme = next;
       if (typeof bearipSetTheme === 'function') bearipSetTheme(next);
-      closeMenu();
+      // Just flips the switch in place — the menu stays open, unlike every
+      // other row here which navigates away or logs out. Stop the click from
+      // reaching the document-level "click outside" listener: renderMenu()
+      // below replaces this button with a new node, so by the time that
+      // listener runs, e.target is detached and menu.contains(e.target)
+      // would wrongly read as false, closing the menu.
+      e.stopPropagation();
+      renderMenu();
     }
   });
 
