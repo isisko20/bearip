@@ -196,3 +196,16 @@
   .cm-position-meta { margin-left: 72px; }
   .cm-creators { grid-template-columns: 1fr; }
 }
+
+/* Dark theme — the light pastel tint backgrounds below read as solid,
+   washed-out blocks on a dark panel, so they get translucent rgba
+   versions instead; everything else on this page already flows through
+   var(--od-*) and re-themes on its own. */
+html[data-theme="dark"] .cm-post-success { background: rgba(61,220,132,0.16); }
+html[data-theme="dark"] .cm-applicant-accept:hover { background: rgba(61,220,132,0.14); }
+html[data-theme="dark"] .cm-applicant-reject:hover,
+html[data-theme="dark"] .cm-applied-row .s.rejected,
+html[data-theme="dark"] .cm-applicant-actions .s.rejected { background: rgba(229,72,77,0.16); }
+html[data-theme="dark"] .cm-applicant-actions .s.accepted,
+html[data-theme="dark"] .cm-applied-row .s.accepted { background: rgba(61,220,132,0.16); }
+html[data-theme="dark"] .cm-applied-row .s.pending { background: rgba(255,180,84,0.18); }

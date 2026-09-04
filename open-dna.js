@@ -76,7 +76,10 @@ function odEnsureDnaReportOverlay() {
       </div>
     </div>
   `;
-  document.body.appendChild(overlay);
+  // Appended inside .od-app (not just body) so it inherits the page's
+  // --od-* theme variables — otherwise var(--od-panel) etc. resolve to
+  // nothing outside that scope and the box renders transparent.
+  (document.querySelector('.od-app') || document.body).appendChild(overlay);
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay || e.target.closest('#odDnaReportClose')) odCloseDnaReport();
   });

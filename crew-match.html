@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thinkit — CREW MATCH</title>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem('bearip_theme')||'light';}catch(e){}</script>
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="open-dna.css">
 <link rel="stylesheet" href="ip-detail.css">
@@ -13,7 +14,7 @@
 <div class="od-app">
 
   <header class="od-topbar">
-    <a class="od-back-home" href="index.html">
+    <a class="od-back-home" href="create.html">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
       Thinkit
     </a>
@@ -41,6 +42,7 @@
       <input type="text" id="cmSearchInput" placeholder="포지션, 크리에이터 검색">
     </label>
     <div class="od-top-actions">
+      <button class="od-icon-btn theme-toggle-btn" aria-label="다크 모드로 전환"></button>
       <button class="od-icon-btn" aria-label="알림"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></button>
       <button class="od-avatar-chip">
         <span class="av"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="6" fill="#fff"/><circle cx="7" cy="7.5" r="2.4" fill="#fff"/><circle cx="17" cy="7.5" r="2.4" fill="#fff"/></svg></span>
@@ -368,6 +370,7 @@
 <script src="script.js"></script>
 <script src="storage.js"></script>
 <script src="auth-ui.js"></script>
+<script src="theme-toggle.js"></script>
 <script src="open-dna.js"></script>
 <script src="crew-match.js"></script>
 <script src="crew-match-status.js"></script>

@@ -2,6 +2,28 @@
 const BEARIP_IPS_KEY = 'bearip_ips';
 const BEARIP_CURRENT_KEY = 'bearip_current_ip';
 
+// ---- Site-wide light/dark preference (OPEN DNA / CREW MATCH / IP DETAIL /
+// CONTENT ROOM only — the landing page and DNA ROOM/MY DNA have a single
+// fixed theme each and don't use this). One shared setting so switching on
+// any of those pages carries over to the rest.
+const BEARIP_THEME_KEY = 'bearip_theme';
+
+function bearipGetTheme() {
+  try {
+    return localStorage.getItem(BEARIP_THEME_KEY) || 'light';
+  } catch (e) {
+    return 'light';
+  }
+}
+
+function bearipSetTheme(theme) {
+  try {
+    localStorage.setItem(BEARIP_THEME_KEY, theme);
+  } catch (e) {
+    /* ignore */
+  }
+}
+
 // Each goal (목표 포맷) has a genuinely different production pipeline, so the
 // roadmap's steps depend on which one is selected — not just its title.
 // Shared between new-ip.js (initial creation) and my-dna-render.js

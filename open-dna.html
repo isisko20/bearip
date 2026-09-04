@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thinkit — OPEN DNA</title>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem('bearip_theme')||'light';}catch(e){}</script>
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="open-dna.css">
 </head>
@@ -12,7 +13,7 @@
 
   <!-- ===================== Top bar ===================== -->
   <header class="od-topbar">
-    <a class="od-back-home" href="index.html">
+    <a class="od-back-home" href="create.html">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
       Thinkit
     </a>
@@ -43,6 +44,7 @@
     </label>
 
     <div class="od-top-actions">
+      <button class="od-icon-btn theme-toggle-btn" aria-label="다크 모드로 전환"></button>
       <button class="od-icon-btn" aria-label="알림">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
       </button>
@@ -262,6 +264,7 @@
 <script src="script.js"></script>
 <script src="storage.js"></script>
 <script src="auth-ui.js"></script>
+<script src="theme-toggle.js"></script>
 <script src="open-dna.js"></script>
 <script src="open-dna-published.js"></script>
 <script>
