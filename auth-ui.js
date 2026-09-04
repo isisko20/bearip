@@ -103,17 +103,38 @@ document.addEventListener('click', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
   const dest = () => (typeof bearipGetUser === 'function' && bearipGetUser() ? 'profile.html' : 'login.html');
 
-  // Remember which shell theme the user is currently browsing in (light
-  // sidebar/topbar vs dark CONTENT ROOM) so a page like notifications.html —
-  // reachable from any of them — can render in a matching theme instead of
-  // always defaulting to light.
+  // Remember which shell (light sidebar/topbar vs dark CONTENT ROOM) the
+  // user is currently browsing in, so a page like notifications.html —
+  // reachable from any of them — can render in a matching shell instead of
+  // always defaulting to light. Named bearip_shell_theme (not bearip_theme)
+  // to stay distinct from the user's light/dark mode preference in
+  // localStorage (storage.js) — same word, different axis, different store.
   const appRoot = document.querySelector('.dna-app, .od-app, .cr-app, .lg-app, .ni-app');
-  // Chameleon pages (like notifications.html) render in whichever theme was
+  // Chameleon pages (like notifications.html) render in whichever shell was
   // last recorded rather than having one of their own, so they must not
   // overwrite the flag they just read.
   if (appRoot && !document.body.classList.contains('chameleon-page')) {
-    sessionStorage.setItem('bearip_theme', appRoot.classList.contains('cr-app') ? 'dark' : 'light');
+    sessionStorage.setItem('bearip_shell_theme', appRoot.classList.contains('cr-app') ? 'dark' : 'light');
   }
+
+  // "Back to X" links (.dr-back-home / .od-back-home / .cr-back-home) always
+  // pointed at one fixed page (usually index.html), so leaving it via that
+  // link — from deep inside MY DNA, say — dropped the user all the way back
+  // to the marketing landing page instead of wherever they actually came
+  // from. When there's a real same-origin previous page in this tab's
+  // history, go there instead; the link's own href stays as the fallback
+  // for a fresh tab / bookmarked / directly-typed visit (and still works
+  // untouched for a modifier-click into a new tab).
+  document.querySelectorAll('.dr-back-home, .od-back-home, .cr-back-home').forEach((link) => {
+    link.addEventListener('click', (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      const ref = document.referrer;
+      if (ref && ref.indexOf(location.origin) === 0 && ref !== location.href) {
+        e.preventDefault();
+        history.back();
+      }
+    });
+  });
 
   if (typeof bearipSeedNotificationsIfEmpty === 'function') bearipSeedNotificationsIfEmpty();
   const unread = typeof bearipGetUnreadCount === 'function' ? bearipGetUnreadCount() : 0;

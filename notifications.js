@@ -57,9 +57,9 @@ function ntRender() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Render in whichever theme (light shell / dark CONTENT ROOM) the user
+  // Render in whichever shell (light shell / dark CONTENT ROOM) the user
   // was just browsing in, since this page is reachable from either.
-  if (sessionStorage.getItem('bearip_theme') === 'dark') {
+  if (sessionStorage.getItem('bearip_shell_theme') === 'dark') {
     document.getElementById('ntRoot').classList.add('theme-dark');
   }
 
