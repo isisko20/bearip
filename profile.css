@@ -93,6 +93,13 @@
 .pf-crew-status.pending { background: #fdf1e4; color: #d9791f; }
 .pf-crew-empty { font-size: 12.5px; color: var(--dr-ink-soft); }
 
+html[data-theme="dark"] .dna-app .pf-vis-badge.apply,
+html[data-theme="dark"] .dna-app .pf-crew-status.pending { background: rgba(217,121,31,0.18); color: #e0954a; }
+html[data-theme="dark"] .dna-app .pf-vis-badge.always,
+html[data-theme="dark"] .dna-app .pf-crew-status.member { background: rgba(61,220,132,0.16); }
+html[data-theme="dark"] .dna-app .pf-vis-badge.private { background: rgba(255,255,255,0.08); }
+html[data-theme="dark"] .dna-app .pf-crew-status.owner { background: rgba(143,107,255,0.18); }
+
 @media (max-width: 860px) {
   .pf-stats-row { grid-template-columns: repeat(2, 1fr); }
   .pf-portfolio-form { grid-template-columns: 1fr; }

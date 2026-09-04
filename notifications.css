@@ -64,3 +64,10 @@
 .dna-app.theme-dark .nt-icon.type-ip { background: rgba(79,176,255,0.18); }
 .dna-app.theme-dark .nt-icon.type-discussion { background: rgba(61,220,132,0.18); color: #3ddc84; }
 .dna-app.theme-dark .nt-item.unread:hover { background: rgba(139,107,255,0.24); }
+
+/* Same dark palette, but driven by the user's light/dark preference toggle
+   rather than which shell they arrived from. */
+html[data-theme="dark"] .dna-app .nt-item.unread:hover { background: rgba(139,107,255,0.24); }
+html[data-theme="dark"] .dna-app .nt-icon.type-crew { background: rgba(139,107,255,0.18); }
+html[data-theme="dark"] .dna-app .nt-icon.type-ip { background: rgba(79,176,255,0.18); }
+html[data-theme="dark"] .dna-app .nt-icon.type-discussion { background: rgba(61,220,132,0.18); color: #3ddc84; }

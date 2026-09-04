@@ -176,10 +176,11 @@ document.addEventListener('DOMContentLoaded', () => {
   menu.className = 'bearip-pm';
   root.appendChild(menu);
 
-  // OPEN DNA / CREW MATCH / IP DETAIL are the only pages with a real light/
-  // dark mode (DNA ROOM, MY DNA, and CONTENT ROOM each have just one fixed
-  // theme) — so the toggle only shows up in the menu on those pages.
-  const themedPage = !!(appRoot && appRoot.classList.contains('od-app'));
+  // Every dr-*/od-* page (DNA ROOM, MY DNA, GUIDE, PROFILE, NOTIFICATIONS,
+  // OPEN DNA, CREW MATCH, IP DETAIL) has a real light/dark mode now — the
+  // landing page and CONTENT ROOM are the only ones left out (CONTENT ROOM
+  // is on hold: its CSS isn't variable-driven the same way yet).
+  const themedPage = !!(appRoot && (appRoot.classList.contains('od-app') || appRoot.classList.contains('dna-app')));
   function themeToggleRowHtml() {
     if (!themedPage) return '';
     const isDark = document.documentElement.dataset.theme === 'dark';
