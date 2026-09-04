@@ -104,15 +104,42 @@
 .ni-vis-option .d { font-size: 11px; color: var(--ni-ink-soft); margin-top: 4px; }
 
 /* Step 3: cover upload */
-.ni-upload { border: 1.5px dashed var(--ni-border); border-radius: 16px; padding: 30px; text-align: center; cursor: pointer; color: var(--ni-ink-soft); }
+.ni-upload {
+  position: relative; border: 1.5px dashed var(--ni-border); border-radius: 16px;
+  padding: 30px; text-align: center; cursor: pointer; color: var(--ni-ink-soft);
+  background-size: cover; background-position: center; transition: border-color 0.15s;
+}
+.ni-upload:hover { border-color: var(--ni-purple); }
 .ni-upload svg { width: 26px; height: 26px; margin-bottom: 8px; color: var(--ni-ink-soft); }
 .ni-upload .t { font-size: 13px; font-weight: 700; color: var(--ni-ink); }
 .ni-upload .d { font-size: 11px; margin-top: 4px; }
-.ni-upload.has-file { border-style: solid; border-color: var(--ni-purple); }
+.ni-upload.has-file {
+  border-style: solid; border-color: var(--ni-purple); min-height: 180px;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  padding-bottom: 16px;
+}
+.ni-upload.has-file::before {
+  content: ''; position: absolute; inset: 0; border-radius: 14px;
+  background: linear-gradient(180deg, rgba(20,16,30,0) 40%, rgba(20,16,30,0.72) 100%);
+}
+.ni-upload.has-file svg { display: none; }
+.ni-upload.has-file .t, .ni-upload.has-file .d { position: relative; z-index: 1; color: #fff; }
+.ni-upload.error { border-color: #d64545; }
+.ni-upload.error .d { color: #d64545; }
+.ni-upload-remove {
+  position: relative; z-index: 1; margin-top: 10px; padding: 6px 14px;
+  border-radius: 999px; border: 1px solid rgba(255,255,255,0.6); background: rgba(0,0,0,0.3);
+  color: #fff; font-size: 11px; font-weight: 700; cursor: pointer;
+}
+.ni-upload-remove:hover { background: rgba(0,0,0,0.5); }
 
 /* Step 4: summary */
 .ni-summary { display: flex; gap: 18px; align-items: flex-start; padding: 18px; border: 1px solid var(--ni-border); border-radius: 16px; margin-bottom: 22px; }
-.ni-summary-cover { width: 96px; aspect-ratio: 1/1; border-radius: 12px; background: linear-gradient(150deg, var(--ni-purple), var(--ni-blue)); flex-shrink: 0; }
+.ni-summary-cover {
+  width: 96px; aspect-ratio: 1/1; border-radius: 12px; flex-shrink: 0;
+  background: linear-gradient(150deg, var(--ni-purple), var(--ni-blue));
+  background-size: cover; background-position: center;
+}
 .ni-summary-info { min-width: 0; }
 .ni-summary-info .title { font-size: 17px; font-weight: 800; }
 .ni-summary-info .row { font-size: 12px; color: var(--ni-ink-soft); margin-top: 5px; line-height: 1.6; }

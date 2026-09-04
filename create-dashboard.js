@@ -16,8 +16,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const genreText = ip.genres && ip.genres.length ? ip.genres.join(', ') : '장르 미정';
     const dna = ip.dnaScore || 0;
+    const imageAsset = (ip.assets || []).find((a) => a.imageData);
+    const thumbClass = imageAsset ? '' : thumbClasses[i % thumbClasses.length];
+    const thumbStyle = imageAsset
+      ? ` style="background-image:url('${imageAsset.imageData}');background-size:cover;background-position:center"`
+      : '';
     card.innerHTML = `
-      <div class="thumb ${thumbClasses[i % thumbClasses.length]}"><span class="tlabel">${ip.title}</span></div>
+      <div class="thumb ${thumbClass}"${thumbStyle}><span class="tlabel">${ip.title}</span></div>
       <div class="title">${ip.title}</div>
       <div class="genre">${genreText}</div>
       <div class="dna-bar"><div class="dna-bar-fill" style="width:${dna}%"></div></div>

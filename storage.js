@@ -2,10 +2,9 @@
 const BEARIP_IPS_KEY = 'bearip_ips';
 const BEARIP_CURRENT_KEY = 'bearip_current_ip';
 
-// ---- Site-wide light/dark preference (OPEN DNA / CREW MATCH / IP DETAIL /
-// CONTENT ROOM only — the landing page and DNA ROOM/MY DNA have a single
-// fixed theme each and don't use this). One shared setting so switching on
-// any of those pages carries over to the rest.
+// ---- Site-wide light/dark preference. Every dr-*/od-* page shares it; only
+// the landing page and CONTENT ROOM are excluded (CONTENT ROOM's CSS isn't
+// variable-driven the same way yet).
 const BEARIP_THEME_KEY = 'bearip_theme';
 
 function bearipGetTheme() {
@@ -566,6 +565,35 @@ function bearipOpenFilesDb() {
     req.onupgradeneeded = () => req.result.createObjectStore(BEARIP_FILES_STORE);
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error || new Error('저장소를 열지 못했어요'));
+  });
+}
+
+// Reads an image file, downsizes it on a canvas, and returns a small JPEG
+// data URL — keeps uploaded photos from blowing past localStorage's quota.
+// Shared by my-dna-render.js (ASSETS tab) and new-ip.js (cover image).
+function bearipResizeImageToDataUrl(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('이미지를 읽지 못했어요'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('이미지를 불러오지 못했어요'));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const scale = maxDim / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
   });
 }
 

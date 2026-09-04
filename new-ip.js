@@ -3,6 +3,8 @@ let currentStep = 1;
 let selectedGoal = 'webnovel';
 let selectedGenres = [];
 let selectedVis = 'public';
+let coverFile = null;
+let coverImageData = null;
 
 const panels = document.querySelectorAll('.ni-panel');
 const steps = document.querySelectorAll('.ni-step');
@@ -39,6 +41,9 @@ function populateSummary() {
   document.getElementById('sumGoal').textContent = `목표: ${goalLabel}`;
   document.getElementById('sumLogline').textContent = logline;
   document.getElementById('sumVis').textContent = `공개 범위: ${visLabel}`;
+
+  const sumCover = document.querySelector('.ni-summary-cover');
+  sumCover.style.backgroundImage = coverImageData ? `url('${coverImageData}')` : '';
 
   const chipsWrap = document.getElementById('sumGenres');
   chipsWrap.innerHTML = '';
@@ -88,12 +93,71 @@ document.querySelectorAll('.ni-vis-option').forEach((opt) => {
   });
 });
 
-// Step 3: cover upload (visual only, no real file handling)
+// Step 3: cover upload
 const coverUpload = document.getElementById('coverUpload');
+const coverInput = document.getElementById('coverInput');
 const coverText = document.getElementById('coverText');
-coverUpload.addEventListener('click', () => {
-  coverUpload.classList.add('has-file');
-  coverText.textContent = '커버 이미지가 선택되었습니다';
+const coverHint = document.getElementById('coverHint');
+const coverRemoveBtn = document.getElementById('coverRemoveBtn');
+const COVER_DEFAULT_HINT = coverHint.textContent;
+
+function setCoverError(message) {
+  coverUpload.classList.add('error');
+  coverText.textContent = '업로드에 실패했어요';
+  coverHint.textContent = message;
+}
+
+function clearCover() {
+  coverFile = null;
+  coverImageData = null;
+  coverInput.value = '';
+  coverUpload.classList.remove('has-file', 'error');
+  coverUpload.style.backgroundImage = '';
+  coverText.textContent = '클릭해서 커버 이미지 업로드';
+  coverHint.textContent = COVER_DEFAULT_HINT;
+  coverRemoveBtn.hidden = true;
+}
+
+coverUpload.addEventListener('click', (e) => {
+  if (e.target.closest('.ni-upload-remove')) return;
+  coverInput.click();
+});
+
+coverRemoveBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  clearCover();
+});
+
+coverInput.addEventListener('change', async () => {
+  const file = coverInput.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    setCoverError('이미지 파일만 업로드할 수 있어요');
+    return;
+  }
+  if (file.size > BEARIP_MAX_ASSET_FILE_BYTES) {
+    setCoverError('파일이 너무 커요 (최대 50MB)');
+    return;
+  }
+  if (!(await bearipCheckStorageRoom(file.size))) {
+    setCoverError('저장 공간이 부족해요. 다른 파일을 시도해보세요.');
+    return;
+  }
+
+  coverUpload.classList.remove('error');
+  coverText.textContent = '이미지를 불러오는 중...';
+  try {
+    coverImageData = await bearipResizeImageToDataUrl(file, 800, 0.85);
+    coverFile = file;
+    coverUpload.classList.add('has-file');
+    coverUpload.style.backgroundImage = `url('${coverImageData}')`;
+    coverText.textContent = file.name;
+    coverHint.textContent = '다른 이미지를 선택하려면 클릭하세요';
+    coverRemoveBtn.hidden = false;
+  } catch (err) {
+    setCoverError(err.message || '이미지를 불러오지 못했어요');
+  }
 });
 
 // Footer nav
@@ -105,6 +169,24 @@ prevBtn.addEventListener('click', () => {
 });
 
 function createAndSaveIP() {
+  const assets = [];
+  if (coverImageData) {
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+    assets.push({
+      id: 'asset_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      name: '커버 이미지',
+      ver: 'v1.0',
+      date: dateStr,
+      thumb: 'thumb-1',
+      icon: 'image',
+      type: 'art',
+      imageData: coverImageData,
+      fileName: coverFile ? coverFile.name : undefined,
+      fileSize: coverFile ? coverFile.size : undefined,
+    });
+  }
+
   const ip = {
     id: 'ip_' + Date.now(),
     title: document.getElementById('ipTitle').value.trim() || '제목 없는 IP',
@@ -120,7 +202,7 @@ function createAndSaveIP() {
     readinessScore: 0,
     productionProgress: 0,
     roadmap: bearipBuildRoadmap(selectedGoal, null),
-    assets: [],
+    assets,
     discussion: [],
     views: 0,
     likes: 0,

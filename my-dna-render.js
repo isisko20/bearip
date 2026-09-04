@@ -852,34 +852,6 @@ document.addEventListener('DOMContentLoaded', () => {
 const ASSET_TYPE_ICONS = { character: 'user', world: 'doc', story: 'file', art: 'image' };
 const ASSET_THUMB_CYCLE = ['thumb-1', 'thumb-2', 'thumb-3', 'thumb-4', 'thumb-5', 'thumb-6', 'thumb-7', 'thumb-8'];
 
-// Reads an image file, downsizes it on a canvas, and returns a small JPEG
-// data URL — keeps uploaded photos from blowing past localStorage's quota.
-function resizeImageToDataUrl(file, maxDim, quality) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('이미지를 읽지 못했어요'));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('이미지를 불러오지 못했어요'));
-      img.onload = () => {
-        let { width, height } = img;
-        if (width > maxDim || height > maxDim) {
-          const scale = maxDim / Math.max(width, height);
-          width = Math.round(width * scale);
-          height = Math.round(height * scale);
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
 async function addAssetFromUpload(title, type, file) {
   if (file && file.size > BEARIP_MAX_ASSET_FILE_BYTES) {
     throw new Error('파일이 너무 커요 (최대 50MB)');
@@ -891,7 +863,7 @@ async function addAssetFromUpload(title, type, file) {
   const isImage = !!file && file.type.startsWith('image/');
   let imageData = null;
   if (isImage) {
-    imageData = await resizeImageToDataUrl(file, 480, 0.85);
+    imageData = await bearipResizeImageToDataUrl(file, 480, 0.85);
   }
 
   const id = 'asset_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
