@@ -83,6 +83,19 @@ function loadCurrentIP() {
 
 function renderHeader() {
   document.getElementById('currentIpChipLabel').textContent = currentIP.title;
+
+  const thumbEl = document.getElementById('currentIpThumb');
+  const iconEl = document.getElementById('currentIpThumbIcon');
+  if (thumbEl && iconEl) {
+    const imageAsset = (currentIP.assets || []).find((a) => a.imageData);
+    if (imageAsset) {
+      thumbEl.style.backgroundImage = `url('${imageAsset.imageData}')`;
+      iconEl.style.display = 'none';
+    } else {
+      thumbEl.style.backgroundImage = '';
+      iconEl.style.display = '';
+    }
+  }
 }
 
 function renderIpSwitcherMenu() {
