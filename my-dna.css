@@ -172,6 +172,7 @@
 .md-applicant-detail-role { font-weight: 700; color: var(--dr-purple); margin-bottom: 4px; }
 .md-applicant-detail-bio { color: var(--dr-ink); line-height: 1.5; }
 .md-applicant-detail-portfolio { color: var(--dr-ink-soft); margin-top: 6px; }
+.md-applicant-detail-message { color: var(--dr-ink); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--dr-border); line-height: 1.5; font-style: italic; }
 
 /* ---- Goal selector ---- */
 .md-goals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }

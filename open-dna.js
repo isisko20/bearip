@@ -115,6 +115,73 @@ function odOpenDnaReport(title, breakdown, score) {
   overlay.style.display = 'flex';
 }
 
+// ---- 지원하기 modal — lets an applicant leave a real message instead of
+// the apply button just toggling state with zero input. Shared by
+// crew-match-post.js (browse-list postings) and ip-detail.js (an IP's own
+// recruit panel), which both load this file.
+let odApplyModalSubmitHandler = null;
+
+function odEnsureApplyModal() {
+  let overlay = document.getElementById('odApplyModalOverlay');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.className = 'od-apply-modal-overlay';
+  overlay.id = 'odApplyModalOverlay';
+  overlay.style.display = 'none';
+  overlay.innerHTML = `
+    <div class="od-apply-modal-box">
+      <div class="od-apply-modal-head">
+        <div>
+          <div class="t">지원하기</div>
+          <div class="s" id="odApplyModalSub"></div>
+        </div>
+        <button type="button" class="od-apply-modal-close" id="odApplyModalClose" aria-label="닫기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <label class="od-apply-modal-label" for="odApplyModalMessage">지원 메시지 (선택)</label>
+      <textarea id="odApplyModalMessage" placeholder="간단한 인사말이나 지원 이유를 남겨보세요."></textarea>
+      <div class="od-apply-modal-hint">비워두고 지원해도 괜찮아요.</div>
+      <div class="od-apply-modal-actions">
+        <button type="button" class="od-apply-modal-cancel" id="odApplyModalCancel">취소</button>
+        <button type="button" class="od-apply-modal-submit" id="odApplyModalSubmit">지원하기</button>
+      </div>
+    </div>
+  `;
+  // Appended inside .od-app (not just body) so it inherits the page's
+  // --od-* theme variables — see odEnsureDnaReportOverlay above for why.
+  (document.querySelector('.od-app') || document.body).appendChild(overlay);
+
+  const close = () => {
+    overlay.style.display = 'none';
+    odApplyModalSubmitHandler = null;
+  };
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('#odApplyModalClose') || e.target.closest('#odApplyModalCancel')) close();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.style.display !== 'none') close();
+  });
+  document.getElementById('odApplyModalSubmit').addEventListener('click', () => {
+    const message = document.getElementById('odApplyModalMessage').value.trim();
+    const handler = odApplyModalSubmitHandler;
+    close();
+    if (handler) handler(message);
+  });
+  return overlay;
+}
+
+// subtitle: e.g. "'서울 야행수선단' · 비주얼 아티스트". onSubmit(message) fires
+// once the user confirms — message is '' when left blank, never skipped.
+function odOpenApplyForm(subtitle, onSubmit) {
+  const overlay = odEnsureApplyModal();
+  document.getElementById('odApplyModalSub').textContent = subtitle;
+  document.getElementById('odApplyModalMessage').value = '';
+  odApplyModalSubmitHandler = onSubmit;
+  overlay.style.display = 'flex';
+  document.getElementById('odApplyModalMessage').focus();
+}
+
 const odCardsContainer = document.querySelector('.od-cards');
 if (odCardsContainer) {
   odCardsContainer.addEventListener('click', (e) => {

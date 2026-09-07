@@ -330,6 +330,41 @@ html[data-theme="dark"] .od-info-panel { background: linear-gradient(160deg, rgb
   .od-dna-tiles { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* ---- 지원하기 modal (crew-match-post.js + ip-detail.js share this) ---- */
+.od-apply-modal-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(20,16,30,0.5);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.od-apply-modal-box {
+  background: var(--od-panel); border-radius: 16px; padding: 20px;
+  max-width: 380px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.od-apply-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.od-apply-modal-head .t { font-size: 15px; font-weight: 800; color: var(--od-ink); }
+.od-apply-modal-head .s { font-size: 11.5px; color: var(--od-ink-soft); margin-top: 3px; }
+.od-apply-modal-close {
+  width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--od-bg);
+  color: var(--od-ink-soft); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+}
+.od-apply-modal-close:hover { background: var(--od-border); color: var(--od-ink); }
+.od-apply-modal-close svg { width: 12px; height: 12px; }
+.od-apply-modal-label { display: block; font-size: 12px; font-weight: 700; color: var(--od-ink); margin-bottom: 8px; }
+.od-apply-modal-box textarea {
+  width: 100%; min-height: 100px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--od-border);
+  background: var(--od-bg); font-size: 13px; color: var(--od-ink); outline: none; font-family: inherit;
+  resize: vertical; line-height: 1.55;
+}
+.od-apply-modal-box textarea:focus { border-color: var(--od-purple); }
+.od-apply-modal-hint { font-size: 11px; color: var(--od-ink-soft); margin-top: 6px; }
+.od-apply-modal-actions { display: flex; gap: 8px; margin-top: 18px; }
+.od-apply-modal-cancel, .od-apply-modal-submit {
+  flex: 1; padding: 11px; border-radius: 10px; font-size: 12.5px; font-weight: 700;
+  cursor: pointer; border: 1px solid var(--od-border); font-family: inherit;
+}
+.od-apply-modal-cancel { background: var(--od-bg); color: var(--od-ink); }
+.od-apply-modal-submit { background: var(--od-purple); color: #fff; border-color: transparent; }
+
 .od-latest-label { font-size: 11px; font-weight: 800; color: var(--od-ink-soft); margin-bottom: 8px; }
 .od-latest-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 16px; }
 .od-latest-thumb { width: 100%; aspect-ratio: 1 / 1; border-radius: 8px; }

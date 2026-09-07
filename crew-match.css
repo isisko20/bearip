@@ -146,6 +146,7 @@
 .cm-applicant-detail-role { font-weight: 700; color: var(--od-purple); margin-bottom: 4px; }
 .cm-applicant-detail-bio { color: var(--od-ink); line-height: 1.5; }
 .cm-applicant-detail-portfolio { color: var(--od-ink-soft); margin-top: 6px; }
+.cm-applicant-detail-message { color: var(--od-ink); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--od-border); line-height: 1.5; font-style: italic; }
 .cm-applicant-actions .s { font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
 .cm-applicant-actions .s.accepted { background: #e6f7ee; color: var(--od-green); }
 .cm-applicant-actions .s.rejected { background: #fbe9e9; color: #d64545; }

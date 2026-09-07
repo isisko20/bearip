@@ -25,25 +25,28 @@ document.querySelectorAll('.cm-apply-btn').forEach((btn) => {
     const role = card ? card.querySelector('.cm-position-role').textContent : '포지션';
     const ipTitle = card ? card.querySelector('.cm-position-ip').textContent : '';
 
-    if (posId) {
-      const applied = bearipSetToggle(CM_APPLY_KEY, posId);
-      cmSetApplyUI(btn, applied);
-      if (!applied) {
-        bearipShowToast('지원을 취소했어요');
-        if (typeof cmRenderMatchStatus === 'function') cmRenderMatchStatus();
-        return;
-      }
-    } else {
-      cmSetApplyUI(btn, true);
+    if (posId && bearipSetHas(CM_APPLY_KEY, posId)) {
+      // Un-applying is immediate — nothing to confirm on the way out.
+      bearipSetToggle(CM_APPLY_KEY, posId);
+      cmSetApplyUI(btn, false);
+      bearipShowToast('지원을 취소했어요');
+      if (typeof cmRenderMatchStatus === 'function') cmRenderMatchStatus();
+      return;
     }
 
-    bearipAddNotification({
-      type: 'crew',
-      title: '포지션에 지원했어요',
-      message: `${ipTitle ? ipTitle + ' · ' : ''}${role}에 지원했어요. 결과를 기다려주세요.`,
-      link: 'profile.html',
+    odOpenApplyForm(`${ipTitle ? "'" + ipTitle + "' · " : ''}${role}`, (message) => {
+      cmSetApplyUI(btn, true);
+      if (posId) bearipSetToggle(CM_APPLY_KEY, posId);
+
+      const base = `${ipTitle ? ipTitle + ' · ' : ''}${role}에 지원했어요. 결과를 기다려주세요.`;
+      bearipAddNotification({
+        type: 'crew',
+        title: '포지션에 지원했어요',
+        message: message ? `${base} 남긴 메시지: "${message}"` : base,
+        link: 'profile.html',
+      });
+      if (typeof cmRenderMatchStatus === 'function') cmRenderMatchStatus();
     });
-    if (typeof cmRenderMatchStatus === 'function') cmRenderMatchStatus();
   });
 });
 

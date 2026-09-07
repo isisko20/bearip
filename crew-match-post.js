@@ -129,6 +129,7 @@ function cmRenderApplicantsPanel(pos, panelEl, fracEl) {
             <div class="cm-applicant-detail-role">${bearipEscapeHtml(a.role || '역할 미지정')}</div>
             <div class="cm-applicant-detail-bio">${bearipEscapeHtml(a.bio || '아직 작성된 소개가 없어요.')}</div>
             ${a.portfolioCount ? `<div class="cm-applicant-detail-portfolio">포트폴리오 ${a.portfolioCount}개</div>` : ''}
+            ${a.message ? `<div class="cm-applicant-detail-message">"${bearipEscapeHtml(a.message)}"</div>` : ''}
           </div>
         </div>
       `;
@@ -207,43 +208,52 @@ function cmRenderPositionCard(pos) {
   cmSetApplyUI(applyBtn, bearipSetHas(CM_APPLY_KEY, pos.id));
   applyBtn.addEventListener('click', () => {
     if (!bearipRequireLogin('crew-match.html')) return;
-    const applied = bearipSetToggle(CM_APPLY_KEY, pos.id);
-    cmSetApplyUI(applyBtn, applied);
-    const user = bearipGetUser();
-    if (!applied) {
+
+    if (bearipSetHas(CM_APPLY_KEY, pos.id)) {
+      // Un-applying is immediate — nothing to confirm on the way out.
+      bearipSetToggle(CM_APPLY_KEY, pos.id);
+      cmSetApplyUI(applyBtn, false);
+      const user = bearipGetUser();
       if (user) bearipRemoveApplicantByName(pos.id, user.nickname);
       bearipShowToast('지원을 취소했어요');
       if (typeof cmRenderMatchStatus === 'function') cmRenderMatchStatus();
       return;
     }
-    if (user) {
-      const myPositions = typeof bearipGetMyPositions === 'function' ? bearipGetMyPositions() : [];
-      const myPortfolio = typeof bearipLoadPortfolio === 'function' ? bearipLoadPortfolio() : [];
-      // "비공개" portfolio items stay hidden even when applying; "지원할 때
-      // 공개" and "항시 공개" items are exactly what should surface here,
-      // since applying to a position is that visibility condition.
-      const visibleCount = myPortfolio.filter((p) => p.visibility !== 'private').length;
-      bearipAddApplicant(pos.id, {
-        id: 'app_me_' + pos.id,
-        name: user.nickname,
-        role: myPositions[0] || '',
-        bio: user.bio || '',
-        portfolioCount: visibleCount,
-        appliedAt: new Date().toISOString(),
-        status: 'pending',
+
+    odOpenApplyForm(`'${pos.ipTitle}' · ${pos.role}`, (message) => {
+      bearipSetToggle(CM_APPLY_KEY, pos.id);
+      cmSetApplyUI(applyBtn, true);
+      const user = bearipGetUser();
+      if (user) {
+        const myPositions = typeof bearipGetMyPositions === 'function' ? bearipGetMyPositions() : [];
+        const myPortfolio = typeof bearipLoadPortfolio === 'function' ? bearipLoadPortfolio() : [];
+        // "비공개" portfolio items stay hidden even when applying; "지원할 때
+        // 공개" and "항시 공개" items are exactly what should surface here,
+        // since applying to a position is that visibility condition.
+        const visibleCount = myPortfolio.filter((p) => p.visibility !== 'private').length;
+        bearipAddApplicant(pos.id, {
+          id: 'app_me_' + pos.id,
+          name: user.nickname,
+          role: myPositions[0] || '',
+          bio: user.bio || '',
+          portfolioCount: visibleCount,
+          message,
+          appliedAt: new Date().toISOString(),
+          status: 'pending',
+        });
+      }
+      const toggleBtn = el.querySelector('.cm-applicants-toggle');
+      const panelEl = el.querySelector('.cm-applicants-panel');
+      toggleBtn.textContent = `지원자 확인 (${bearipGetApplicants(pos.id).length})`;
+      if (panelEl.style.display !== 'none') cmRenderApplicantsPanel(pos, panelEl, fracEl);
+      bearipAddNotification({
+        type: 'crew',
+        title: '포지션에 지원했어요',
+        message: `${pos.ipTitle} · ${pos.role}에 지원했어요. 결과를 기다려주세요.`,
+        link: 'profile.html',
       });
-    }
-    const toggleBtn = el.querySelector('.cm-applicants-toggle');
-    const panelEl = el.querySelector('.cm-applicants-panel');
-    toggleBtn.textContent = `지원자 확인 (${bearipGetApplicants(pos.id).length})`;
-    if (panelEl.style.display !== 'none') cmRenderApplicantsPanel(pos, panelEl, fracEl);
-    bearipAddNotification({
-      type: 'crew',
-      title: '포지션에 지원했어요',
-      message: `${pos.ipTitle} · ${pos.role}에 지원했어요. 결과를 기다려주세요.`,
-      link: 'profile.html',
+      if (typeof cmRenderMatchStatus === 'function') cmRenderMatchStatus();
     });
-    if (typeof cmRenderMatchStatus === 'function') cmRenderMatchStatus();
   });
 
   const applicantsToggle = el.querySelector('.cm-applicants-toggle');

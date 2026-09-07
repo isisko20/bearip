@@ -235,38 +235,45 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => {
       if (!bearipRequireLogin('ip-detail.html')) return;
       const posId = btn.dataset.pos;
-      const nowApplied = bearipSetToggle(IPD_APPLY_KEY, posId);
-      ipdSetApplyUI(btn, nowApplied);
-      const user = bearipGetUser();
 
-      if (!nowApplied) {
+      if (bearipSetHas(IPD_APPLY_KEY, posId)) {
+        // Un-applying is immediate — nothing to confirm on the way out.
+        bearipSetToggle(IPD_APPLY_KEY, posId);
+        ipdSetApplyUI(btn, false);
+        const user = bearipGetUser();
         if (user) bearipRemoveApplicantByName(posId, user.nickname);
         bearipShowToast('지원을 취소했어요');
         return;
       }
 
-      // Creates the same real applicant record CREW MATCH's own apply
-      // button does, so the IP owner actually sees this applicant in
-      // 지원자 확인 instead of the click only toggling local UI state.
-      if (user) {
-        const myPositions = typeof bearipGetMyPositions === 'function' ? bearipGetMyPositions() : [];
-        const myPortfolio = typeof bearipLoadPortfolio === 'function' ? bearipLoadPortfolio() : [];
-        const visibleCount = myPortfolio.filter((p) => p.visibility !== 'private').length;
-        bearipAddApplicant(posId, {
-          id: 'app_me_' + posId,
-          name: user.nickname,
-          role: myPositions[0] || '',
-          bio: user.bio || '',
-          portfolioCount: visibleCount,
-          appliedAt: new Date().toISOString(),
-          status: 'pending',
+      odOpenApplyForm(`'${btn.dataset.ipTitle}' · ${btn.dataset.posTitle}`, (message) => {
+        bearipSetToggle(IPD_APPLY_KEY, posId);
+        ipdSetApplyUI(btn, true);
+        const user = bearipGetUser();
+        // Creates the same real applicant record CREW MATCH's own apply
+        // button does, so the IP owner actually sees this applicant in
+        // 지원자 확인 instead of the click only toggling local UI state.
+        if (user) {
+          const myPositions = typeof bearipGetMyPositions === 'function' ? bearipGetMyPositions() : [];
+          const myPortfolio = typeof bearipLoadPortfolio === 'function' ? bearipLoadPortfolio() : [];
+          const visibleCount = myPortfolio.filter((p) => p.visibility !== 'private').length;
+          bearipAddApplicant(posId, {
+            id: 'app_me_' + posId,
+            name: user.nickname,
+            role: myPositions[0] || '',
+            bio: user.bio || '',
+            portfolioCount: visibleCount,
+            message,
+            appliedAt: new Date().toISOString(),
+            status: 'pending',
+          });
+        }
+        bearipAddNotification({
+          type: 'crew',
+          title: '포지션에 지원했어요',
+          message: `${btn.dataset.ipTitle} · ${btn.dataset.posTitle}에 지원했어요. 결과를 기다려주세요.`,
+          link: 'profile.html',
         });
-      }
-      bearipAddNotification({
-        type: 'crew',
-        title: '포지션에 지원했어요',
-        message: `${btn.dataset.ipTitle} · ${btn.dataset.posTitle}에 지원했어요. 결과를 기다려주세요.`,
-        link: 'profile.html',
       });
     });
   });
