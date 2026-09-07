@@ -582,6 +582,149 @@ function openRoadEdit(index) {
   overlay.style.display = 'flex';
 }
 
+// ---- Asset folders — a free-form, user-created grouping on top of the
+// fixed type filter. Nothing is pre-seeded; the row starts out as just
+// "전체 자산" and only grows as the user names folders themselves.
+let currentFolderFilter = 'all';
+let addingFolder = false;
+
+function mdGetFolders() {
+  return currentIP.folders || [];
+}
+
+function mdAddFolder(name) {
+  const folder = { id: 'folder_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name };
+  currentIP.folders = [...(currentIP.folders || []), folder];
+  if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { folders: currentIP.folders });
+  return folder;
+}
+
+function mdDeleteFolder(folderId) {
+  currentIP.folders = (currentIP.folders || []).filter((f) => f.id !== folderId);
+  // Ungroups the assets rather than deleting them — a tidy-up shouldn't cost content.
+  currentIP.assets = (currentIP.assets || []).map((a) => (a.folderId === folderId ? { ...a, folderId: null } : a));
+  if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { folders: currentIP.folders, assets: currentIP.assets });
+}
+
+function mdSetAssetFolder(index, folderId) {
+  const assets = currentIP.assets || [];
+  if (!assets[index]) return;
+  assets[index] = Object.assign({}, assets[index], { folderId: folderId || null });
+  currentIP.assets = assets;
+  if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { assets: currentIP.assets });
+}
+
+// Combines the folder view with the existing type filter — a folder chip
+// narrows *which* assets are visible, the type pills further narrow within that.
+function applyAssetFilters() {
+  const typeBtn = document.querySelector('.md-asset-filter-row .md-pill-btn.active');
+  const type = typeBtn ? typeBtn.dataset.assetType : 'all';
+  document.querySelectorAll('#assetsRow .md-asset-card').forEach((card) => {
+    const typeMatch = type === 'all' || card.dataset.type === type;
+    const folderMatch = currentFolderFilter === 'all' || card.dataset.folderId === currentFolderFilter;
+    card.style.display = typeMatch && folderMatch ? '' : 'none';
+  });
+}
+
+function renderFolderRow() {
+  const row = document.getElementById('assetFolderRow');
+  if (!row) return;
+  const folders = mdGetFolders();
+  const chipsHtml = folders
+    .map(
+      (f) => `
+      <button type="button" class="md-folder-chip${currentFolderFilter === f.id ? ' active' : ''}" data-folder-id="${f.id}">
+        <span class="name">${bearipEscapeHtml(f.name)}</span>
+        <span class="md-folder-remove" data-remove-folder="${f.id}" title="폴더 삭제 (자산은 유지돼요)">×</span>
+      </button>
+    `
+    )
+    .join('');
+  const addHtml = addingFolder
+    ? `<span class="md-folder-add-form">
+         <input type="text" id="folderNameInput" placeholder="폴더 이름" maxlength="20">
+         <button type="button" id="folderAddConfirm">추가</button>
+         <button type="button" id="folderAddCancel">취소</button>
+       </span>`
+    : `<button type="button" class="md-folder-add-btn" id="folderAddBtn">
+         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+         폴더 추가
+       </button>`;
+  row.innerHTML = `
+    <button type="button" class="md-folder-chip${currentFolderFilter === 'all' ? ' active' : ''}" data-folder-id="all">전체 자산</button>
+    ${chipsHtml}
+    ${addHtml}
+  `;
+  if (addingFolder) {
+    const input = document.getElementById('folderNameInput');
+    input.focus();
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') confirmAddFolder();
+      if (e.key === 'Escape') {
+        addingFolder = false;
+        renderFolderRow();
+      }
+    });
+  }
+}
+
+function confirmAddFolder() {
+  const input = document.getElementById('folderNameInput');
+  const name = input.value.trim();
+  if (!name) {
+    input.focus();
+    return;
+  }
+  const folder = mdAddFolder(name);
+  addingFolder = false;
+  currentFolderFilter = folder.id;
+  renderFolderRow();
+  renderAssets();
+}
+
+// Delegated so re-rendering the row's innerHTML on every folder add/remove
+// never leaves a stale, unbound button behind.
+function bindFolderRow() {
+  const row = document.getElementById('assetFolderRow');
+  if (!row || row.dataset.bound) return;
+  row.dataset.bound = '1';
+  row.addEventListener('click', (e) => {
+    if (e.target.closest('#folderAddBtn')) {
+      if (!bearipRequireLogin('my-dna.html')) return;
+      addingFolder = true;
+      renderFolderRow();
+      return;
+    }
+    if (e.target.closest('#folderAddConfirm')) {
+      confirmAddFolder();
+      return;
+    }
+    if (e.target.closest('#folderAddCancel')) {
+      addingFolder = false;
+      renderFolderRow();
+      return;
+    }
+    const removeBtn = e.target.closest('.md-folder-remove');
+    if (removeBtn) {
+      e.stopPropagation();
+      const id = removeBtn.dataset.removeFolder;
+      const folder = mdGetFolders().find((f) => f.id === id);
+      mdDeleteFolder(id);
+      if (currentFolderFilter === id) currentFolderFilter = 'all';
+      renderFolderRow();
+      renderAssets();
+      bearipShowToast(`'${folder ? folder.name : '폴더'}' 폴더를 삭제했어요. 자산은 유지돼요.`);
+      return;
+    }
+    const chip = e.target.closest('.md-folder-chip');
+    if (chip) {
+      currentFolderFilter = chip.dataset.folderId;
+      renderFolderRow();
+      applyAssetFilters();
+    }
+  });
+}
+
 function renderAssets() {
   const row = document.getElementById('assetsRow');
   row.querySelectorAll('.md-asset-card').forEach((el) => el.remove());
@@ -597,17 +740,22 @@ function renderAssets() {
     return;
   }
 
+  const folders = mdGetFolders();
   currentIP.assets.forEach((asset, i) => {
     const card = document.createElement('div');
     card.className = 'md-asset-card';
     card.dataset.type = asset.type || 'other';
     card.dataset.index = i;
+    card.dataset.folderId = asset.folderId || '';
     card.tabIndex = 0;
     const hasImage = !!asset.imageData;
     const thumbClass = hasImage ? 'md-asset-thumb has-image' : `md-asset-thumb ${asset.thumb || 'thumb-1'}`;
     const thumbStyle = hasImage ? ` style="background-image:url('${asset.imageData}')"` : '';
     const iconHtml = hasImage ? '' : ASSET_ICONS[asset.icon] || '';
     const meta = asset.blobStored ? `${asset.date} · ${mdFormatFileSize(asset.fileSize)}` : `${asset.ver} · ${asset.date}`;
+    const folderOptions =
+      `<option value=""${asset.folderId ? '' : ' selected'}>폴더 없음</option>` +
+      folders.map((f) => `<option value="${f.id}"${asset.folderId === f.id ? ' selected' : ''}>${bearipEscapeHtml(f.name)}</option>`).join('');
     card.innerHTML = `
       <button type="button" class="md-asset-delete" data-index="${i}" aria-label="자산 삭제">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -615,9 +763,11 @@ function renderAssets() {
       <div class="${thumbClass}"${thumbStyle}>${iconHtml}</div>
       <div class="md-asset-name">${bearipEscapeHtml(asset.name)}</div>
       <div class="md-asset-meta">${meta}</div>
+      <select class="md-asset-folder-select" data-index="${i}" aria-label="폴더로 이동">${folderOptions}</select>
     `;
     row.insertBefore(card, addBtn);
   });
+  applyAssetFilters();
 }
 
 function deleteAssetAt(index) {
@@ -771,6 +921,7 @@ function renderAll() {
   renderGenreTags();
   renderStatus();
   renderRoadmap();
+  renderFolderRow();
   renderAssets();
   renderDiscussion();
 }
@@ -839,11 +990,24 @@ document.addEventListener('DOMContentLoaded', () => {
       deleteAssetAt(parseInt(delBtn.dataset.index, 10));
       return;
     }
+    // A click into the folder <select> shouldn't also open the preview
+    // overlay underneath it.
+    if (e.target.closest('.md-asset-folder-select')) return;
     const card = e.target.closest('.md-asset-card');
     if (card) openAssetPreview(parseInt(card.dataset.index, 10));
   });
+  document.getElementById('assetsRow').addEventListener('change', (e) => {
+    const select = e.target.closest('.md-asset-folder-select');
+    if (!select) return;
+    const index = parseInt(select.dataset.index, 10);
+    mdSetAssetFolder(index, select.value || null);
+    const card = select.closest('.md-asset-card');
+    if (card) card.dataset.folderId = select.value || '';
+    applyAssetFilters();
+  });
   document.getElementById('assetsRow').addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
+    if (e.target.closest('.md-asset-folder-select')) return;
     const card = e.target.closest('.md-asset-card');
     if (!card) return;
     e.preventDefault();
@@ -861,12 +1025,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   bindAssetAddTile();
+  bindFolderRow();
 });
 
 const ASSET_TYPE_ICONS = { character: 'user', world: 'doc', story: 'file', art: 'image' };
 const ASSET_THUMB_CYCLE = ['thumb-1', 'thumb-2', 'thumb-3', 'thumb-4', 'thumb-5', 'thumb-6', 'thumb-7', 'thumb-8'];
 
-async function addAssetFromUpload(title, type, file) {
+async function addAssetFromUpload(title, type, file, folderId) {
   if (file && file.size > BEARIP_MAX_ASSET_FILE_BYTES) {
     throw new Error('파일이 너무 커요 (최대 50MB)');
   }
@@ -906,6 +1071,7 @@ async function addAssetFromUpload(title, type, file) {
     icon: isVideo ? 'video' : ASSET_TYPE_ICONS[type] || 'file',
     type,
   };
+  if (folderId) asset.folderId = folderId;
   if (imageData) asset.imageData = imageData;
   if (file) {
     asset.fileName = file.name;
@@ -939,6 +1105,15 @@ function bindAssetAddTile() {
 
   function activate() {
     if (!bearipRequireLogin('my-dna.html')) return;
+    const folders = mdGetFolders();
+    // Only bother showing the folder picker once the user's actually made
+    // one — otherwise it'd be a select with a single, pointless option.
+    const folderSelectHtml = folders.length
+      ? `<select id="assetFolderSelect">
+           <option value="">폴더 없음</option>
+           ${folders.map((f) => `<option value="${f.id}"${currentFolderFilter === f.id ? ' selected' : ''}>${bearipEscapeHtml(f.name)}</option>`).join('')}
+         </select>`
+      : '';
     tile.innerHTML = `
       <div class="md-asset-add-form">
         <input type="text" id="assetTitleInput" placeholder="자산 이름" maxlength="30">
@@ -953,6 +1128,7 @@ function bindAssetAddTile() {
           <option value="story">스토리</option>
           <option value="art">아트워크</option>
         </select>
+        ${folderSelectHtml}
         <div class="row">
           <button type="button" class="confirm" id="assetConfirmBtn">추가</button>
           <button type="button" class="cancel" id="assetCancelBtn">취소</button>
@@ -992,6 +1168,7 @@ function bindAssetAddTile() {
     const input = document.getElementById('assetTitleInput');
     const fileInput = document.getElementById('assetFileInput');
     const typeSelect = document.getElementById('assetTypeSelect');
+    const folderSelect = document.getElementById('assetFolderSelect');
     const file = fileInput.files[0] || null;
     const title = input.value.trim() || (file ? file.name.replace(/\.[^.]+$/, '') : '');
     if (!title) {
@@ -1002,7 +1179,7 @@ function bindAssetAddTile() {
     confirmBtn.disabled = true;
     confirmBtn.textContent = '추가 중...';
     try {
-      await addAssetFromUpload(title, typeSelect.value, file);
+      await addAssetFromUpload(title, typeSelect.value, file, folderSelect ? folderSelect.value : null);
       reset();
     } catch (err) {
       bearipShowToast(err.message || '자산 추가에 실패했어요');

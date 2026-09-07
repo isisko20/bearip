@@ -10,15 +10,13 @@ document.querySelectorAll('#mdTabs .md-tab').forEach((tab) => {
   });
 });
 
-// ASSETS tab: filter chips (character / world / story / art)
+// ASSETS tab: filter chips (character / world / story / art) — combined
+// with whichever folder is selected via applyAssetFilters (my-dna-render.js).
 document.querySelectorAll('.md-asset-filter-row .md-pill-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.md-asset-filter-row .md-pill-btn').forEach((b) => b.classList.remove('active'));
     btn.classList.add('active');
-    const type = btn.dataset.assetType;
-    document.querySelectorAll('#assetsRow .md-asset-card').forEach((card) => {
-      card.style.display = type === 'all' || card.dataset.type === type ? '' : 'none';
-    });
+    if (typeof applyAssetFilters === 'function') applyAssetFilters();
   });
 });
 
