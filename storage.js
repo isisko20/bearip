@@ -118,13 +118,35 @@ function bearipUpdateIP(id, patch) {
 }
 
 function bearipDeleteIP(id) {
-  const ips = bearipLoadIPs().filter((i) => i.id !== id);
-  bearipSaveIPs(ips);
+  const ip = bearipLoadIPs().find((i) => i.id === id);
+  bearipSaveIPs(bearipLoadIPs().filter((i) => i.id !== id));
   // Falls back to the demo project the next time anything reads the current
   // IP (bearipGetCurrentIP already treats an id with no matching IP as "none").
   if (localStorage.getItem(BEARIP_CURRENT_KEY) === id) {
     localStorage.removeItem(BEARIP_CURRENT_KEY);
   }
+  if (!ip) return;
+
+  // A CREW MATCH posting only exists to recruit for this IP, and an
+  // applicant record only exists to apply to one of those postings — both
+  // are meaningless (and confusing to see) once the IP itself is gone.
+  // Positions link back by title, not id (same convention used everywhere
+  // else — cmResolveIpByTitle, my-dna-applicants.js, ip-detail.js), so this
+  // assumes IP titles are unique, same as those do.
+  const positions = bearipLoadPositions();
+  const orphaned = positions.filter((p) => p.ipTitle === ip.title);
+  if (orphaned.length === 0) return;
+
+  bearipSavePositions(positions.filter((p) => p.ipTitle !== ip.title));
+  const applicantsMap = bearipLoadApplicantsMap();
+  const orphanedIds = orphaned.map((p) => p.id);
+  orphanedIds.forEach((posId) => delete applicantsMap[posId]);
+  bearipSaveApplicantsMap(applicantsMap);
+  // Also drop the deleted postings out of the current user's own "지원한
+  // 포지션" set, so 나의 매치 현황 doesn't show a dangling, unresolvable id.
+  const APPLIED_KEY = 'bearip_applied_positions';
+  const stillApplied = bearipSetList(APPLIED_KEY).filter((posId) => !orphanedIds.includes(posId));
+  localStorage.setItem(APPLIED_KEY, JSON.stringify(stillApplied));
 }
 
 // ---- Shared "IP DNA 현황" breakdown metadata ----

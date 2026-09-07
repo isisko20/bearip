@@ -74,7 +74,7 @@ function mpConfirmDelete(ip) {
   overlay.innerHTML = `
     <div class="mp-confirm-box">
       <div class="mp-confirm-title">'${bearipEscapeHtml(ip.title || '제목 없는 IP')}'을(를) 삭제할까요?</div>
-      <div class="mp-confirm-desc">삭제하면 DNA 현황, 자산, 토론 내용이 모두 사라지고 되돌릴 수 없어요.</div>
+      <div class="mp-confirm-desc">삭제하면 DNA 현황, 자산, 토론 내용은 물론 이 IP로 올린 크루매치 모집글과 지원자 기록까지 모두 사라지고 되돌릴 수 없어요.</div>
       <div class="mp-confirm-actions">
         <button type="button" class="mp-confirm-cancel">취소</button>
         <button type="button" class="mp-confirm-delete">삭제하기</button>
