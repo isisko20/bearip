@@ -117,6 +117,16 @@ function bearipUpdateIP(id, patch) {
   return ips[idx];
 }
 
+function bearipDeleteIP(id) {
+  const ips = bearipLoadIPs().filter((i) => i.id !== id);
+  bearipSaveIPs(ips);
+  // Falls back to the demo project the next time anything reads the current
+  // IP (bearipGetCurrentIP already treats an id with no matching IP as "none").
+  if (localStorage.getItem(BEARIP_CURRENT_KEY) === id) {
+    localStorage.removeItem(BEARIP_CURRENT_KEY);
+  }
+}
+
 // ---- Shared "IP DNA 현황" breakdown metadata ----
 // Used by MY DNA (my-dna-render.js), OPEN DNA's DNA report popup, and the
 // DNA ROOM home summary, so all three stay in sync with one definition.
