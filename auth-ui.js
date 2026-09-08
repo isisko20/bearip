@@ -448,10 +448,10 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('scroll', closeMenu, true);
 
   // Search inputs/buttons that aren't wired to real filtering yet (CREW
-  // MATCH's is — it's excluded by id) get honest "준비 중" feedback instead
-  // of silently doing nothing.
+  // MATCH's and OPEN DNA's are — both excluded by id) get honest "준비 중"
+  // feedback instead of silently doing nothing.
   document.querySelectorAll('.od-search input, .cr-search input').forEach((input) => {
-    if (input.id === 'cmSearchInput') return;
+    if (input.id === 'cmSearchInput' || input.id === 'odSearchInput') return;
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();

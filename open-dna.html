@@ -40,7 +40,7 @@
 
     <label class="od-search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      <input type="text" placeholder="프로젝트, 키워드, 태그 검색">
+      <input type="text" id="odSearchInput" placeholder="프로젝트, 키워드, 태그 검색">
     </label>
 
     <div class="od-top-actions">
@@ -152,7 +152,8 @@
         <a class="od-view-more bearip-soon" href="#">더 많은 프로젝트 보기 →</a>
       </div>
 
-      <div class="od-cards">
+      <div class="od-cards" id="odCardsGrid">
+        <div class="od-empty-state" id="odCardsEmpty" hidden>검색어와 일치하는 IP가 없어요.</div>
 
         <!-- Card 1 -->
         <article class="od-card" data-created="2024-03-02" data-dna="68" data-followers="128" data-recruiting="1">
@@ -269,6 +270,7 @@
 <script src="storage.js"></script>
 <script src="auth-ui.js"></script><script src="open-dna.js"></script>
 <script src="open-dna-published.js"></script>
+<script src="open-dna-search.js"></script>
 <script>
   let odTabNoteTimer = null;
   function onDisabledTabClick(tab) {
