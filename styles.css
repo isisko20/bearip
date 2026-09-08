@@ -267,9 +267,7 @@ html, body {
 .lp-scene-label .t { font-size: clamp(26px, 4.2vw, 44px); font-weight: 800; color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,0.6); }
 .lp-scene-label .s { font-size: clamp(12px, 1.4vw, 15px); color: rgba(255,255,255,0.8); margin-top: 6px; text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
 
-.hl { font-family: 'Playfair Display', serif; font-style: italic; }
-.hl.purple { background: linear-gradient(120deg, var(--purple-2), var(--blue-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.hl.orange { background: linear-gradient(120deg, #ffb454, #ff6a5c); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hl { font-family: 'Playfair Display', serif; font-style: italic; color: #fff; }
 
 /* ---------- Bottom CTA ---------- */
 .lp-cta-row { display: flex; gap: 20px; width: 100%; max-width: 1100px; }
