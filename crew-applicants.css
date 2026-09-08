@@ -1,0 +1,83 @@
+/* ================= 지원자 관리 (crew applicant review) ================= */
+
+.ca-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 14px 0 22px;
+}
+.ca-header h1 { font-size: 32px; font-weight: 800; }
+.ca-header p { font-size: 13.5px; color: var(--dr-ink-soft); margin-top: 6px; }
+
+.ca-filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.ca-filter-btn {
+  padding: 8px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+  border: 1px solid var(--dr-border); background: var(--dr-panel); color: var(--dr-ink-soft);
+  cursor: pointer; font-family: inherit;
+}
+.ca-filter-btn.active { background: var(--dr-purple); border-color: transparent; color: #fff; }
+
+.ca-list { display: flex; flex-direction: column; gap: 14px; }
+
+.ca-card {
+  background: var(--dr-panel);
+  border: 1px solid var(--dr-border);
+  border-radius: var(--dr-radius);
+  box-shadow: var(--dr-shadow);
+  padding: 18px 20px;
+}
+.ca-card-top { display: flex; align-items: center; gap: 14px; }
+.ca-thumb { width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0; }
+.ca-card-info { flex: 1; min-width: 0; }
+.ca-ip { font-size: 12px; font-weight: 700; color: var(--dr-ink-soft); }
+.ca-role { font-size: 15px; font-weight: 800; color: var(--dr-ink); margin-top: 2px; }
+.ca-tags { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.ca-tags span { font-size: 10px; font-weight: 700; color: var(--dr-purple); background: var(--dr-active-bg); padding: 3px 8px; border-radius: 999px; }
+.ca-card-meta { text-align: right; flex-shrink: 0; }
+.ca-card-meta .frac { font-size: 14px; font-weight: 800; color: var(--dr-ink); }
+.ca-card-meta .deadline { font-size: 10.5px; color: var(--dr-ink-soft); margin-top: 3px; }
+
+.ca-applicants { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--dr-border); display: flex; flex-direction: column; gap: 10px; }
+.ca-applicants-empty { font-size: 12px; color: var(--dr-ink-soft); padding: 4px 2px; }
+
+.ca-applicant-item { border: 1px solid var(--dr-border); border-radius: 12px; padding: 10px 12px; }
+.ca-applicant-row { display: flex; align-items: center; gap: 10px; }
+.ca-applicant-name {
+  font-size: 12.5px; font-weight: 700; color: var(--dr-ink); background: none; border: none;
+  cursor: pointer; font-family: inherit; padding: 0; text-decoration: underline; text-underline-offset: 2px;
+}
+.ca-applicant-time { font-size: 10.5px; color: var(--dr-ink-soft); flex: 1; }
+.ca-applicant-actions { display: flex; gap: 6px; }
+.ca-applicant-accept, .ca-applicant-reject {
+  font-size: 10.5px; font-weight: 700; padding: 5px 10px; border-radius: 999px; border: none; cursor: pointer; font-family: inherit;
+}
+.ca-applicant-accept { background: var(--dr-purple); color: #fff; }
+.ca-applicant-reject { background: var(--dr-bg-soft); color: var(--dr-ink-soft); }
+.ca-applicant-reject:hover { color: #d64545; }
+.ca-applicant-status { font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.ca-applicant-status.accepted { background: rgba(62,207,125,0.16); color: #2fae6b; }
+.ca-applicant-status.rejected { background: rgba(214,69,69,0.14); color: #d64545; }
+
+.ca-applicant-detail { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--dr-border); font-size: 11.5px; color: var(--dr-ink-soft); line-height: 1.6; }
+.ca-applicant-detail-role { font-weight: 700; color: var(--dr-ink); }
+.ca-applicant-detail-message { margin-top: 4px; font-style: italic; }
+
+.ca-empty {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px;
+  padding: 60px 20px; color: var(--dr-ink-soft);
+  background: var(--dr-panel); border: 1px solid var(--dr-border); border-radius: var(--dr-radius);
+}
+.ca-empty svg { width: 34px; height: 34px; color: var(--dr-border); }
+.ca-empty .t { font-size: 14px; font-weight: 700; color: var(--dr-ink); }
+.ca-empty .s { font-size: 12px; }
+.ca-empty .btn {
+  margin-top: 4px; font-size: 12.5px; font-weight: 800; color: #fff; background: var(--dr-purple);
+  border: none; border-radius: 999px; padding: 10px 20px; text-decoration: none;
+}
+
+@media (max-width: 560px) {
+  .ca-card-top { flex-wrap: wrap; }
+  .ca-card-meta { text-align: left; }
+}

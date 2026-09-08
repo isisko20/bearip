@@ -357,6 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <button class="bearip-pm-btn primary" data-action="profile">내 정보 수정 →</button>
         <button class="bearip-pm-btn" data-action="notifications">알림함</button>
         <button class="bearip-pm-btn" data-action="production-admin">제작요청 관리</button>
+        <button class="bearip-pm-btn" data-action="crew-applicants">지원자 관리</button>
         ${themeToggleRowHtml()}
         <button class="bearip-pm-btn danger" data-action="logout">로그아웃</button>
       `;
@@ -417,6 +418,8 @@ document.addEventListener('DOMContentLoaded', () => {
       location.href = 'notifications.html';
     } else if (action === 'production-admin') {
       location.href = 'production-requests.html';
+    } else if (action === 'crew-applicants') {
+      location.href = 'crew-applicants.html';
     } else if (action === 'login') {
       bearipGoToLogin();
     } else if (action === 'toggle-theme') {
