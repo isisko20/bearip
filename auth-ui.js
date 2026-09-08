@@ -98,8 +98,131 @@ function bearipInjectProfileMenuStyles() {
     }
     .bearip-back-btn svg { width: 13px; height: 13px; }
     .bearip-back-btn:hover { color: var(--pm-ink); border-color: var(--pm-purple); }
+
+    .bearip-pm-credit-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 10px 10px; margin-bottom: 4px; border-radius: 10px; background: var(--pm-active-bg);
+    }
+    .bearip-pm-credit-row .lbl { font-size: 11px; font-weight: 700; color: var(--pm-ink-soft); }
+    .bearip-pm-credit-row .val { font-size: 14px; font-weight: 800; color: var(--pm-purple); }
+    .bearip-pm-credit-topup {
+      font-size: 10.5px; font-weight: 700; padding: 5px 10px; border-radius: 999px;
+      border: none; background: var(--pm-purple); color: #fff; cursor: pointer; font-family: inherit;
+    }
+
+    .bearip-credit-overlay {
+      --pm-panel: var(--dr-panel, var(--od-panel, var(--cr-bg-elev, var(--panel, #ffffff))));
+      --pm-border: var(--dr-border, var(--od-border, var(--cr-border, var(--line, #e5e2f0))));
+      --pm-ink: var(--dr-ink, var(--od-ink, var(--cr-ink, var(--ink, #201d33))));
+      --pm-ink-soft: var(--dr-ink-soft, var(--od-ink-soft, var(--cr-ink-soft, var(--ink-soft, #8b879c))));
+      --pm-purple: var(--dr-purple, var(--od-purple, var(--cr-purple, var(--purple-1, #6d4de6))));
+      --pm-bg: var(--dr-bg, var(--od-bg, var(--cr-bg, #f6f6fb)));
+      position: fixed; inset: 0; z-index: 1100;
+      background: rgba(20,16,30,0.5);
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+    .bearip-credit-box {
+      background: var(--pm-panel); border-radius: 16px; padding: 22px;
+      max-width: 340px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .bearip-credit-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .bearip-credit-head span { font-size: 15px; font-weight: 800; color: var(--pm-ink); }
+    .bearip-credit-close {
+      width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--pm-bg);
+      color: var(--pm-ink-soft); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+    }
+    .bearip-credit-close svg { width: 12px; height: 12px; }
+    .bearip-credit-hint { font-size: 11.5px; color: var(--pm-ink-soft); line-height: 1.55; margin-bottom: 14px; }
+    .bearip-credit-balance { font-size: 12.5px; color: var(--pm-ink-soft); margin-bottom: 14px; }
+    .bearip-credit-balance strong { color: var(--pm-purple); font-size: 15px; }
+    .bearip-credit-options { display: flex; flex-direction: column; gap: 8px; }
+    .bearip-credit-opt {
+      padding: 12px; border-radius: 12px; border: 1px solid var(--pm-border); background: var(--pm-bg);
+      font-size: 13px; font-weight: 800; color: var(--pm-ink); cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .bearip-credit-opt:hover { border-color: var(--pm-purple); color: var(--pm-purple); }
+    .bearip-credit-opt .sub { font-size: 10.5px; font-weight: 700; color: var(--pm-ink-soft); }
   `;
   document.head.appendChild(style);
+}
+
+// ---- Credit top-up — a mock "충전" flow (no payment gateway exists in this
+// prototype); the balance it adds to is real and shared by anything that
+// spends credits (my-dna-render.js's 제작요청). Defined at top level, not
+// nested in the DOMContentLoaded handler below, so any page/file can call
+// bearipOpenCreditTopup() — e.g. a "크레딧이 부족해요" link elsewhere.
+const BEARIP_CREDIT_TOPUP_OPTIONS = [
+  { amount: 100, sub: '가벼운 파트 1개' },
+  { amount: 300, sub: '가장 인기 있는 구성' },
+  { amount: 1000, sub: '여러 파트를 한 번에' },
+];
+
+function bearipEnsureCreditTopupOverlay() {
+  let overlay = document.getElementById('bearipCreditTopupOverlay');
+  if (overlay) return overlay;
+  bearipInjectProfileMenuStyles();
+  overlay = document.createElement('div');
+  overlay.className = 'bearip-credit-overlay';
+  overlay.id = 'bearipCreditTopupOverlay';
+  overlay.style.display = 'none';
+  overlay.innerHTML = `
+    <div class="bearip-credit-box">
+      <div class="bearip-credit-head">
+        <span>크레딧 충전</span>
+        <button type="button" class="bearip-credit-close" id="bearipCreditTopupClose" aria-label="닫기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <p class="bearip-credit-hint">실제 결제는 연결되어 있지 않은 프로토타입이라, 선택하면 바로 충전돼요.</p>
+      <div class="bearip-credit-balance">현재 잔액 <strong id="bearipCreditTopupBalance">0</strong>C</div>
+      <div class="bearip-credit-options">
+        ${BEARIP_CREDIT_TOPUP_OPTIONS.map(
+          (opt) => `<button type="button" class="bearip-credit-opt" data-amount="${opt.amount}"><span>${opt.amount}C</span><span class="sub">${opt.sub}</span></button>`
+        ).join('')}
+      </div>
+    </div>
+  `;
+  // Appended inside whichever shell root is on the page (same rule as every
+  // other overlay here) — a plain document.body append would sit outside
+  // .dna-app/.od-app and the var() fallback chain above would resolve to
+  // nothing, rendering the box transparent in both themes.
+  const root = document.querySelector('.dna-app, .od-app, .cr-app, .lg-app, .ni-app') || document.body;
+  root.appendChild(overlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('#bearipCreditTopupClose')) {
+      overlay.style.display = 'none';
+      return;
+    }
+    const opt = e.target.closest('.bearip-credit-opt');
+    if (!opt) return;
+    const amount = parseInt(opt.dataset.amount, 10);
+    bearipAddCredits(amount);
+    document.getElementById('bearipCreditTopupBalance').textContent = bearipGetCredits();
+    bearipRefreshCreditDisplays();
+    bearipShowToast(`${amount}C를 충전했어요`);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.style.display !== 'none') overlay.style.display = 'none';
+  });
+  return overlay;
+}
+
+function bearipOpenCreditTopup() {
+  const overlay = bearipEnsureCreditTopupOverlay();
+  document.getElementById('bearipCreditTopupBalance').textContent = bearipGetCredits();
+  overlay.style.display = 'flex';
+}
+
+// Keeps every visible balance (profile menu, any 제작요청 modal open at the
+// same time) in sync right after a top-up, instead of only the popup that
+// triggered it.
+function bearipRefreshCreditDisplays() {
+  document.querySelectorAll('.bearip-credit-balance-display').forEach((el) => {
+    el.textContent = bearipGetCredits() + 'C';
+  });
+  if (typeof mdRefreshProductionBalance === 'function') mdRefreshProductionBalance();
 }
 
 let bearipToastEl = null;
@@ -210,6 +333,14 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>`;
   }
 
+  function creditRowHtml() {
+    return `
+      <div class="bearip-pm-credit-row">
+        <div><span class="lbl">크레딧 </span><span class="val bearip-credit-balance-display">${bearipGetCredits()}C</span></div>
+        <button type="button" class="bearip-pm-credit-topup" data-action="topup-credits">충전하기</button>
+      </div>`;
+  }
+
   function renderMenu() {
     const u = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
     if (u) {
@@ -222,6 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </div>
         <div class="bearip-pm-divider"></div>
+        ${creditRowHtml()}
         <button class="bearip-pm-btn primary" data-action="profile">내 정보 수정 →</button>
         <button class="bearip-pm-btn" data-action="notifications">알림함</button>
         ${themeToggleRowHtml()}
@@ -296,6 +428,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // would wrongly read as false, closing the menu.
       e.stopPropagation();
       renderMenu();
+    } else if (action === 'topup-credits') {
+      e.stopPropagation();
+      closeMenu();
+      bearipOpenCreditTopup();
     }
   });
 

@@ -266,7 +266,7 @@
 
 /* ---- Roadmap ---- */
 .md-roadmap { display: flex; align-items: flex-start; overflow-x: auto; padding: 6px 2px 4px; }
-.md-road-step { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 94px; flex-shrink: 0; text-align: center; cursor: pointer; border-radius: 12px; padding: 6px 4px; transition: background 0.15s; }
+.md-road-step { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 116px; flex-shrink: 0; text-align: center; cursor: pointer; border-radius: 12px; padding: 6px 4px; transition: background 0.15s; }
 .md-road-step:hover, .md-road-step:focus-visible { background: var(--dr-bg-soft); outline: none; }
 .md-road-arrow { width: 24px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--dr-border); margin-top: 26px; }
 .md-road-arrow svg { width: 15px; height: 15px; }
@@ -300,6 +300,25 @@
 .md-score-edit-value { font-size: 32px; font-weight: 800; color: var(--dr-purple); margin-bottom: 16px; }
 .md-score-edit-body input[type="range"] { width: 100%; accent-color: var(--dr-purple); cursor: pointer; }
 .md-score-edit-note { font-size: 11.5px; color: var(--dr-ink-soft); margin-top: 14px; }
+
+/* ---- 제작 요청 결제 모달 ---- */
+.md-production-request-desc { font-size: 13px; color: var(--dr-ink); line-height: 1.55; margin-bottom: 14px; }
+.md-production-request-price {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-radius: 12px; background: var(--dr-active-bg); margin-bottom: 10px;
+}
+.md-production-request-price .lbl { font-size: 12px; font-weight: 700; color: var(--dr-ink-soft); }
+.md-production-request-price .val { font-size: 17px; font-weight: 800; color: var(--dr-purple); }
+.md-production-request-balance { font-size: 11.5px; color: var(--dr-ink-soft); margin-bottom: 14px; }
+.md-production-request-pay {
+  width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--dr-purple);
+  color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; font-family: inherit;
+}
+.md-production-request-pay:disabled { background: var(--dr-bg-soft); color: var(--dr-ink-soft); cursor: not-allowed; }
+.md-production-request-topup {
+  display: block; text-align: center; margin-top: 10px; font-size: 12px; font-weight: 700; color: var(--dr-purple); text-decoration: none;
+}
+.md-production-request-topup:hover { text-decoration: underline; }
 
 /* Slider popup must always paint above the DNA report overlay when opened
    from one of its tiles (both share .md-road-edit-overlay, so equal
@@ -366,6 +385,20 @@
 .md-road-name { font-size: 12px; font-weight: 700; }
 .md-road-status { font-size: 11px; color: var(--dr-ink-soft); }
 .md-road-step.done .md-road-status { color: var(--dr-purple); font-weight: 700; }
+
+/* ---- 제작요청 / 자체제작 중 — shared by IP DNA 현황 tiles and roadmap steps ---- */
+.md-production-row { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 2px; }
+.md-dna-tile .md-production-row { align-items: flex-start; width: 100%; margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--dr-border); }
+.md-production-tag { font-size: 9.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+.md-production-tag.self { background: var(--dr-bg-soft); color: var(--dr-ink-soft); }
+.md-production-tag.requested { background: rgba(143,107,255,0.16); color: var(--dr-purple); }
+.md-production-btn {
+  font-size: 9.5px; font-weight: 700; padding: 5px 9px; border-radius: 999px; border: none; cursor: pointer;
+  font-family: inherit; white-space: nowrap;
+}
+.md-production-btn.request { background: var(--dr-purple); color: #fff; }
+.md-production-btn.cancel { background: var(--dr-bg-soft); color: var(--dr-ink-soft); }
+.md-production-btn.cancel:hover { color: var(--dr-ink); }
 
 /* ---- Needs ---- */
 .md-needs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }

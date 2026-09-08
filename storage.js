@@ -23,6 +23,36 @@ function bearipSetTheme(theme) {
   }
 }
 
+// ---- Credits — pays for "제작요청" (asking a real person/AI to make a MY
+// DNA part instead of self-producing it). No payment gateway exists in this
+// prototype, so 충전 (top-up) just adds the number straight to the balance;
+// the balance itself, and every request/refund that spends or returns it,
+// is real and persisted.
+const BEARIP_CREDITS_KEY = 'bearip_credits';
+
+function bearipGetCredits() {
+  const n = parseInt(localStorage.getItem(BEARIP_CREDITS_KEY), 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function bearipSetCredits(amount) {
+  localStorage.setItem(BEARIP_CREDITS_KEY, String(Math.max(0, amount)));
+}
+
+function bearipAddCredits(amount) {
+  const next = bearipGetCredits() + amount;
+  bearipSetCredits(next);
+  return next;
+}
+
+// Returns false (no mutation) if the balance can't cover it.
+function bearipSpendCredits(amount) {
+  const current = bearipGetCredits();
+  if (current < amount) return false;
+  bearipSetCredits(current - amount);
+  return true;
+}
+
 // Each goal (목표 포맷) has a genuinely different production pipeline, so the
 // roadmap's steps depend on which one is selected — not just its title.
 // Shared between new-ip.js (initial creation) and my-dna-render.js
@@ -67,9 +97,24 @@ const BEARIP_ROADMAP_TEMPLATES = {
   ],
 };
 
-// Builds the roadmap for a goal, preserving status/progress for any step
-// that also exists in the previous roadmap (matched by key) — switching
-// goals shouldn't silently discard progress on shared steps like 스토리.
+// Credit cost to have each roadmap step made by 제작요청 instead of
+// self-producing it — one price per step key, shared across every goal's
+// template since the same key means the same kind of work either way.
+const BEARIP_ROADMAP_STEP_PRICE = {
+  story: 40,
+  character: 60,
+  visual: 70,
+  background: 50,
+  storyboard: 55,
+  lettering: 35,
+  art: 90,
+  upload: 20,
+};
+
+// Builds the roadmap for a goal, preserving status/progress/mode for any
+// step that also exists in the previous roadmap (matched by key) —
+// switching goals shouldn't silently discard progress on shared steps like
+// 스토리, or quietly cancel a 제작요청 already in flight for one.
 function bearipBuildRoadmap(goal, previousRoadmap) {
   const template = BEARIP_ROADMAP_TEMPLATES[goal] || BEARIP_ROADMAP_TEMPLATES.webtoon;
   const prevByKey = {};
@@ -83,6 +128,7 @@ function bearipBuildRoadmap(goal, previousRoadmap) {
       label: step.label,
       status: prev ? prev.status : 'todo',
       progress: prev ? prev.progress : 0,
+      mode: prev && prev.mode ? prev.mode : 'self',
     };
   });
 }
@@ -160,6 +206,17 @@ const BEARIP_DNA_CATEGORIES = [
   { key: 'visual', label: 'VISUAL', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 100 18c1.1 0 2-.9 2-2 0-.6-.2-1-.5-1.4-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 004-4c0-4.4-4-7.5-9-7.5z"/><circle cx="7.5" cy="10.5" r="1.1" fill="currentColor"/><circle cx="11" cy="7.5" r="1.1" fill="currentColor"/><circle cx="15" cy="8.5" r="1.1" fill="currentColor"/></svg>' },
   { key: 'assets', label: 'WORLD ASSETS', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>' },
 ];
+
+// Credit cost to have each DNA category made via 제작요청 instead of
+// self-producing it (my-dna-render.js's IP DNA 현황 popup).
+const BEARIP_DNA_PRODUCTION_PRICE = {
+  concept: 30,
+  world: 50,
+  character: 60,
+  story: 70,
+  visual: 80,
+  assets: 50,
+};
 
 const BEARIP_DNA_TIPS = {
   concept: { high: '세계관의 핵심 컨셉이 잘 정리되어 있어요!', mid: '핵심 컨셉을 조금 더 다듬어보세요.', low: '핵심 컨셉 정리가 필요해요.' },

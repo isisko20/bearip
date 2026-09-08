@@ -337,6 +337,17 @@ function ensureDnaReportOverlay() {
     if (e.key === 'Escape' && overlay.style.display !== 'none') closeDnaReport();
   });
   document.getElementById('dnaReportTiles').addEventListener('click', (e) => {
+    const prodBtn = e.target.closest('.md-production-btn');
+    if (prodBtn) {
+      e.stopPropagation();
+      if (prodBtn.classList.contains('cancel')) {
+        mdCancelProductionRequest('dna', prodBtn.dataset.key);
+      } else {
+        const cat = BEARIP_DNA_CATEGORIES.find((c) => c.key === prodBtn.dataset.key);
+        openProductionRequest('dna', prodBtn.dataset.key, cat ? cat.label : prodBtn.dataset.key, BEARIP_DNA_PRODUCTION_PRICE[prodBtn.dataset.key] || 0);
+      }
+      return;
+    }
     const tile = e.target.closest('.md-dna-tile');
     if (tile) openScoreEdit('bd:' + tile.dataset.key);
   });
@@ -348,19 +359,171 @@ function closeDnaReport() {
   if (overlay) overlay.style.display = 'none';
 }
 
+// ---- 제작요청 — pay credits to have a DNA category or roadmap step made
+// instead of self-producing it. Shared by both surfaces via `scope`
+// ('dna' | 'roadmap'), since the request/cancel/pay flow is identical —
+// only which store the mode is written back to differs.
+function mdProductionRowHtml(scope, key, mode, price) {
+  if (mode === 'requested') {
+    return `
+      <div class="md-production-row requested">
+        <span class="md-production-tag requested">제작 요청됨 · 검토 대기</span>
+        <button type="button" class="md-production-btn cancel" data-scope="${scope}" data-key="${key}">자체제작으로 전환</button>
+      </div>`;
+  }
+  return `
+    <div class="md-production-row">
+      <span class="md-production-tag self">자체제작 중</span>
+      <button type="button" class="md-production-btn request" data-scope="${scope}" data-key="${key}">제작요청 · ${price}C</button>
+    </div>`;
+}
+
+function mdSetDnaProductionMode(key, mode) {
+  currentIP.dnaProductionMode = Object.assign({}, currentIP.dnaProductionMode, { [key]: mode });
+  if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { dnaProductionMode: currentIP.dnaProductionMode });
+}
+
+function mdSetRoadmapProductionMode(key, mode) {
+  const step = (currentIP.roadmap || []).find((s) => s.key === key);
+  if (!step) return;
+  step.mode = mode;
+  if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { roadmap: currentIP.roadmap });
+}
+
+// Switching back to 자체제작 refunds the credit — nothing was actually
+// delivered, so there's nothing to keep the payment for.
+function mdCancelProductionRequest(scope, key) {
+  const price = scope === 'dna' ? BEARIP_DNA_PRODUCTION_PRICE[key] || 0 : BEARIP_ROADMAP_STEP_PRICE[key] || 0;
+  bearipAddCredits(price);
+  if (scope === 'dna') {
+    mdSetDnaProductionMode(key, 'self');
+    renderDnaReportTiles();
+  } else {
+    mdSetRoadmapProductionMode(key, 'self');
+    renderRoadmap();
+  }
+  if (typeof bearipRefreshCreditDisplays === 'function') bearipRefreshCreditDisplays();
+  bearipShowToast(`자체제작으로 전환했어요. ${price}C를 환불했어요.`);
+}
+
+let productionRequestPending = null;
+
+function updateProductionRequestPayState() {
+  if (!productionRequestPending) return;
+  const balance = bearipGetCredits();
+  const enough = balance >= productionRequestPending.price;
+  const payBtn = document.getElementById('productionRequestPayBtn');
+  const topupLink = document.getElementById('productionRequestTopup');
+  const balanceEl = document.getElementById('productionRequestBalance');
+  if (balanceEl) balanceEl.textContent = balance + 'C';
+  if (payBtn) {
+    payBtn.disabled = !enough;
+    payBtn.textContent = enough ? '결제하고 요청하기' : '크레딧이 부족해요';
+  }
+  if (topupLink) topupLink.hidden = enough;
+}
+
+// bearipRefreshCreditDisplays (auth-ui.js) calls this after a top-up so a
+// 제작요청 modal left open mid-충전 (via its own "충전하러 가기" link)
+// re-enables its pay button without needing to be closed and reopened.
+function mdRefreshProductionBalance() {
+  const overlay = document.getElementById('productionRequestOverlay');
+  if (!overlay || overlay.style.display === 'none') return;
+  updateProductionRequestPayState();
+}
+
+function ensureProductionRequestOverlay() {
+  let overlay = document.getElementById('productionRequestOverlay');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.className = 'md-road-edit-overlay';
+  overlay.id = 'productionRequestOverlay';
+  overlay.style.display = 'none';
+  overlay.innerHTML = `
+    <div class="md-road-edit-box md-production-request-box">
+      <div class="md-road-edit-head">
+        <span>제작 요청</span>
+        <button type="button" class="md-road-edit-close" id="productionRequestClose" aria-label="닫기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <p class="md-production-request-desc" id="productionRequestDesc"></p>
+      <div class="md-production-request-price">
+        <span class="lbl">결제 크레딧</span>
+        <span class="val" id="productionRequestPrice">0C</span>
+      </div>
+      <div class="md-production-request-balance">보유 크레딧 <span id="productionRequestBalance" class="bearip-credit-balance-display">0C</span></div>
+      <button type="button" class="md-production-request-pay" id="productionRequestPayBtn">결제하고 요청하기</button>
+      <a href="#" class="md-production-request-topup" id="productionRequestTopup" hidden>크레딧 충전하러 가기 →</a>
+    </div>
+  `;
+  // Appended inside .dna-app (not just body) so it inherits --dr-* theme
+  // variables — see ensureDnaReportOverlay/ensureRoadEditOverlay above.
+  (document.querySelector('.dna-app') || document.body).appendChild(overlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('#productionRequestClose')) closeProductionRequest();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.style.display !== 'none') closeProductionRequest();
+  });
+  document.getElementById('productionRequestTopup').addEventListener('click', (e) => {
+    e.preventDefault();
+    closeProductionRequest();
+    if (typeof bearipOpenCreditTopup === 'function') bearipOpenCreditTopup();
+  });
+  document.getElementById('productionRequestPayBtn').addEventListener('click', () => {
+    if (!productionRequestPending) return;
+    const { scope, key, price } = productionRequestPending;
+    if (!bearipSpendCredits(price)) return;
+    if (scope === 'dna') {
+      mdSetDnaProductionMode(key, 'requested');
+      renderDnaReportTiles();
+    } else {
+      mdSetRoadmapProductionMode(key, 'requested');
+      renderRoadmap();
+    }
+    if (typeof bearipRefreshCreditDisplays === 'function') bearipRefreshCreditDisplays();
+    closeProductionRequest();
+    bearipShowToast(`제작을 요청했어요. ${price}C가 결제됐어요.`);
+  });
+  return overlay;
+}
+
+function closeProductionRequest() {
+  const overlay = document.getElementById('productionRequestOverlay');
+  if (overlay) overlay.style.display = 'none';
+  productionRequestPending = null;
+}
+
+function openProductionRequest(scope, key, label, price) {
+  const overlay = ensureProductionRequestOverlay();
+  productionRequestPending = { scope, key, price };
+  document.getElementById('productionRequestDesc').textContent = `'${label}' 파트를 전문가에게 제작 요청할까요?`;
+  document.getElementById('productionRequestPrice').textContent = price + 'C';
+  updateProductionRequestPayState();
+  overlay.style.display = 'flex';
+}
+
+function mdDnaProductionMode(key) {
+  return (currentIP.dnaProductionMode && currentIP.dnaProductionMode[key]) || 'self';
+}
+
 function renderDnaReportTiles() {
   const wrap = document.getElementById('dnaReportTiles');
   if (!wrap) return;
   wrap.innerHTML = BEARIP_DNA_CATEGORIES.map((cat, i) => {
     const value = (currentIP.dnaBreakdown && currentIP.dnaBreakdown[cat.key]) || 0;
+    const mode = mdDnaProductionMode(cat.key);
+    const price = BEARIP_DNA_PRODUCTION_PRICE[cat.key] || 0;
     return `
-      <button type="button" class="md-dna-tile" data-key="${cat.key}">
+      <div class="md-dna-tile" data-key="${cat.key}" tabindex="0">
         <div class="md-dna-tile-ic">${cat.icon}</div>
         <div class="md-dna-tile-num">0${i + 1}</div>
         <div class="md-dna-tile-label">${cat.label}</div>
         <div class="md-dna-tile-value">${value}%</div>
         <div class="md-dna-tile-tip">${bearipDnaTip(cat.key, value)}</div>
-      </button>
+        ${mdProductionRowHtml('dna', cat.key, mode, price)}
+      </div>
     `;
   }).join('');
   const scoreValueEl = document.getElementById('dnaReportScoreValue');
@@ -480,6 +643,7 @@ function renderRoadmap() {
     const wrapClass = isRing ? 'md-road-ic-wrap ring' : 'md-road-ic-wrap';
     const checkHtml = step.status === 'done' ? `<span class="md-road-check">${CHECK_SVG}</span>` : '';
     const statusText = step.status === 'done' ? '완료' : `${step.progress}%`;
+    const price = BEARIP_ROADMAP_STEP_PRICE[step.key] || 0;
 
     stepEl.innerHTML = `
       <div class="${wrapClass}"${wrapAttrs}>
@@ -488,6 +652,7 @@ function renderRoadmap() {
       </div>
       <div class="md-road-name">${step.label}</div>
       <div class="md-road-status">${statusText}</div>
+      ${mdProductionRowHtml('roadmap', step.key, step.mode || 'self', price)}
     `;
     container.appendChild(stepEl);
     if (i < currentIP.roadmap.length - 1) {
@@ -972,11 +1137,23 @@ document.addEventListener('DOMContentLoaded', () => {
   if (productionCard) productionCard.addEventListener('click', jumpToRoadmap);
 
   document.getElementById('roadmapContainer').addEventListener('click', (e) => {
+    const prodBtn = e.target.closest('.md-production-btn');
+    if (prodBtn) {
+      e.stopPropagation();
+      if (prodBtn.classList.contains('cancel')) {
+        mdCancelProductionRequest('roadmap', prodBtn.dataset.key);
+      } else {
+        const step = (currentIP.roadmap || []).find((s) => s.key === prodBtn.dataset.key);
+        if (step) openProductionRequest('roadmap', step.key, step.label.replace(/<br>/g, ' '), BEARIP_ROADMAP_STEP_PRICE[step.key] || 0);
+      }
+      return;
+    }
     const step = e.target.closest('.md-road-step');
     if (step) openRoadEdit(parseInt(step.dataset.index, 10));
   });
   document.getElementById('roadmapContainer').addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
+    if (e.target.closest('.md-production-btn')) return;
     const step = e.target.closest('.md-road-step');
     if (!step) return;
     e.preventDefault();
