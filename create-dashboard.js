@@ -30,13 +30,85 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     track.insertBefore(card, track.firstChild);
   });
-
-  const ipCountStat = document.getElementById('ipCountStat');
-  if (ipCountStat) {
-    const base = parseInt(ipCountStat.textContent, 10) || 0;
-    ipCountStat.textContent = base + ips.length;
-  }
 });
+
+// Hero "상상력 구체화하기" CTA — jumps into the most recently touched real
+// IP (bearipAddIP unshifts, so index 0 is most recent). With no real IP yet
+// there's nothing to continue, so it's an honest toast instead of a dead click.
+function renderHeroContinueCta() {
+  const btn = document.getElementById('drHeroContinueBtn');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const ips = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
+    if (!ips.length) {
+      bearipShowToast('아직 만든 IP가 없어요. 먼저 상상력을 만들어보세요!');
+      return;
+    }
+    if (!bearipRequireLogin('my-dna.html')) return;
+    bearipSetCurrentId(ips[0].id);
+    location.href = 'my-dna.html';
+  });
+}
+
+document.addEventListener('DOMContentLoaded', renderHeroContinueCta);
+
+// Hero live-preview cards — "연재중인 IP" shows the user's most recent real
+// IP, "크루 구하기" shows the most recent real recruiting post (from CREW
+// MATCH's "모집글 올리기" flow). Either falls back to an honest empty-state
+// prompt instead of fabricated numbers when there's nothing real yet.
+function renderHeroLiveCards() {
+  const ongoingCard = document.getElementById('drHeroOngoing');
+  const ongoingBody = document.getElementById('drHeroOngoingBody');
+  const crewCard = document.getElementById('drHeroCrew');
+  const crewBody = document.getElementById('drHeroCrewBody');
+  if (!ongoingCard || !ongoingBody || !crewCard || !crewBody) return;
+
+  const thumbClasses = ['thumb-6', 'thumb-3', 'thumb-4', 'thumb-2', 'thumb-1'];
+  const ips = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
+
+  if (ips.length) {
+    const ip = ips[0];
+    const imageAsset = (ip.assets || []).find((a) => a.imageData);
+    const thumbClass = imageAsset ? '' : thumbClasses[0];
+    const thumbStyle = imageAsset
+      ? ` style="background-image:url('${imageAsset.imageData}');background-size:cover;background-position:center"`
+      : '';
+    ongoingBody.innerHTML = `
+      <div class="dr-hero-live-thumb ${thumbClass}"${thumbStyle}></div>
+      <div class="dr-hero-live-info">
+        <div class="t">${bearipEscapeHtml(ip.title || '제목 없는 IP')}</div>
+        <div class="s">DNA ${ip.dnaScore || 0}%</div>
+      </div>
+    `;
+    ongoingCard.addEventListener('click', (e) => {
+      e.preventDefault();
+      bearipSetCurrentId(ip.id);
+      location.href = 'my-dna.html';
+    });
+  } else {
+    ongoingBody.innerHTML = '<div class="dr-hero-live-empty">아직 연재중인 IP가 없어요.<br>첫 IP를 만들어보세요.</div>';
+    ongoingCard.href = 'new-ip.html';
+    ongoingCard.addEventListener('click', (e) => {
+      if (!bearipRequireLogin('new-ip.html')) e.preventDefault();
+    });
+  }
+
+  const positions = typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : [];
+  if (positions.length) {
+    const pos = positions[0]; // bearipAddPosition unshifts
+    crewBody.innerHTML = `
+      <div class="dr-hero-live-thumb ${pos.thumb || 'thumb-3'}"></div>
+      <div class="dr-hero-live-info">
+        <div class="t">${bearipEscapeHtml(pos.ipTitle)} · ${bearipEscapeHtml(pos.role)} 모집</div>
+        <div class="s">${pos.filled || 0}/${pos.count}명 · ${bearipEscapeHtml(pos.deadlineText || '상시 모집')}</div>
+      </div>
+    `;
+  } else {
+    crewBody.innerHTML = '<div class="dr-hero-live-empty">지금 크루를 구하고 있는<br>프로젝트를 둘러보세요.</div>';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', renderHeroLiveCards);
 
 // "IP DNA 현황" summary — shows the 6-category breakdown (shared with MY DNA
 // and OPEN DNA via storage.js) for the user's most recently created real IP.
