@@ -82,6 +82,41 @@ function odBuildPublishedCard(ip, index) {
   return card;
 }
 
+// Hero stat line — real counts, not fabricated platform numbers: how many
+// IPs are actually public right now, and how many are actively recruiting.
+function odRenderHeroStats() {
+  const statsEl = document.getElementById('odHeroStats');
+  if (!statsEl) return;
+  const publicCount = (typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : []).filter(
+    (ip) => ip.visibility === 'public'
+  ).length;
+  const recruitingCount = typeof bearipLoadPositions === 'function' ? bearipLoadPositions().length : 0;
+  statsEl.innerHTML = `
+    <span class="stat">공개된 IP <b>${publicCount}</b>개</span>
+    <span class="stat">지금 모집 중 <b>${recruitingCount}</b>건</span>
+  `;
+}
+
+// Hero CTA — routes straight to publishing: no real IP yet gets an honest
+// nudge to create one first, an existing one goes to MY DNA where the actual
+// OPEN DNA에 공개하기 toggle lives (this button doesn't publish by itself).
+function odWireHeroPublishBtn() {
+  const btn = document.getElementById('odHeroPublishBtn');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const ips = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
+    if (!ips.length) {
+      bearipShowToast('아직 만든 IP가 없어요. 먼저 상상력을 만들어보세요!');
+      return;
+    }
+    if (!bearipRequireLogin('my-dna.html')) return;
+    location.href = 'my-dna.html';
+  });
+}
+
+document.addEventListener('DOMContentLoaded', odRenderHeroStats);
+document.addEventListener('DOMContentLoaded', odWireHeroPublishBtn);
+
 document.addEventListener('DOMContentLoaded', () => {
   const container = document.querySelector('.od-cards');
   if (!container || typeof bearipLoadIPs !== 'function') return;

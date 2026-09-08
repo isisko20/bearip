@@ -84,6 +84,9 @@ function loadCurrentIP() {
 function renderHeader() {
   document.getElementById('currentIpChipLabel').textContent = currentIP.title;
 
+  const dnaBadge = document.getElementById('currentIpDnaBadge');
+  if (dnaBadge) dnaBadge.textContent = `DNA ${currentIP.dnaScore || 0}%`;
+
   const thumbEl = document.getElementById('currentIpThumb');
   const iconEl = document.getElementById('currentIpThumbIcon');
   if (thumbEl && iconEl) {

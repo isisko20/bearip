@@ -32,6 +32,10 @@
 .md-current-ip-info { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .md-current-ip-eyebrow { font-size: 10px; font-weight: 700; color: var(--dr-ink-soft); text-transform: uppercase; letter-spacing: 0.4px; }
 .md-current-ip-title { font-size: 15.5px; font-weight: 800; color: var(--dr-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.md-current-ip-dna {
+  flex-shrink: 0; font-size: 11px; font-weight: 800; color: var(--dr-purple);
+  background: var(--dr-active-bg); padding: 5px 10px; border-radius: 999px; white-space: nowrap;
+}
 .md-current-ip-card .chev { width: 15px; height: 15px; color: var(--dr-ink-soft); flex-shrink: 0; transition: transform 0.15s; }
 .md-ip-switcher.open .md-current-ip-card .chev { transform: rotate(180deg); }
 
