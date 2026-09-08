@@ -254,7 +254,7 @@
           <button class="dr-arrow prev" aria-label="이전">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>
           </button>
-          <div class="dr-carousel-track">
+          <div class="dr-carousel-track" id="openDnaTrack">
             <article class="dr-card">
               <div class="thumb thumb-5"><span class="tlabel">고양이 탐정 모모</span></div>
               <div class="title">고양이 탐정 모모</div>
@@ -320,32 +320,35 @@
 
     </div>
 
-    <!-- Bottom stat bar -->
+    <!-- Bottom stat bar — my own real numbers, not a fake platform-wide count -->
     <div class="dr-bottom-bar">
-      <div class="dr-bottom-item">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M14 4v5h5"/></svg></div>
-        <div class="num">1,248</div>
-        <div class="label">전체 IP 수</div>
-      </div>
-      <div class="dr-bottom-item">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="15" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg></div>
-        <div class="num">326</div>
-        <div class="label">진행 중 프로젝트</div>
-      </div>
-      <div class="dr-bottom-item">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg></div>
-        <div class="num">892</div>
-        <div class="label">창작자 수</div>
-      </div>
-      <div class="dr-bottom-item">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></div>
-        <div class="num">4.8K</div>
-        <div class="label">응원 수</div>
-      </div>
-      <div class="dr-bottom-item">
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg></div>
-        <div class="num">156</div>
-        <div class="label">활성 CREW</div>
+      <div class="dr-bottom-eyebrow">나의 창작 현황</div>
+      <div class="dr-bottom-row">
+        <div class="dr-bottom-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h11l5 5v11a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M14 4v5h5"/></svg></div>
+          <div class="num" id="bottomStatIps">0</div>
+          <div class="label">내가 만든 IP</div>
+        </div>
+        <div class="dr-bottom-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="15" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg></div>
+          <div class="num" id="bottomStatJoined">0</div>
+          <div class="label">참여 중인 프로젝트</div>
+        </div>
+        <div class="dr-bottom-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg></div>
+          <div class="num" id="bottomStatApplied">0</div>
+          <div class="label">지원한 포지션</div>
+        </div>
+        <div class="dr-bottom-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg></div>
+          <div class="num" id="bottomStatLikes">0</div>
+          <div class="label">받은 응원</div>
+        </div>
+        <div class="dr-bottom-item">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg></div>
+          <div class="num" id="bottomStatPositions">0</div>
+          <div class="label">지금 모집 중</div>
+        </div>
       </div>
     </div>
 

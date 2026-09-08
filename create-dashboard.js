@@ -32,6 +32,45 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+// Injects real published IPs (visibility === 'public', same flag MY DNA's
+// OPEN DNA에 공개하기 button sets) into the OPEN DNA panel's carousel, ahead
+// of the static demo cards — so once something real is public, it's the
+// first thing shown here instead of only fake projects.
+document.addEventListener('DOMContentLoaded', () => {
+  const track = document.getElementById('openDnaTrack');
+  if (!track || typeof bearipLoadIPs !== 'function') return;
+
+  const publicIPs = bearipLoadIPs().filter((ip) => ip.visibility === 'public');
+  if (!publicIPs.length) return;
+
+  const thumbClasses = ['thumb-7', 'thumb-8', 'thumb-5', 'thumb-6'];
+
+  publicIPs.forEach((ip, i) => {
+    const card = document.createElement('article');
+    card.className = 'dr-card';
+    card.style.cursor = 'pointer';
+    card.onclick = () => {
+      sessionStorage.setItem('bearip_view_ip_id', ip.id);
+      location.href = 'ip-detail.html';
+    };
+    const genreText = ip.genres && ip.genres.length ? ip.genres.join(', ') : '장르 미정';
+    const dna = ip.dnaScore || 0;
+    const imageAsset = (ip.assets || []).find((a) => a.imageData);
+    const thumbClass = imageAsset ? '' : thumbClasses[i % thumbClasses.length];
+    const thumbStyle = imageAsset
+      ? ` style="background-image:url('${imageAsset.imageData}');background-size:cover;background-position:center"`
+      : '';
+    card.innerHTML = `
+      <div class="thumb ${thumbClass}"${thumbStyle}><span class="tlabel">${ip.title}</span></div>
+      <div class="title">${ip.title}</div>
+      <div class="genre">${genreText}</div>
+      <div class="dna-bar"><div class="dna-bar-fill" style="width:${dna}%"></div></div>
+      <div class="dna-label">DNA ${dna}%</div>
+    `;
+    track.insertBefore(card, track.firstChild);
+  });
+});
+
 // Hero "상상력 구체화하기" CTA — jumps into the most recently touched real
 // IP (bearipAddIP unshifts, so index 0 is most recent). With no real IP yet
 // there's nothing to continue, so it's an honest toast instead of a dead click.
@@ -217,3 +256,24 @@ function renderMyProjectsList() {
 }
 
 document.addEventListener('DOMContentLoaded', renderMyProjectsList);
+
+// Bottom stat bar — real numbers scoped to this browser's own account, not
+// a fabricated platform-wide count (there's no backend to count "everyone").
+function renderBottomStats() {
+  const ipsEl = document.getElementById('bottomStatIps');
+  if (!ipsEl || typeof bearipLoadIPs !== 'function') return;
+
+  const ips = bearipLoadIPs();
+  const joined = typeof bearipSetList === 'function' ? bearipSetList('bearip_joined_ips') : [];
+  const applied = typeof bearipSetList === 'function' ? bearipSetList('bearip_applied_positions') : [];
+  const positions = typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : [];
+  const likesTotal = ips.reduce((sum, ip) => sum + (ip.likes || 0), 0);
+
+  ipsEl.textContent = bearipFormatCount(ips.length);
+  document.getElementById('bottomStatJoined').textContent = bearipFormatCount(joined.length);
+  document.getElementById('bottomStatApplied').textContent = bearipFormatCount(applied.length);
+  document.getElementById('bottomStatLikes').textContent = bearipFormatCount(likesTotal);
+  document.getElementById('bottomStatPositions').textContent = bearipFormatCount(positions.length);
+}
+
+document.addEventListener('DOMContentLoaded', renderBottomStats);
