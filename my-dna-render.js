@@ -364,6 +364,14 @@ function closeDnaReport() {
 // ('dna' | 'roadmap'), since the request/cancel/pay flow is identical —
 // only which store the mode is written back to differs.
 function mdProductionRowHtml(scope, key, mode, price) {
+  // 'done' is set from the 제작요청 관리 admin page (production-requests.js)
+  // once a request is fulfilled — nothing left to cancel or re-request here.
+  if (mode === 'done') {
+    return `
+      <div class="md-production-row done">
+        <span class="md-production-tag done">제작 완료</span>
+      </div>`;
+  }
   if (mode === 'requested') {
     return `
       <div class="md-production-row requested">
@@ -543,7 +551,7 @@ function mdFormatRelativeTime(iso) {
   return `${Math.floor(hr / 24)}일 전`;
 }
 
-const MD_PRODUCTION_STATUS_LABEL = { pending: '검토 대기', cancelled: '취소됨', done: '완료' };
+const MD_PRODUCTION_STATUS_LABEL = { pending: '검토 대기', cancelled: '취소됨', done: '완료', rejected: '거절됨' };
 
 // The "제작요청" tab's history list — every request/cancel this IP has
 // gone through, newest first, so the user can check what they asked for
@@ -575,6 +583,7 @@ function renderProductionRequestsList() {
           <span>${mdFormatRelativeTime(r.requestedAt)}</span>
         </div>
         ${r.detail ? `<div class="md-production-list-detail">"${bearipEscapeHtml(r.detail)}"</div>` : ''}
+        ${r.resultNote ? `<div class="md-production-list-result"><span>완료 메모</span>${bearipEscapeHtml(r.resultNote)}</div>` : ''}
       </div>
     `)
     .join('');

@@ -1,0 +1,99 @@
+/* ================= 제작요청 관리 (production request review) ================= */
+
+.pr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 14px 0 22px;
+}
+.pr-header h1 { font-size: 32px; font-weight: 800; }
+.pr-header p { font-size: 13.5px; color: var(--dr-ink-soft); margin-top: 6px; }
+
+.pr-filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.pr-filter-btn {
+  padding: 8px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+  border: 1px solid var(--dr-border); background: var(--dr-panel); color: var(--dr-ink-soft);
+  cursor: pointer; font-family: inherit;
+}
+.pr-filter-btn.active { background: var(--dr-purple); border-color: transparent; color: #fff; }
+
+.pr-list { display: flex; flex-direction: column; gap: 12px; }
+
+.pr-card {
+  background: var(--dr-panel);
+  border: 1px solid var(--dr-border);
+  border-radius: var(--dr-radius);
+  box-shadow: var(--dr-shadow);
+  padding: 18px 20px;
+}
+.pr-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pr-card-ip { font-size: 12px; font-weight: 700; color: var(--dr-ink-soft); }
+.pr-status { font-size: 10.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.pr-status.pending { background: rgba(143,107,255,0.16); color: var(--dr-purple); }
+.pr-status.done { background: rgba(62,207,125,0.16); color: #2fae6b; }
+.pr-status.rejected { background: rgba(214,69,69,0.14); color: #d64545; }
+.pr-status.cancelled { background: var(--dr-bg-soft); color: var(--dr-ink-soft); }
+
+.pr-card-label { font-size: 15.5px; font-weight: 800; color: var(--dr-ink); margin-top: 6px; }
+.pr-card-meta { display: flex; gap: 10px; font-size: 11.5px; color: var(--dr-ink-soft); margin-top: 6px; }
+.pr-card-detail {
+  font-size: 12.5px; color: var(--dr-ink-soft); line-height: 1.55; margin-top: 10px;
+  padding-top: 10px; border-top: 1px dashed var(--dr-border);
+}
+.pr-card-result {
+  font-size: 12.5px; color: var(--dr-ink); line-height: 1.55; margin-top: 10px;
+  padding: 10px 12px; border-radius: 10px; background: var(--dr-bg-soft);
+}
+.pr-card-result span { display: block; font-size: 10.5px; font-weight: 700; color: var(--dr-ink-soft); margin-bottom: 3px; }
+
+.pr-card-actions { display: flex; gap: 8px; margin-top: 14px; }
+.pr-complete-btn, .pr-reject-btn {
+  flex: 1; padding: 10px; border-radius: 10px; font-size: 12.5px; font-weight: 700;
+  cursor: pointer; border: 1px solid var(--dr-border); font-family: inherit;
+}
+.pr-complete-btn { background: var(--dr-purple); color: #fff; border-color: transparent; }
+.pr-reject-btn { background: var(--dr-panel); color: #d64545; }
+.pr-reject-btn:hover { background: rgba(214,69,69,0.1); border-color: #d64545; }
+
+.pr-empty {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px;
+  padding: 60px 20px; color: var(--dr-ink-soft);
+  background: var(--dr-panel); border: 1px solid var(--dr-border); border-radius: var(--dr-radius);
+}
+.pr-empty svg { width: 34px; height: 34px; color: var(--dr-border); }
+.pr-empty .t { font-size: 14px; font-weight: 700; color: var(--dr-ink); }
+.pr-empty .s { font-size: 12px; }
+
+/* ---- 완료/거절 확인 모달 ---- */
+.pr-confirm-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(20,16,30,0.5);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.pr-confirm-box {
+  background: var(--dr-panel); border-radius: 16px; padding: 22px;
+  max-width: 360px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.pr-confirm-title { font-size: 15px; font-weight: 800; color: var(--dr-ink); margin-bottom: 8px; line-height: 1.4; }
+.pr-confirm-desc { font-size: 12px; color: var(--dr-ink-soft); line-height: 1.6; margin-bottom: 14px; }
+.pr-confirm-label { display: block; font-size: 11.5px; font-weight: 700; color: var(--dr-ink-soft); margin-bottom: 6px; }
+.pr-confirm-textarea {
+  width: 100%; min-height: 72px; padding: 10px 12px; border-radius: 12px;
+  border: 1px solid var(--dr-border); background: var(--dr-bg-soft); color: var(--dr-ink);
+  font-size: 12.5px; font-family: inherit; resize: vertical;
+}
+.pr-confirm-textarea:focus { outline: none; border-color: var(--dr-purple); }
+.pr-confirm-actions { display: flex; gap: 8px; margin-top: 16px; }
+.pr-confirm-cancel, .pr-confirm-submit {
+  flex: 1; padding: 10px; border-radius: 10px; font-size: 12.5px; font-weight: 700;
+  cursor: pointer; border: 1px solid var(--dr-border); font-family: inherit;
+}
+.pr-confirm-cancel { background: var(--dr-bg); color: var(--dr-ink); }
+.pr-confirm-submit.done { background: var(--dr-purple); color: #fff; border-color: transparent; }
+.pr-confirm-submit.reject { background: #d64545; color: #fff; border-color: transparent; }
+
+@media (max-width: 560px) {
+  .pr-card-actions { flex-direction: column; }
+}
