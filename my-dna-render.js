@@ -395,6 +395,10 @@ function mdSetRoadmapProductionMode(key, mode) {
 function mdCancelProductionRequest(scope, key) {
   const price = scope === 'dna' ? BEARIP_DNA_PRODUCTION_PRICE[key] || 0 : BEARIP_ROADMAP_STEP_PRICE[key] || 0;
   bearipAddCredits(price);
+  const pending = bearipLoadProductionRequests().find(
+    (r) => r.ipId === currentIP.id && r.scope === scope && r.key === key && r.status === 'pending'
+  );
+  if (pending) bearipUpdateProductionRequest(pending.id, { status: 'cancelled' });
   if (scope === 'dna') {
     mdSetDnaProductionMode(key, 'self');
     renderDnaReportTiles();
@@ -403,6 +407,7 @@ function mdCancelProductionRequest(scope, key) {
     renderRoadmap();
   }
   if (typeof bearipRefreshCreditDisplays === 'function') bearipRefreshCreditDisplays();
+  if (typeof renderProductionRequestsList === 'function') renderProductionRequestsList();
   bearipShowToast(`자체제작으로 전환했어요. ${price}C를 환불했어요.`);
 }
 
@@ -448,6 +453,8 @@ function ensureProductionRequestOverlay() {
         </button>
       </div>
       <p class="md-production-request-desc" id="productionRequestDesc"></p>
+      <label class="md-production-request-detail-label" for="productionRequestDetail">요청 세부사항 (선택)</label>
+      <textarea id="productionRequestDetail" class="md-production-request-detail" placeholder="원하는 스타일, 참고 자료, 꼭 반영됐으면 하는 부분 등을 자유롭게 적어주세요."></textarea>
       <div class="md-production-request-price">
         <span class="lbl">결제 크레딧</span>
         <span class="val" id="productionRequestPrice">0C</span>
@@ -473,8 +480,10 @@ function ensureProductionRequestOverlay() {
   });
   document.getElementById('productionRequestPayBtn').addEventListener('click', () => {
     if (!productionRequestPending) return;
-    const { scope, key, price } = productionRequestPending;
+    const { scope, key, price, label } = productionRequestPending;
     if (!bearipSpendCredits(price)) return;
+    const detailInput = document.getElementById('productionRequestDetail');
+    const detail = detailInput ? detailInput.value.trim() : '';
     if (scope === 'dna') {
       mdSetDnaProductionMode(key, 'requested');
       renderDnaReportTiles();
@@ -482,7 +491,26 @@ function ensureProductionRequestOverlay() {
       mdSetRoadmapProductionMode(key, 'requested');
       renderRoadmap();
     }
+    bearipAddProductionRequest({
+      id: 'preq_' + Date.now(),
+      ipId: currentIP.id,
+      ipTitle: currentIP.title || '제목 없는 IP',
+      scope,
+      key,
+      label,
+      price,
+      detail,
+      status: 'pending',
+      requestedAt: new Date().toISOString(),
+    });
+    bearipAddNotification({
+      type: 'production',
+      title: '제작을 요청했어요',
+      message: `'${currentIP.title || '제목 없는 IP'}'의 '${label}' 파트 제작을 요청했어요. ${price}C가 결제됐어요.`,
+      link: 'my-dna.html',
+    });
     if (typeof bearipRefreshCreditDisplays === 'function') bearipRefreshCreditDisplays();
+    if (typeof renderProductionRequestsList === 'function') renderProductionRequestsList();
     closeProductionRequest();
     bearipShowToast(`제작을 요청했어요. ${price}C가 결제됐어요.`);
   });
@@ -497,11 +525,59 @@ function closeProductionRequest() {
 
 function openProductionRequest(scope, key, label, price) {
   const overlay = ensureProductionRequestOverlay();
-  productionRequestPending = { scope, key, price };
+  productionRequestPending = { scope, key, price, label };
   document.getElementById('productionRequestDesc').textContent = `'${label}' 파트를 전문가에게 제작 요청할까요?`;
   document.getElementById('productionRequestPrice').textContent = price + 'C';
+  const detailInput = document.getElementById('productionRequestDetail');
+  if (detailInput) detailInput.value = '';
   updateProductionRequestPayState();
   overlay.style.display = 'flex';
+}
+
+function mdFormatRelativeTime(iso) {
+  const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (min < 1) return '방금 전';
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  return `${Math.floor(hr / 24)}일 전`;
+}
+
+const MD_PRODUCTION_STATUS_LABEL = { pending: '검토 대기', cancelled: '취소됨', done: '완료' };
+
+// The "제작요청" tab's history list — every request/cancel this IP has
+// gone through, newest first, so the user can check what they asked for
+// (and the detail text they sent) without having to remember it.
+function renderProductionRequestsList() {
+  const wrap = document.getElementById('productionRequestsList');
+  if (!wrap) return;
+  const requests = (typeof bearipLoadProductionRequests === 'function' ? bearipLoadProductionRequests() : [])
+    .filter((r) => r.ipId === currentIP.id);
+
+  if (!requests.length) {
+    wrap.innerHTML = `
+      <div class="md-production-list-empty">
+        아직 요청한 제작이 없어요.<br>
+        DNA 현황이나 개발 맵의 '제작요청' 버튼으로 전문가에게 맡겨보세요.
+      </div>`;
+    return;
+  }
+
+  wrap.innerHTML = requests
+    .map((r) => `
+      <div class="md-production-list-item">
+        <div class="md-production-list-row">
+          <span class="md-production-list-label">${bearipEscapeHtml(r.label)}</span>
+          <span class="md-production-list-status ${r.status}">${MD_PRODUCTION_STATUS_LABEL[r.status] || r.status}</span>
+        </div>
+        <div class="md-production-list-meta">
+          <span>${r.price}C</span>
+          <span>${mdFormatRelativeTime(r.requestedAt)}</span>
+        </div>
+        ${r.detail ? `<div class="md-production-list-detail">"${bearipEscapeHtml(r.detail)}"</div>` : ''}
+      </div>
+    `)
+    .join('');
 }
 
 function mdDnaProductionMode(key) {
@@ -1089,6 +1165,7 @@ function renderAll() {
   renderFolderRow();
   renderAssets();
   renderDiscussion();
+  renderProductionRequestsList();
 }
 
 function persistGoalChange(goal) {

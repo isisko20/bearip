@@ -378,6 +378,42 @@ function bearipUpdateApplicantStatus(positionId, applicantId, status) {
   return list[idx];
 }
 
+// ---- 제작요청 history — every production request a user has submitted
+// from MY DNA, kept separately from the IP's own self/requested mode flag
+// so the user can see a full list (including cancelled ones) later, and so
+// a future 관리자 승인/AI evaluation flow has somewhere to write a 'done'
+// status without changing this shape.
+const BEARIP_PRODUCTION_REQUESTS_KEY = 'bearip_production_requests';
+
+function bearipLoadProductionRequests() {
+  try {
+    const raw = localStorage.getItem(BEARIP_PRODUCTION_REQUESTS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function bearipSaveProductionRequests(list) {
+  localStorage.setItem(BEARIP_PRODUCTION_REQUESTS_KEY, JSON.stringify(list));
+}
+
+function bearipAddProductionRequest(req) {
+  const list = bearipLoadProductionRequests();
+  list.unshift(req);
+  bearipSaveProductionRequests(list);
+  return req;
+}
+
+function bearipUpdateProductionRequest(id, patch) {
+  const list = bearipLoadProductionRequests();
+  const idx = list.findIndex((r) => r.id === id);
+  if (idx === -1) return null;
+  list[idx] = Object.assign({}, list[idx], patch);
+  bearipSaveProductionRequests(list);
+  return list[idx];
+}
+
 // ---- Mock login / current user (no backend — nickname-only) ----
 const BEARIP_USER_KEY = 'bearip_user';
 

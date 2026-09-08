@@ -113,11 +113,11 @@
 
 /* Sub-tabs (개요 / ASSETS / DISCUSSION) */
 .md-tabs {
-  display: flex; gap: 4px; width: fit-content;
+  display: flex; gap: 4px; width: fit-content; max-width: 100%; overflow-x: auto;
   background: var(--dr-panel); border: 1px solid var(--dr-border);
   padding: 4px; border-radius: 999px; box-shadow: var(--dr-shadow);
 }
-.md-tab { padding: 9px 18px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--dr-ink-soft); border: none; background: none; cursor: pointer; }
+.md-tab { padding: 9px 18px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--dr-ink-soft); border: none; background: none; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
 .md-tab.active { background: var(--dr-purple); color: #fff; }
 .md-tab-panel { display: none; }
 .md-tab-panel.active { display: flex; flex-direction: column; gap: 20px; }
@@ -303,6 +303,13 @@
 
 /* ---- 제작 요청 결제 모달 ---- */
 .md-production-request-desc { font-size: 13px; color: var(--dr-ink); line-height: 1.55; margin-bottom: 14px; }
+.md-production-request-detail-label { display: block; font-size: 11.5px; font-weight: 700; color: var(--dr-ink-soft); margin-bottom: 6px; }
+.md-production-request-detail {
+  width: 100%; min-height: 72px; padding: 10px 12px; border-radius: 12px;
+  border: 1px solid var(--dr-border); background: var(--dr-bg-soft); color: var(--dr-ink);
+  font-size: 12.5px; font-family: inherit; resize: vertical; margin-bottom: 12px;
+}
+.md-production-request-detail:focus { outline: none; border-color: var(--dr-purple); }
 .md-production-request-price {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 14px; border-radius: 12px; background: var(--dr-active-bg); margin-bottom: 10px;
@@ -399,6 +406,20 @@
 .md-production-btn.request { background: var(--dr-purple); color: #fff; }
 .md-production-btn.cancel { background: var(--dr-bg-soft); color: var(--dr-ink-soft); }
 .md-production-btn.cancel:hover { color: var(--dr-ink); }
+
+/* ---- 제작요청 현황 tab — history list ---- */
+.md-production-list-empty { font-size: 12.5px; color: var(--dr-ink-soft); line-height: 1.6; padding: 20px 4px; text-align: center; }
+.md-production-list-item {
+  border: 1px solid var(--dr-border); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px;
+}
+.md-production-list-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.md-production-list-label { font-size: 13.5px; font-weight: 700; color: var(--dr-ink); }
+.md-production-list-status { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.md-production-list-status.pending { background: rgba(143,107,255,0.16); color: var(--dr-purple); }
+.md-production-list-status.cancelled { background: var(--dr-bg-soft); color: var(--dr-ink-soft); }
+.md-production-list-status.done { background: rgba(62,207,125,0.16); color: #2fae6b; }
+.md-production-list-meta { display: flex; gap: 10px; font-size: 11px; color: var(--dr-ink-soft); margin-top: 6px; }
+.md-production-list-detail { font-size: 12px; color: var(--dr-ink-soft); margin-top: 8px; line-height: 1.5; padding-top: 8px; border-top: 1px dashed var(--dr-border); }
 
 /* ---- Needs ---- */
 .md-needs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
