@@ -414,6 +414,43 @@ function bearipUpdateProductionRequest(id, patch) {
   return list[idx];
 }
 
+// ---- IP 심사 요청 — one entry per roadmap step the creator submitted
+// material for at IP-creation time. Separate from 제작요청 (which is about
+// outsourcing a step to a Creator); this is the page-admin scoring how
+// complete/real a step's submitted material actually is, per step, with a
+// one-line comment — mirrored back onto the IP's own roadmap step (see
+// ip-reviews.js) so MY DNA can show it without re-reading this list.
+const BEARIP_IP_REVIEWS_KEY = 'bearip_ip_reviews';
+
+function bearipLoadIpReviews() {
+  try {
+    const raw = localStorage.getItem(BEARIP_IP_REVIEWS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function bearipSaveIpReviews(list) {
+  localStorage.setItem(BEARIP_IP_REVIEWS_KEY, JSON.stringify(list));
+}
+
+function bearipAddIpReview(review) {
+  const list = bearipLoadIpReviews();
+  list.unshift(review);
+  bearipSaveIpReviews(list);
+  return review;
+}
+
+function bearipUpdateIpReview(id, patch) {
+  const list = bearipLoadIpReviews();
+  const idx = list.findIndex((r) => r.id === id);
+  if (idx === -1) return null;
+  list[idx] = Object.assign({}, list[idx], patch);
+  bearipSaveIpReviews(list);
+  return list[idx];
+}
+
 // ---- Mock login / current user (no backend — nickname-only) ----
 const BEARIP_USER_KEY = 'bearip_user';
 

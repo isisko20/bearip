@@ -427,6 +427,35 @@
 .md-production-btn.cancel { background: var(--dr-bg-soft); color: var(--dr-ink-soft); }
 .md-production-btn.cancel:hover { color: var(--dr-ink); }
 
+/* ---- 관리자 심사 badge — separate from 제작요청 above; this is the
+   page-admin's own score for how complete the creator's submitted material
+   is, set from ip-reviews.html. Only appears once something was submitted. ---- */
+.md-admin-review-badge {
+  font-size: 9.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; border: none; cursor: pointer;
+  font-family: inherit; white-space: nowrap; margin-top: 2px;
+}
+.md-admin-review-badge.pending { background: var(--dr-bg-soft); color: var(--dr-ink-soft); }
+.md-admin-review-badge.reviewed { background: rgba(62,207,125,0.16); color: #2fae6b; }
+
+.md-admin-review-body { display: flex; flex-direction: column; gap: 12px; }
+.md-admin-review-submission { display: flex; flex-direction: column; gap: 8px; }
+.md-admin-review-thumb {
+  width: 100%; aspect-ratio: 16/9; border-radius: 10px; background-color: var(--dr-bg-soft);
+  background-size: cover; background-position: center;
+}
+.md-admin-review-file {
+  padding: 10px 12px; border-radius: 10px; background: var(--dr-bg-soft);
+  font-size: 12px; font-weight: 700; color: var(--dr-ink);
+}
+.md-admin-review-note { font-size: 12px; color: var(--dr-ink-soft); line-height: 1.5; }
+.md-admin-review-score { font-size: 13px; font-weight: 800; color: var(--dr-ink); }
+.md-admin-review-score b { color: #2fae6b; }
+.md-admin-review-comment {
+  font-size: 12px; color: var(--dr-ink); line-height: 1.5; padding: 10px 12px;
+  background: var(--dr-active-bg); border-radius: 10px;
+}
+.md-admin-review-waiting { font-size: 12px; color: var(--dr-ink-soft); }
+
 /* ---- 제작요청 현황 tab — history list ---- */
 .md-production-list-empty { font-size: 12.5px; color: var(--dr-ink-soft); line-height: 1.6; padding: 20px 4px; text-align: center; }
 .md-production-list-item {

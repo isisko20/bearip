@@ -413,6 +413,85 @@ function mdProductionRowHtml(scope, key, mode, price) {
     </div>`;
 }
 
+// Separate from 제작요청 above — this is the page-admin scoring how
+// complete the creator's own submitted material for this step actually is
+// (set from ip-reviews.html), with a one-line comment. Only shows once the
+// creator has submitted something for the step (new-ip.html's 1차 등록, or
+// none for IPs made before this feature existed).
+function mdAdminReviewBadgeHtml(step) {
+  if (!step.submission) return '';
+  if (step.reviewStatus === 'reviewed') {
+    return `<button type="button" class="md-admin-review-badge reviewed" data-review-key="${step.key}">관리자 ${step.adminProgress}%</button>`;
+  }
+  return `<button type="button" class="md-admin-review-badge pending" data-review-key="${step.key}">심사 대기중</button>`;
+}
+
+function ensureAdminReviewViewOverlay() {
+  let overlay = document.getElementById('adminReviewViewOverlay');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.className = 'md-road-edit-overlay';
+  overlay.id = 'adminReviewViewOverlay';
+  overlay.style.display = 'none';
+  overlay.innerHTML = `
+    <div class="md-road-edit-box">
+      <div class="md-road-edit-head">
+        <span id="adminReviewViewTitle"></span>
+        <button type="button" class="md-road-edit-close" id="adminReviewViewClose" aria-label="닫기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="md-admin-review-body" id="adminReviewViewBody"></div>
+    </div>
+  `;
+  (document.querySelector('.dna-app') || document.body).appendChild(overlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('#adminReviewViewClose')) closeAdminReviewView();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.style.display !== 'none') closeAdminReviewView();
+  });
+  return overlay;
+}
+
+function closeAdminReviewView() {
+  const overlay = document.getElementById('adminReviewViewOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function openAdminReviewView(stepKey) {
+  const step = (currentIP.roadmap || []).find((s) => s.key === stepKey);
+  if (!step || !step.submission) return;
+  const overlay = ensureAdminReviewViewOverlay();
+  overlay.parentNode.appendChild(overlay);
+  document.getElementById('adminReviewViewTitle').textContent = step.label.replace(/<br>/g, ' ');
+
+  const sub = step.submission;
+  const previewHtml = sub.imageData
+    ? `<div class="md-admin-review-thumb" style="background-image:url('${sub.imageData}')"></div>`
+    : sub.fileName
+      ? `<div class="md-admin-review-file">${bearipEscapeHtml(sub.fileName)}${sub.fileSize ? ` · ${mdFormatFileSize(sub.fileSize)}` : ''}</div>`
+      : '';
+  const noteHtml = sub.note ? `<p class="md-admin-review-note">${bearipEscapeHtml(sub.note)}</p>` : '';
+
+  const resultHtml =
+    step.reviewStatus === 'reviewed'
+      ? `
+        <div class="md-admin-review-score">관리자 진행도 <b>${step.adminProgress}%</b></div>
+        ${step.adminComment ? `<p class="md-admin-review-comment">"${bearipEscapeHtml(step.adminComment)}"</p>` : ''}
+      `
+      : `<div class="md-admin-review-waiting">아직 관리자 심사 전이에요.</div>`;
+
+  document.getElementById('adminReviewViewBody').innerHTML = `
+    <div class="md-admin-review-submission">
+      ${previewHtml}
+      ${noteHtml}
+    </div>
+    ${resultHtml}
+  `;
+  overlay.style.display = 'flex';
+}
+
 function mdSetDnaProductionMode(key, mode) {
   currentIP.dnaProductionMode = Object.assign({}, currentIP.dnaProductionMode, { [key]: mode });
   if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { dnaProductionMode: currentIP.dnaProductionMode });
@@ -764,6 +843,7 @@ function renderRoadmap() {
       </div>
       <div class="md-road-name">${step.label}</div>
       <div class="md-road-status">${statusText}</div>
+      ${mdAdminReviewBadgeHtml(step)}
       ${mdProductionRowHtml('roadmap', step.key, step.mode || 'self', price)}
     `;
     container.appendChild(stepEl);
@@ -1260,6 +1340,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (productionCard) productionCard.addEventListener('click', jumpToRoadmap);
 
   document.getElementById('roadmapContainer').addEventListener('click', (e) => {
+    const reviewBadge = e.target.closest('.md-admin-review-badge');
+    if (reviewBadge) {
+      e.stopPropagation();
+      openAdminReviewView(reviewBadge.dataset.reviewKey);
+      return;
+    }
     const prodBtn = e.target.closest('.md-production-btn');
     if (prodBtn) {
       e.stopPropagation();
