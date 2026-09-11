@@ -36,8 +36,13 @@ function renderStep() {
     renderRoadmapItemsStep();
   }
 
-  if (currentStep === TOTAL_STEPS) {
-    nextBtn.innerHTML = `IP 만들기 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2z"/></svg>`;
+  // Last step swaps the single nextBtn for two explicit choices — creating
+  // the IP no longer also fires the 전문가 검토 요청 automatically, so the
+  // creator picks whether to send it right away or review in MY DNA first.
+  const isFinalStep = currentStep === TOTAL_STEPS;
+  nextBtn.hidden = isFinalStep;
+  document.getElementById('niFooterFinal').hidden = !isFinalStep;
+  if (isFinalStep) {
     populateSummary();
   } else {
     nextBtn.innerHTML = `다음 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>`;
@@ -332,7 +337,12 @@ prevBtn.addEventListener('click', () => {
   }
 });
 
-function createAndSaveIP() {
+// Creating the IP and sending it for 전문가 검토 used to be the same click —
+// now deliberately split, so a half-finished 1차 등록 can't get submitted by
+// accident. createIP() always just saves; requestExpertReviewForIp() is a
+// separate, optional second step (same shape MY DNA's own "전문가 검토 요청"
+// button uses later — see mdRequestExpertReview in my-dna-render.js).
+function createIP() {
   const today = new Date();
   const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
 
@@ -352,45 +362,26 @@ function createAndSaveIP() {
     });
   }
 
-  const ipId = 'ip_' + Date.now();
   const roadmap = bearipBuildRoadmap(selectedGoal, null);
-  const reviewRequestedAt = new Date().toISOString();
-
-  // Each step carries the creator's 1차 등록 (or "아직 없어요") alongside
-  // where the page-admin's own score + one-line comment will land once
-  // reviewed — kept per step (not one IP-wide number) since a video IP's
-  // 시나리오 can be done while 편집/사운드 hasn't even started.
-  const reviewRequests = [];
   roadmap.forEach((step) => {
     const sub = roadmapSubmissions[step.key];
     const hasContent = !!(sub && sub.hasContent);
     step.submission = hasContent
       ? { imageData: sub.imageData || null, fileName: sub.fileName || null, fileSize: sub.fileSize || null, mime: sub.mime || null, note: sub.note || '' }
       : null;
-    step.reviewStatus = hasContent ? 'pending' : null;
+    // null (not requested yet) rather than any "pending" value — a step
+    // with material sits in 작성 중 until 전문가 검토 요청 is actually sent.
+    step.reviewStatus = null;
     step.adminProgress = null;
     step.adminComment = null;
+    step.needsRevision = false;
     step.adminReviewedAt = null;
-
-    if (hasContent) {
-      reviewRequests.push({
-        id: 'ipreview_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-        ipId,
-        ipTitle: document.getElementById('ipTitle').value.trim() || '제목 없는 IP',
-        stepKey: step.key,
-        stepLabel: step.label.replace(/<br>/g, ' '),
-        submission: step.submission,
-        requestedAt: reviewRequestedAt,
-        status: 'pending',
-        adminProgress: null,
-        adminComment: null,
-        reviewedAt: null,
-      });
-    }
   });
 
+  const filledCount = roadmap.filter((s) => !!s.submission).length;
+
   const ip = {
-    id: ipId,
+    id: 'ip_' + Date.now(),
     title: document.getElementById('ipTitle').value.trim() || '제목 없는 IP',
     goal: selectedGoal,
     genres: selectedGenres.slice(),
@@ -399,40 +390,75 @@ function createAndSaveIP() {
     coverImage: coverImageData || undefined,
     visibility: selectedVis,
     createdAt: new Date().toISOString(),
-    // A brand-new IP always starts at 0% — nothing has been produced yet.
-    dnaScore: 0,
+    // 작성 완성도 is derived from roadmap submissions from the start (see
+    // recomputeWritingCompleteness in my-dna-render.js), not self-input.
+    dnaScore: roadmap.length ? Math.round((filledCount / roadmap.length) * 100) : 0,
     dnaBreakdown: { concept: 0, world: 0, character: 0, story: 0, visual: 0, assets: 0 },
     readinessScore: 0,
-    productionProgress: 0,
+    productionProgress: null,
     roadmap,
-    reviewRequestedAt: reviewRequests.length ? reviewRequestedAt : null,
     assets,
     discussion: [],
     views: 0,
     likes: 0,
   };
   bearipAddIP(ip);
-  reviewRequests.forEach((r) => bearipAddIpReview(r));
 
   bearipAddNotification({
     type: 'ip',
     title: '새 IP가 생성됐어요',
-    message: reviewRequests.length
-      ? `'${ip.title}'가 MY DNA에 추가됐어요. 등록한 ${reviewRequests.length}개 항목이 관리자 심사에 들어갔어요.`
-      : `'${ip.title}'가 MY DNA에 추가됐어요. 목표부터 채워보세요.`,
+    message: `'${ip.title}'가 MY DNA에 추가됐어요.`,
     link: 'my-dna.html',
   });
   return ip;
+}
+
+function requestExpertReviewForIp(ip) {
+  const steps = ip.roadmap.filter((s) => !!s.submission && !s.reviewStatus);
+  if (!steps.length) return;
+  const requestedAt = new Date().toISOString();
+  steps.forEach((step) => {
+    step.reviewStatus = 'requested';
+    bearipAddIpReview({
+      id: 'ipreview_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      ipId: ip.id,
+      ipTitle: ip.title,
+      stepKey: step.key,
+      stepLabel: step.label.replace(/<br>/g, ' '),
+      submission: step.submission,
+      requestedAt,
+      status: 'pending',
+      adminProgress: null,
+      adminComment: null,
+      needsRevision: false,
+      reviewedAt: null,
+    });
+  });
+  bearipUpdateIP(ip.id, { roadmap: ip.roadmap });
+  bearipAddNotification({
+    type: 'ip',
+    title: '전문가 검토를 요청했어요',
+    message: `'${ip.title}'의 ${steps.length}개 항목을 담당 IP 매니저에게 전달했어요.`,
+    link: 'my-dna.html',
+  });
 }
 
 nextBtn.addEventListener('click', () => {
   if (currentStep < TOTAL_STEPS) {
     currentStep += 1;
     renderStep();
-  } else {
-    createAndSaveIP();
-    location.href = 'my-dna.html';
   }
+});
+
+document.getElementById('finishGoToDnaBtn').addEventListener('click', () => {
+  createIP();
+  location.href = 'my-dna.html';
+});
+
+document.getElementById('finishRequestReviewBtn').addEventListener('click', () => {
+  const ip = createIP();
+  requestExpertReviewForIp(ip);
+  location.href = 'my-dna.html';
 });
 
 renderStep();

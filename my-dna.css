@@ -307,13 +307,6 @@
 }
 .md-road-edit-close:hover { background: var(--dr-border); color: var(--dr-ink); }
 .md-road-edit-close svg { width: 13px; height: 13px; }
-.md-road-edit-options { display: flex; flex-direction: column; gap: 8px; }
-.md-road-edit-opt {
-  padding: 10px 14px; border-radius: 10px; border: 1px solid var(--dr-border); background: var(--dr-bg);
-  font-size: 12.5px; font-weight: 700; color: var(--dr-ink); text-align: left; cursor: pointer; font-family: inherit;
-}
-.md-road-edit-opt:hover { border-color: var(--dr-purple); }
-.md-road-edit-opt.active { background: var(--dr-active-bg); border-color: var(--dr-purple); color: var(--dr-purple); }
 
 .md-score-edit-body { text-align: center; padding: 10px 4px 4px; }
 .md-score-edit-value { font-size: 32px; font-weight: 800; color: var(--dr-purple); margin-bottom: 16px; }
@@ -427,16 +420,8 @@
 .md-production-btn.cancel { background: var(--dr-bg-soft); color: var(--dr-ink-soft); }
 .md-production-btn.cancel:hover { color: var(--dr-ink); }
 
-/* ---- 관리자 심사 badge — separate from 제작요청 above; this is the
-   page-admin's own score for how complete the creator's submitted material
-   is, set from ip-reviews.html. Only appears once something was submitted. ---- */
-.md-admin-review-badge {
-  font-size: 9.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px; border: none; cursor: pointer;
-  font-family: inherit; white-space: nowrap; margin-top: 2px;
-}
-.md-admin-review-badge.pending { background: var(--dr-bg-soft); color: var(--dr-ink-soft); }
-.md-admin-review-badge.reviewed { background: rgba(62,207,125,0.16); color: #2fae6b; }
-
+/* ---- 전문가 검토 결과 read-only view (opened from a roadmap step's own
+   action button now — see .md-road-action-btn below — not a separate badge). ---- */
 .md-admin-review-body { display: flex; flex-direction: column; gap: 12px; }
 .md-admin-review-submission { display: flex; flex-direction: column; gap: 8px; }
 .md-admin-review-thumb {
@@ -450,11 +435,89 @@
 .md-admin-review-note { font-size: 12px; color: var(--dr-ink-soft); line-height: 1.5; }
 .md-admin-review-score { font-size: 13px; font-weight: 800; color: var(--dr-ink); }
 .md-admin-review-score b { color: #2fae6b; }
+.md-admin-review-flag { font-size: 10.5px; font-weight: 700; color: #d68a1c; background: rgba(214,138,28,0.14); padding: 3px 8px; border-radius: 999px; margin-left: 4px; }
 .md-admin-review-comment {
   font-size: 12px; color: var(--dr-ink); line-height: 1.5; padding: 10px 12px;
   background: var(--dr-active-bg); border-radius: 10px;
 }
 .md-admin-review-waiting { font-size: 12px; color: var(--dr-ink-soft); }
+
+/* ---- Unified per-step action button — one button, one status per roadmap
+   step (미등록/작성 중/전문가 검토 중/보완 필요/준비 완료/제작 의뢰 중/제작 완료),
+   replacing what used to be a self-progress badge + admin badge + 제작요청
+   row shown all at once. ---- */
+.md-road-action-btn {
+  margin-top: 6px; padding: 6px 12px; border-radius: 999px; border: none; cursor: pointer;
+  font-size: 10.5px; font-weight: 700; font-family: inherit; white-space: nowrap;
+  background: var(--dr-bg-soft); color: var(--dr-ink-soft);
+}
+.md-road-action-btn.unregistered { background: var(--dr-bg-soft); color: var(--dr-ink-soft); }
+.md-road-action-btn.writing { background: rgba(79,176,255,0.16); color: var(--dr-blue); }
+.md-road-action-btn.reviewing { background: rgba(143,107,255,0.16); color: var(--dr-purple); }
+.md-road-action-btn.needs-revision { background: rgba(214,138,28,0.16); color: #d68a1c; }
+.md-road-action-btn.ready { background: var(--dr-purple); color: #fff; }
+.md-road-action-btn.production { background: rgba(143,107,255,0.16); color: var(--dr-purple); }
+.md-road-action-btn.done { background: rgba(62,207,125,0.16); color: #2fae6b; }
+.md-road-step.needs-revision .md-road-status { color: #d68a1c; font-weight: 700; }
+.md-road-step.ready .md-road-status,
+.md-road-step.done .md-road-status { color: var(--dr-purple); font-weight: 700; }
+
+/* ---- 전문가 검토 요청 button — roadmap section header ---- */
+.md-expert-review-btn {
+  margin-left: auto; padding: 7px 14px; border-radius: 999px; border: none; cursor: pointer;
+  font-size: 12px; font-weight: 700; font-family: inherit; background: var(--dr-purple); color: #fff;
+}
+.md-expert-review-btn:hover { opacity: 0.9; }
+
+/* ---- 개발 항목 자료 등록/수정 modal (openStepMaterialEditor) ---- */
+.md-step-material-body { display: flex; flex-direction: column; gap: 12px; }
+.md-step-material-upload {
+  position: relative; border: 1.5px dashed var(--dr-border); border-radius: 12px;
+  padding: 20px; text-align: center; cursor: pointer; color: var(--dr-ink-soft);
+  background-size: cover; background-position: center; transition: border-color 0.15s;
+}
+.md-step-material-upload:hover { border-color: var(--dr-purple); }
+.md-step-material-upload svg { width: 22px; height: 22px; margin-bottom: 6px; color: var(--dr-ink-soft); }
+.md-step-material-upload .t { font-size: 12.5px; font-weight: 700; color: var(--dr-ink); }
+.md-step-material-upload .d { font-size: 10.5px; margin-top: 3px; }
+.md-step-material-upload.has-file {
+  border-style: solid; border-color: var(--dr-purple); min-height: 100px;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 12px;
+}
+.md-step-material-upload.has-file::before {
+  content: ''; position: absolute; inset: 0; border-radius: 10px;
+  background: linear-gradient(180deg, rgba(20,16,30,0) 40%, rgba(20,16,30,0.72) 100%);
+}
+.md-step-material-upload.has-file svg { display: none; }
+.md-step-material-upload.has-file .t, .md-step-material-upload.has-file .d { position: relative; z-index: 1; color: #fff; }
+.md-step-material-note {
+  width: 100%; min-height: 64px; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--dr-border); background: var(--dr-bg-soft); color: var(--dr-ink);
+  font-size: 12.5px; font-family: inherit; resize: vertical;
+}
+.md-step-material-note:focus { outline: none; border-color: var(--dr-purple); }
+.md-step-material-save {
+  padding: 12px; border-radius: 12px; border: none; background: var(--dr-purple);
+  color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; font-family: inherit;
+}
+
+/* ---- 작성 완성도 상세 (openWritingCompletenessView) ---- */
+.md-wc-note { font-size: 12px; color: var(--dr-ink-soft); margin-bottom: 12px; }
+.md-wc-list { display: flex; flex-direction: column; gap: 8px; }
+.md-wc-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 12px; border-radius: 10px; background: var(--dr-bg-soft); font-size: 12.5px; color: var(--dr-ink);
+}
+.md-wc-flag { font-size: 10.5px; font-weight: 700; color: var(--dr-ink-soft); }
+.md-wc-flag.done { color: #2fae6b; }
+
+/* ---- 전문가 준비도 종합 코멘트 (admin-set, read only here) ---- */
+.md-status-card.blue { cursor: default; }
+.md-status-card.blue:hover { border-color: var(--dr-border); }
+.md-status-overall-comment {
+  margin-top: 10px; padding: 9px 11px; border-radius: 10px; background: var(--dr-active-bg);
+  font-size: 11.5px; color: var(--dr-ink); line-height: 1.5;
+}
 
 /* ---- 제작요청 현황 tab — history list ---- */
 .md-production-list-empty { font-size: 12.5px; color: var(--dr-ink-soft); line-height: 1.6; padding: 20px 4px; text-align: center; }

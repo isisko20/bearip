@@ -212,36 +212,37 @@
               <div class="md-status-top">
                 <div class="md-status-left">
                   <div class="md-status-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3C8 3 16 6 16 12C16 18 8 21 8 21"/><path d="M16 3C16 3 8 6 8 12C8 18 16 21 16 21"/><path d="M9 7h6M8 12h8M9 17h6"/></svg></div>
-                  <div class="md-status-label">DNA SCORE</div>
+                  <div class="md-status-label">작성 완성도</div>
                 </div>
                 <svg class="md-status-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.1"/></svg>
               </div>
               <div class="md-status-value" id="dnaScoreValue">78%</div>
-              <div class="md-status-desc">6개 항목 평균 · 눌러서 자세히 보기</div>
+              <div class="md-status-desc" id="dnaScoreDesc">개발 항목 등록 현황 · 눌러서 자세히 보기</div>
               <div class="md-status-bar"><div class="md-status-bar-fill" id="dnaScoreBar" style="width:78%"></div></div>
             </div>
             <div class="md-status-card blue">
               <div class="md-status-top">
                 <div class="md-status-left">
                   <div class="md-status-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg></div>
-                  <div class="md-status-label">READINESS SCORE</div>
+                  <div class="md-status-label">전문가 준비도</div>
                 </div>
                 <svg class="md-status-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.1"/></svg>
               </div>
               <div class="md-status-value" id="readinessValue">57%</div>
               <div class="md-status-desc" id="readinessDesc">선택한 목표(웹툰) 준비도</div>
               <div class="md-status-bar"><div class="md-status-bar-fill" id="readinessBar" style="width:57%"></div></div>
+              <div class="md-status-overall-comment" id="readinessOverallComment" hidden></div>
             </div>
             <div class="md-status-card green">
               <div class="md-status-top">
                 <div class="md-status-left">
                   <div class="md-status-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l3-4h3l-2 4z"/><path d="M8 8l3-4h3l-2 4z"/><path d="M13 8l3-4h3l-2 4z"/><rect x="3" y="8" width="18" height="12" rx="1.5"/></svg></div>
-                  <div class="md-status-label">PRODUCTION PROGRESS</div>
+                  <div class="md-status-label">제작 진행률</div>
                 </div>
                 <svg class="md-status-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.1"/></svg>
               </div>
               <div class="md-status-value" id="productionValue">23%</div>
-              <div class="md-status-desc">실제 제작 진행도</div>
+              <div class="md-status-desc">제작 의뢰 후 실제 작업 진행도</div>
               <div class="md-status-bar"><div class="md-status-bar-fill" id="productionBar" style="width:23%"></div></div>
             </div>
           </div>
@@ -253,6 +254,7 @@
             <span class="num">3</span>
             <span class="t" id="roadmapTitle">웹툰 개발 맵</span>
             <span class="md-badge" id="roadmapGoalBadge">선택한 목표: 웹툰</span>
+            <button type="button" class="md-expert-review-btn" id="mdRequestReviewBtn" hidden>전문가 검토 요청</button>
           </div>
 
           <div class="md-roadmap" id="roadmapContainer">

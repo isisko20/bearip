@@ -158,7 +158,7 @@
     <!-- Step 4: 개발 항목 1차 등록 -->
     <section class="ni-panel" data-panel="4">
       <h2>가진 자료를 등록해볼까요?</h2>
-      <p class="sub" id="roadItemsSub">선택한 목표의 개발 항목마다 지금 가진 자료를 올려주세요. 없는 항목은 "아직 없어요"로 두면 돼요 — 생성과 동시에 관리자에게 심사 요청이 전송되고, 항목별로 진행도를 확인해드려요.</p>
+      <p class="sub" id="roadItemsSub">선택한 목표의 개발 항목마다 지금 가진 자료를 올려주세요. 없는 항목은 "아직 없어요"로 두면 돼요. 등록한 기획과 자료를 담당 IP 매니저가 확인하고, 항목별 제작 준비도와 보완 의견을 알려드립니다.</p>
       <div class="ni-road-items" id="roadItemsList"></div>
     </section>
 
@@ -182,7 +182,7 @@
         <div class="ni-checklist-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>MY DNA에 새 프로젝트가 추가됩니다</div>
         <div class="ni-checklist-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>선택한 목표에 맞는 개발 맵이 자동으로 준비됩니다</div>
         <div class="ni-checklist-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>공개 범위는 만든 후에도 언제든 바꿀 수 있습니다</div>
-        <div class="ni-checklist-item" id="sumReviewNotice" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>등록한 항목이 관리자에게 심사 요청으로 전송됩니다</div>
+        <div class="ni-checklist-item" id="sumReviewNotice" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>등록한 항목은 이 화면에서 바로, 또는 MY DNA에서 나중에 전문가 검토를 요청할 수 있어요</div>
       </div>
     </section>
 
@@ -192,6 +192,10 @@
         다음
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
+      <div class="ni-footer-final" id="niFooterFinal" hidden>
+        <button type="button" class="ni-btn-ghost" id="finishGoToDnaBtn">MY DNA에서 확인하기</button>
+        <button type="button" class="ni-btn-primary" id="finishRequestReviewBtn">바로 전문가 검토 요청하기</button>
+      </div>
     </div>
   </div>
 
