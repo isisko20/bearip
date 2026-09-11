@@ -19,10 +19,11 @@ function crGoToIp(ip) {
 
 function crPosterAttrs(ip, index) {
   const imageAsset = (ip.assets || []).find((a) => a.imageData);
-  const style = imageAsset
-    ? ` style="background-image:url('${imageAsset.imageData}');background-size:cover;background-position:center"`
+  const coverUrl = ip.coverImage || (imageAsset && imageAsset.imageData);
+  const style = coverUrl
+    ? ` style="background-image:url('${coverUrl}');background-size:cover;background-position:center"`
     : '';
-  const className = imageAsset ? '' : `cr-thumb-${(index % 10) + 1}`;
+  const className = coverUrl ? '' : `cr-thumb-${(index % 10) + 1}`;
   return { style, className };
 }
 

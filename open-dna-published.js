@@ -9,10 +9,11 @@ const OD_GOAL_TAG = { webnovel: 'WEBNOVEL', webtoon: 'WEBTOON', video: 'VIDEO', 
 function odBuildPublishedCard(ip, index) {
   const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
   const imageAsset = (ip.assets || []).find((a) => a.imageData);
-  const bannerStyle = imageAsset
-    ? ` style="background-image:url('${imageAsset.imageData}');background-size:cover;background-position:center"`
+  const coverUrl = ip.coverImage || (imageAsset && imageAsset.imageData);
+  const bannerStyle = coverUrl
+    ? ` style="background-image:url('${coverUrl}');background-size:cover;background-position:center"`
     : '';
-  const bannerClass = imageAsset ? '' : `thumb-${(index % 8) + 1}`;
+  const bannerClass = coverUrl ? '' : `thumb-${(index % 8) + 1}`;
   const avatarThumb = `thumb-${((index + 3) % 8) + 1}`;
   const initials = esc(ip.title || 'IP').slice(0, 6);
 

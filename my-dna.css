@@ -39,6 +39,21 @@
 .md-current-ip-card .chev { width: 15px; height: 15px; color: var(--dr-ink-soft); flex-shrink: 0; transition: transform 0.15s; }
 .md-ip-switcher.open .md-current-ip-card .chev { transform: rotate(180deg); }
 
+/* Sits visually on top of the thumb (same box: 10px inset, 56px square) as
+   a sibling button — not nested inside .md-current-ip-card, since that's
+   already a <button> and buttons can't contain buttons. */
+.md-current-ip-thumb-edit {
+  position: absolute; top: 10px; left: 10px; width: 56px; height: 56px;
+  display: flex; align-items: flex-end; justify-content: flex-end; padding: 3px;
+  border: none; background: transparent; cursor: pointer; border-radius: 14px; font-family: inherit;
+}
+.md-current-ip-thumb-edit svg {
+  width: 13px; height: 13px; padding: 4px; border-radius: 50%;
+  background: rgba(20,16,30,0.65); color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  transition: background 0.15s;
+}
+.md-current-ip-thumb-edit:hover svg { background: var(--dr-purple); }
+
 @media (max-width: 760px) {
   .md-ip-hero { max-width: 100%; }
 }

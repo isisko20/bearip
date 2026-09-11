@@ -13,9 +13,12 @@ function mpBuildCard(ip) {
   const el = document.createElement('article');
   el.className = 'mp-card';
 
+  // An explicitly-set cover image wins; otherwise fall back to the first
+  // image asset, so IPs created before this feature still show something.
   const imageAsset = (ip.assets || []).find((a) => a.imageData);
-  const thumbStyle = imageAsset ? ` style="background-image:url('${imageAsset.imageData}')"` : '';
-  const thumbIcon = imageAsset
+  const coverUrl = ip.coverImage || (imageAsset && imageAsset.imageData);
+  const thumbStyle = coverUrl ? ` style="background-image:url('${coverUrl}')"` : '';
+  const thumbIcon = coverUrl
     ? ''
     : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 15l5-5 4 4 4-4 5 5"/><circle cx="8" cy="9" r="1.4"/></svg>';
   const isPublic = ip.visibility === 'public';

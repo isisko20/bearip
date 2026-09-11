@@ -53,10 +53,11 @@ function ipdApplyDynamicIP() {
   document.getElementById('ipdHeroGenre').textContent = [...(ip.genres || []), goalLabel].filter(Boolean).join(' · ') || '미지정';
 
   const imageAsset = (ip.assets || []).find((a) => a.imageData);
+  const coverUrl = ip.coverImage || (imageAsset && imageAsset.imageData);
   const heroBg = document.getElementById('ipdHeroBg');
-  if (imageAsset) {
+  if (coverUrl) {
     heroBg.classList.remove('thumb-1');
-    heroBg.style.backgroundImage = `url('${imageAsset.imageData}')`;
+    heroBg.style.backgroundImage = `url('${coverUrl}')`;
     heroBg.style.backgroundSize = 'cover';
     heroBg.style.backgroundPosition = 'center';
   } else {

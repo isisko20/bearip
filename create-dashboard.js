@@ -17,9 +17,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const genreText = ip.genres && ip.genres.length ? ip.genres.join(', ') : '장르 미정';
     const dna = ip.dnaScore || 0;
     const imageAsset = (ip.assets || []).find((a) => a.imageData);
-    const thumbClass = imageAsset ? '' : thumbClasses[i % thumbClasses.length];
-    const thumbStyle = imageAsset
-      ? ` style="background-image:url('${imageAsset.imageData}');background-size:cover;background-position:center"`
+    const coverUrl = ip.coverImage || (imageAsset && imageAsset.imageData);
+    const thumbClass = coverUrl ? '' : thumbClasses[i % thumbClasses.length];
+    const thumbStyle = coverUrl
+      ? ` style="background-image:url('${coverUrl}');background-size:cover;background-position:center"`
       : '';
     card.innerHTML = `
       <div class="thumb ${thumbClass}"${thumbStyle}><span class="tlabel">${ip.title}</span></div>
@@ -56,9 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const genreText = ip.genres && ip.genres.length ? ip.genres.join(', ') : '장르 미정';
     const dna = ip.dnaScore || 0;
     const imageAsset = (ip.assets || []).find((a) => a.imageData);
-    const thumbClass = imageAsset ? '' : thumbClasses[i % thumbClasses.length];
-    const thumbStyle = imageAsset
-      ? ` style="background-image:url('${imageAsset.imageData}');background-size:cover;background-position:center"`
+    const coverUrl = ip.coverImage || (imageAsset && imageAsset.imageData);
+    const thumbClass = coverUrl ? '' : thumbClasses[i % thumbClasses.length];
+    const thumbStyle = coverUrl
+      ? ` style="background-image:url('${coverUrl}');background-size:cover;background-position:center"`
       : '';
     card.innerHTML = `
       <div class="thumb ${thumbClass}"${thumbStyle}><span class="tlabel">${ip.title}</span></div>
@@ -108,9 +110,10 @@ function renderHeroLiveCards() {
   if (ips.length) {
     const ip = ips[0];
     const imageAsset = (ip.assets || []).find((a) => a.imageData);
-    const thumbClass = imageAsset ? '' : thumbClasses[0];
-    const thumbStyle = imageAsset
-      ? ` style="background-image:url('${imageAsset.imageData}');background-size:cover;background-position:center"`
+    const coverUrl = ip.coverImage || (imageAsset && imageAsset.imageData);
+    const thumbClass = coverUrl ? '' : thumbClasses[0];
+    const thumbStyle = coverUrl
+      ? ` style="background-image:url('${coverUrl}');background-size:cover;background-position:center"`
       : '';
     ongoingBody.innerHTML = `
       <div class="dr-hero-live-thumb ${thumbClass}"${thumbStyle}></div>

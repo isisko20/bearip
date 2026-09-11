@@ -158,7 +158,8 @@ function pfPositionLabel(posId) {
 
 function pfCrewThumbStyle(ip) {
   const imageAsset = (ip && ip.assets || []).find((a) => a.imageData);
-  return imageAsset ? ` style="background-image:url('${imageAsset.imageData}');background-size:cover;background-position:center"` : '';
+  const coverUrl = (ip && ip.coverImage) || (imageAsset && imageAsset.imageData);
+  return coverUrl ? ` style="background-image:url('${coverUrl}');background-size:cover;background-position:center"` : '';
 }
 
 function renderCrew() {

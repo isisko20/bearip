@@ -90,14 +90,38 @@ function renderHeader() {
   const thumbEl = document.getElementById('currentIpThumb');
   const iconEl = document.getElementById('currentIpThumbIcon');
   if (thumbEl && iconEl) {
+    // An explicitly-set cover image wins; otherwise fall back to the first
+    // image asset, so IPs created before this feature still show something.
     const imageAsset = (currentIP.assets || []).find((a) => a.imageData);
-    if (imageAsset) {
-      thumbEl.style.backgroundImage = `url('${imageAsset.imageData}')`;
+    const coverUrl = currentIP.coverImage || (imageAsset && imageAsset.imageData);
+    if (coverUrl) {
+      thumbEl.style.backgroundImage = `url('${coverUrl}')`;
       iconEl.style.display = 'none';
     } else {
       thumbEl.style.backgroundImage = '';
       iconEl.style.display = '';
     }
+  }
+}
+
+async function changeCurrentIpCoverImage(file) {
+  if (!file) return;
+  if (file.size > BEARIP_MAX_ASSET_FILE_BYTES) {
+    bearipShowToast('파일이 너무 커요 (최대 50MB)');
+    return;
+  }
+  if (!(await bearipCheckStorageRoom(file.size))) {
+    bearipShowToast('저장 공간이 부족해요. 다른 파일을 시도해보세요.');
+    return;
+  }
+  try {
+    const dataUrl = await bearipResizeImageToDataUrl(file, 800, 0.85);
+    currentIP.coverImage = dataUrl;
+    if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { coverImage: dataUrl });
+    renderHeader();
+    bearipShowToast('대표 이미지를 변경했어요');
+  } catch (err) {
+    bearipShowToast(err.message || '이미지를 불러오지 못했어요');
   }
 }
 
@@ -1208,6 +1232,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const menu = document.getElementById('ipSwitcherMenu');
     if (menu.hidden) openIpSwitcher();
     else closeIpSwitcher();
+  });
+
+  document.getElementById('currentIpThumbEditBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('currentIpCoverInput').click();
+  });
+  document.getElementById('currentIpCoverInput').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    changeCurrentIpCoverImage(file);
   });
   document.addEventListener('click', (e) => {
     const wrap = document.getElementById('ipSwitcher');

@@ -194,6 +194,7 @@ function createAndSaveIP() {
     genres: selectedGenres.slice(),
     logline: document.getElementById('ipLogline').value.trim(),
     synopsis: document.getElementById('ipSynopsis').value.trim(),
+    coverImage: coverImageData || undefined,
     visibility: selectedVis,
     createdAt: new Date().toISOString(),
     // A brand-new IP always starts at 0% — nothing has been produced yet.
