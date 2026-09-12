@@ -133,17 +133,6 @@ function renderPortfolio() {
   });
 }
 
-// Same 5 static CREW MATCH demo postings crew-match-status.js resolves —
-// duplicated here since profile.html doesn't load that file, matching how
-// every od-app page already keeps its own small copy of this kind of map.
-const PF_POSITION_LABELS = {
-  'seoul-night-menders_visual-artist': { ip: '서울 야행수선단', role: 'Visual Artist' },
-  'seoul-night-menders_bg-concept': { ip: '서울 야행수선단', role: '배경 컨셉 아티스트' },
-  'cat-detective-momo_story-writer': { ip: '고양이 탐정 모모', role: 'Story Writer' },
-  'memory-walking-girl_video-creator': { ip: '기억을 걷는 소녀', role: 'Video Creator' },
-  'star-tower_bg-concept': { ip: '별을 품은 탑', role: '배경 컨셉 아티스트' },
-  'ocean-planet_lettering': { ip: 'OCEAN PLANET', role: '레터링 스페셜리스트' },
-};
 const PF_APPLY_STATUS = {
   pending: { cls: 'pending', label: '검토 중' },
   accepted: { cls: 'member', label: '크루 참여 중' },
@@ -151,7 +140,6 @@ const PF_APPLY_STATUS = {
 };
 
 function pfPositionLabel(posId) {
-  if (PF_POSITION_LABELS[posId]) return PF_POSITION_LABELS[posId];
   const pos = (typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : []).find((p) => p.id === posId);
   return pos ? { ip: pos.ipTitle, role: pos.role } : null;
 }
@@ -181,11 +169,10 @@ function renderCrew() {
   });
 
   // IPs this user asked to join as crew (ip-detail.html's 참여하기), on
-  // someone else's project — the demo project included, since 참여하기
-  // works there too.
+  // someone else's project.
   bearipSetList('bearip_joined_ips').forEach((id) => {
     const ip = ips.find((i) => i.id === id);
-    const title = ip ? ip.title : id === 'demo' ? '서울 야행수선단 (예시)' : null;
+    const title = ip ? ip.title : null;
     if (!title) return;
     rows.push(`
       <div class="pf-crew-row">

@@ -24,68 +24,6 @@ const ASSET_ICONS = {
   video: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="14" height="12" rx="2"/><path d="M16.5 10.5l5-3v9l-5-3z"/></svg>',
 };
 
-const DEMO_IP = {
-  id: 'demo',
-  title: '서울 야행수선단',
-  goal: 'webtoon',
-  dnaScore: 68,
-  dnaBreakdown: { ...BEARIP_DEMO_DNA_BREAKDOWN },
-  readinessScore: 57,
-  productionProgress: 23,
-  // Statuses here map onto the unified per-step model (mdStepStatus below):
-  // story/character/visual read as 전문가 진단까지 끝난 "준비 완료", background/
-  // storyboard as 자료는 있지만 아직 검토 요청 전인 "작성 중", the rest genuinely
-  // untouched — roughly preserving the demo's original 완료/진행중/미착수 feel.
-  roadmap: [
-    {
-      key: 'story',
-      label: '스토리',
-      submission: { note: '메인 플롯과 결말까지 정리한 시놉시스', imageData: null, fileName: null, fileSize: null, mime: null },
-      reviewStatus: 'reviewed',
-      adminProgress: 100,
-      adminComment: '완결까지 구조가 탄탄해요.',
-      needsRevision: false,
-      mode: 'self',
-    },
-    {
-      key: 'character',
-      label: '캐릭터<br>디자인',
-      submission: { note: '주요 인물 5인 캐릭터 시트', imageData: null, fileName: null, fileSize: null, mime: null },
-      reviewStatus: 'reviewed',
-      adminProgress: 100,
-      adminComment: '디자인 완성도가 높아요.',
-      needsRevision: false,
-      mode: 'self',
-    },
-    {
-      key: 'visual',
-      label: '비주얼<br>가이드',
-      submission: { note: '톤앤매너, 색감 가이드', imageData: null, fileName: null, fileSize: null, mime: null },
-      reviewStatus: 'reviewed',
-      adminProgress: 100,
-      adminComment: '가이드가 명확해요.',
-      needsRevision: false,
-      mode: 'self',
-    },
-    { key: 'background', label: '배경/장소', submission: { note: '주요 배경 60% 진행 중', imageData: null, fileName: null, fileSize: null, mime: null }, reviewStatus: null, adminProgress: null, adminComment: null, needsRevision: false, mode: 'self' },
-    { key: 'storyboard', label: '콘티', submission: { note: '콘티 초안 35% 진행 중', imageData: null, fileName: null, fileSize: null, mime: null }, reviewStatus: null, adminProgress: null, adminComment: null, needsRevision: false, mode: 'self' },
-    { key: 'art', label: '작화', submission: null, reviewStatus: null, adminProgress: null, adminComment: null, needsRevision: false, mode: 'self' },
-    { key: 'lettering', label: '레터링/<br>검수', submission: null, reviewStatus: null, adminProgress: null, adminComment: null, needsRevision: false, mode: 'self' },
-    { key: 'upload', label: '업로드/<br>연재', submission: null, reviewStatus: null, adminProgress: null, adminComment: null, needsRevision: false, mode: 'self' },
-  ],
-  assets: [
-    { name: '캐릭터 시트', ver: 'v1.2', date: '2024.05.12', thumb: 'thumb-5', icon: 'user', type: 'character' },
-    { name: '세계관 문서', ver: 'v2.0', date: '2024.05.10', thumb: 'thumb-2', icon: 'doc', type: 'world' },
-    { name: 'EP01 시놉시스', ver: 'v1.1', date: '2024.05.09', thumb: 'thumb-8', icon: 'file', type: 'story' },
-    { name: '콘셉트 아트', ver: 'v1.0', date: '2024.05.07', thumb: 'thumb-7', icon: 'image', type: 'art' },
-  ],
-  discussion: [
-    { id: 'dc_seed_1', name: '라라', role: '스토리보드', text: 'EP03 콘티 초안 올렸어요! 배경 톤 관련해서 의견 부탁드려요 🙏', likes: 8, likedByMe: false, thumb: 'thumb-3', createdAt: new Date(Date.now() - 60 * 24 * 2 * 60000).toISOString() },
-    { id: 'dc_seed_2', name: '몽몽', role: '비주얼 가이드', text: '배경/장소 레퍼런스 60%까지 정리했어요. 다음 주까지 마무리할게요.', likes: 5, likedByMe: false, thumb: 'thumb-4', createdAt: new Date(Date.now() - 60 * 24 * 3 * 60000).toISOString() },
-    { id: 'dc_seed_3', name: '판타지 (나)', role: '원작 · 스토리', text: 'Visual Artist 포지션 2명 추가로 모집 시작했습니다. 관심 있으신 분들 CREW MATCH에서 확인해주세요!', likes: 12, likedByMe: false, thumb: 'thumb-2', createdAt: new Date(Date.now() - 60 * 24 * 5 * 60000).toISOString() },
-  ],
-};
-
 function mdFormatRelativeTime(iso) {
   const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
   if (min < 1) return '방금 전';
@@ -103,9 +41,16 @@ function mdFormatFileSize(bytes) {
 
 let currentIP = null;
 
+// Returns false (and redirects to my-projects.html) when the user has no
+// current IP yet — that page already has its own "아직 만든 IP가 없어요"
+// empty state, so MY DNA doesn't need a fake project to fall back to.
 function loadCurrentIP() {
   const stored = typeof bearipGetCurrentIP === 'function' ? bearipGetCurrentIP() : null;
-  currentIP = stored || DEMO_IP;
+  if (!stored) {
+    location.href = 'my-projects.html';
+    return false;
+  }
+  currentIP = stored;
   // Older IPs (created before the DNA breakdown feature) only have a single
   // dnaScore number — this seeds all 6 categories from it so nothing looks
   // broken, then the score itself becomes the derived average going forward.
@@ -116,6 +61,7 @@ function loadCurrentIP() {
   recomputeWritingCompleteness();
   recomputeExpertReadiness();
   recomputeProductionProgress();
+  return true;
 }
 
 function renderHeader() {
@@ -185,21 +131,9 @@ function renderIpSwitcherMenu() {
 
   const emptyHtml = myIPs.length === 0 ? '<div class="md-ip-switcher-empty">아직 만든 IP가 없어요.</div>' : '';
 
-  const isDemoActive = currentIP.id === 'demo';
-  const demoRowHtml = `
-    <button type="button" class="md-ip-switcher-row demo${isDemoActive ? ' active' : ''}" data-switch-ip="demo">
-      <span class="dot"></span>
-      <span class="info">
-        <span class="t">서울 야행수선단 (예시)</span>
-        <span class="m">둘러보기용 데모</span>
-      </span>
-    </button>
-  `;
-
   menu.innerHTML = `
     ${emptyHtml}
     ${rowsHtml}
-    ${demoRowHtml}
     <div class="md-ip-switcher-divider"></div>
     <a class="md-ip-switcher-new" href="new-ip.html">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -215,11 +149,7 @@ function renderIpSwitcherMenu() {
         closeIpSwitcher();
         return;
       }
-      if (id === 'demo') {
-        localStorage.removeItem('bearip_current_ip');
-      } else {
-        bearipSetCurrentId(id);
-      }
+      bearipSetCurrentId(id);
       location.reload();
     });
   });
@@ -1543,7 +1473,7 @@ function persistGoalChange(goal) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  loadCurrentIP();
+  if (!loadCurrentIP()) return;
   renderAll();
 
   document.getElementById('mdPublishBtn').addEventListener('click', toggleIPVisibility);

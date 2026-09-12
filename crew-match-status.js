@@ -2,17 +2,7 @@
 // numbers — so it reflects whatever the user has actually applied to,
 // proposed, or joined (joined-IP state comes from ip-detail.js's key).
 
-const CM_POSITION_LABELS = {
-  'seoul-night-menders_visual-artist': { ip: '서울 야행수선단', role: 'Visual Artist' },
-  'seoul-night-menders_bg-concept': { ip: '서울 야행수선단', role: '배경 컨셉 아티스트' },
-  'cat-detective-momo_story-writer': { ip: '고양이 탐정 모모', role: 'Story Writer' },
-  'memory-walking-girl_video-creator': { ip: '기억을 걷는 소녀', role: 'Video Creator' },
-  'star-tower_bg-concept': { ip: '별을 품은 탑', role: '배경 컨셉 아티스트' },
-  'ocean-planet_lettering': { ip: 'OCEAN PLANET', role: '레터링 스페셜리스트' },
-};
-
 function cmPositionLabel(id) {
-  if (CM_POSITION_LABELS[id]) return CM_POSITION_LABELS[id];
   const posted = (typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : []).find((p) => p.id === id);
   return posted ? { ip: posted.ipTitle, role: posted.role } : null;
 }
@@ -37,9 +27,6 @@ function cmRenderMatchStatus() {
     .map((id) => {
       const label = cmPositionLabel(id);
       const text = label ? `${bearipEscapeHtml(label.ip)} · ${bearipEscapeHtml(label.role)}` : bearipEscapeHtml(id);
-      // A real applicant record only exists for positions applied through
-      // CREW MATCH's own list or an IP's own page — the 5 static demo cards
-      // never create one, so those honestly stay "검토 중" forever.
       const mine = user ? bearipGetApplicants(id).find((a) => a.name === user.nickname) : null;
       const status = mine ? mine.status : 'pending';
       const cancelBtn = status === 'pending'

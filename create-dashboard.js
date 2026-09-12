@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (ips.length === 0) return;
 
   const track = document.getElementById('myDnaTrack');
+  const emptyEl = document.getElementById('myDnaTrackEmpty');
+  if (emptyEl) emptyEl.remove();
   const thumbClasses = ['thumb-6', 'thumb-3', 'thumb-4', 'thumb-2', 'thumb-1'];
 
   ips.forEach((ip, i) => {
@@ -34,9 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Injects real published IPs (visibility === 'public', same flag MY DNA's
-// OPEN DNA에 공개하기 button sets) into the OPEN DNA panel's carousel, ahead
-// of the static demo cards — so once something real is public, it's the
-// first thing shown here instead of only fake projects.
+// OPEN DNA에 공개하기 button sets) into the OPEN DNA panel's carousel.
 document.addEventListener('DOMContentLoaded', () => {
   const track = document.getElementById('openDnaTrack');
   if (!track || typeof bearipLoadIPs !== 'function') return;
@@ -44,6 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const publicIPs = bearipLoadIPs().filter((ip) => ip.visibility === 'public');
   if (!publicIPs.length) return;
 
+  const emptyEl = document.getElementById('openDnaTrackEmpty');
+  if (emptyEl) emptyEl.remove();
   const thumbClasses = ['thumb-7', 'thumb-8', 'thumb-5', 'thumb-6'];
 
   publicIPs.forEach((ip, i) => {

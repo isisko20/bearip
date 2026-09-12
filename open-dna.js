@@ -188,10 +188,6 @@ if (odCardsContainer) {
     const btn = e.target.closest('[data-dna-report]');
     if (!btn) return;
     const id = btn.dataset.dnaReport;
-    if (id === 'demo') {
-      odOpenDnaReport('서울 야행수선단', BEARIP_DEMO_DNA_BREAKDOWN, bearipRecomputeDnaScore(BEARIP_DEMO_DNA_BREAKDOWN));
-      return;
-    }
     const ip = (typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : []).find((i) => i.id === id);
     if (!ip) return;
     bearipEnsureDnaBreakdown(ip);
@@ -200,9 +196,7 @@ if (odCardsContainer) {
 }
 
 // Sort dropdown — reorders real .od-card elements by real per-card data
-// attributes (set in the HTML for the demo card, and in
-// open-dna-published.js for user-published cards). .mock-slot placeholders
-// have no real data to sort by, so they always stay pinned at the end.
+// attributes (set in open-dna-published.js for each published card).
 const odSortSelect = document.getElementById('odSortSelect');
 if (odSortSelect) {
   const OD_SORTERS = {

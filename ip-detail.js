@@ -24,16 +24,18 @@ function ipdSetApplyUI(btn, applied) {
 
 const IPD_GOAL_LABELS = { webnovel: '웹소설', webtoon: '웹툰', video: '영상', multi: '멀티포맷' };
 
-// Rewrites the static (서울 야행수선단) markup in place for a user-created IP,
+// Rewrites the static placeholder markup in place for a user-created IP,
 // if the visitor arrived here via a "IP 보기 / 참여하기" click from OPEN DNA
 // (open-dna-published.js sets this one-shot flag before navigating). There's
 // no real multi-user data for this prototype, so anything we can't honestly
 // derive from the IP itself (crew roster, past updates, published episodes)
 // is shown as an empty state instead of being left as fake demo content.
+// Arriving with no id at all (direct navigation) leaves the static
+// placeholder in place.
 function ipdApplyDynamicIP() {
   const viewId = sessionStorage.getItem('bearip_view_ip_id');
   sessionStorage.removeItem('bearip_view_ip_id');
-  if (!viewId || viewId === 'seoul-night-menders') return;
+  if (!viewId) return;
 
   const ip = (typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : []).find((i) => i.id === viewId);
   if (!ip) return;

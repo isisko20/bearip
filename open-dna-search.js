@@ -1,6 +1,6 @@
 // OPEN DNA text search — filters the .od-cards grid (real published IPs
-// injected by open-dna-published.js plus the static demo cards) by whatever
-// text is on the card. Mirrors crew-match-filter.js's search pattern.
+// injected by open-dna-published.js) by whatever text is on the card.
+// Mirrors crew-match-filter.js's search pattern.
 document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('odSearchInput');
   const grid = document.getElementById('odCardsGrid');
@@ -29,8 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
       slot.style.display = query ? 'none' : '';
     });
 
-    if (emptyEl) emptyEl.hidden = !query || visibleCards > 0;
+    if (emptyEl) emptyEl.hidden = visibleCards > 0;
   }
 
   input.addEventListener('input', applySearch);
+  // Runs once on load too (not just on the next keystroke) so the empty
+  // state is correct even before any search — nothing to show fake demo
+  // cards for anymore when there are no real published IPs yet.
+  applySearch();
 });

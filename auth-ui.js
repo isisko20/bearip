@@ -283,7 +283,6 @@ document.addEventListener('DOMContentLoaded', () => {
     homeLink.parentNode.insertBefore(backBtn, homeLink);
   });
 
-  if (typeof bearipSeedNotificationsIfEmpty === 'function') bearipSeedNotificationsIfEmpty();
   const unread = typeof bearipGetUnreadCount === 'function' ? bearipGetUnreadCount() : 0;
 
   // Bell: unchanged — jumps straight to the notifications page.

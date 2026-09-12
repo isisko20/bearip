@@ -1,11 +1,13 @@
 // Injects real published IPs (visibility === 'public') into CONTENT ROOM's
-// 라이징/챌린지/오피셜 rows, ahead of the mock placeholder cards — using the
-// same growth stage (bearipGrowthStage, storage.js) that drives OPEN DNA's
-// badges, so "how developed is this IP" means the same thing on both pages.
-// SEED-stage IPs don't appear here yet; there's nothing worth watching or
-// reading that early. This connects at the IP level (not per-episode) —
-// clicking a card goes to ip-detail.html via the same one-shot
-// sessionStorage flag open-dna-published.js already uses.
+// 라이징/챌린지/오피셜 rows (clearing each row's "아직 콘텐츠가 없어요"
+// placeholder the first time it gets a real card) and features the most
+// engaged one in the hero — using the same growth stage (bearipGrowthStage,
+// storage.js) that drives OPEN DNA's badges, so "how developed is this IP"
+// means the same thing on both pages. SEED-stage IPs don't appear here yet;
+// there's nothing worth watching or reading that early. This connects at
+// the IP level (not per-episode) — clicking a card goes to ip-detail.html
+// via the same one-shot sessionStorage flag open-dna-published.js already
+// uses.
 //
 // 조회수/좋아요 are real per-IP counts (ip.views/ip.likes, updated from
 // ip-detail.js), not placeholders — so is the TOP 100 row below, ranked by
@@ -38,10 +40,18 @@ document.addEventListener('DOMContentLoaded', () => {
     return { ip, stage: bearipGrowthStage(ip.dnaScore || 0) };
   });
 
+  // Clears a track's "아직 콘텐츠가 없어요" placeholder the first time a
+  // real card is about to be inserted into it.
+  function clearRowEmpty(track) {
+    const empty = track.querySelector('.cr-row-empty');
+    if (empty) empty.remove();
+  }
+
   entries.forEach(({ ip, stage }, i) => {
     if (stage === 'seed') return;
     const track = document.querySelector(`.cr-row.${stage} .cr-carousel-track`);
     if (!track) return;
+    clearRowEmpty(track);
 
     const { style, className } = crPosterAttrs(ip, i);
     const card = document.createElement('article');
@@ -55,10 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="meta">조회수 ${bearipFormatCount(ip.views)} · 좋아요 ${bearipFormatCount(ip.likes)}</div>
     `;
     card.addEventListener('click', () => crGoToIp(ip));
-
-    const firstMock = track.querySelector('.cr-mock-card');
-    if (firstMock) track.insertBefore(card, firstMock);
-    else track.appendChild(card);
+    track.appendChild(card);
   });
 
   const rankTrack = document.querySelector('.cr-row.top100 .cr-carousel-track');
@@ -67,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
     .filter((e) => e.stage === 'challenge' || e.stage === 'official')
     .sort((a, b) => ((b.ip.views || 0) + (b.ip.likes || 0)) - ((a.ip.views || 0) + (a.ip.likes || 0)));
 
+  if (ranked.length) clearRowEmpty(rankTrack);
   ranked.forEach(({ ip, stage }, i) => {
     const { style, className } = crPosterAttrs(ip, i);
     const card = document.createElement('article');
@@ -80,9 +88,46 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     `;
     card.addEventListener('click', () => crGoToIp(ip));
-
-    const firstMock = rankTrack.querySelector('.cr-mock-rank');
-    if (firstMock) rankTrack.insertBefore(card, firstMock);
-    else rankTrack.appendChild(card);
+    rankTrack.appendChild(card);
   });
+
+  // Hero — features the single most-engaged (views + likes) real published
+  // IP above seed stage, if one exists. Otherwise the static "아직
+  // 대표작이 없어요" placeholder in the HTML stays as-is.
+  const heroCandidates = entries.filter((e) => e.stage !== 'seed').sort(
+    (a, b) => ((b.ip.views || 0) + (b.ip.likes || 0)) - ((a.ip.views || 0) + (a.ip.likes || 0))
+  );
+  if (heroCandidates.length) {
+    const { ip, stage } = heroCandidates[0];
+    const imageAsset = (ip.assets || []).find((a) => a.imageData);
+    const coverUrl = ip.coverImage || (imageAsset && imageAsset.imageData);
+    const heroBg = document.getElementById('crHeroBg');
+    if (heroBg) {
+      heroBg.style.position = 'absolute';
+      heroBg.style.inset = '0';
+      if (coverUrl) {
+        heroBg.className = 'cr-hero-bg';
+        heroBg.style.backgroundImage = `url('${coverUrl}')`;
+        heroBg.style.backgroundSize = 'cover';
+        heroBg.style.backgroundPosition = 'center';
+      } else {
+        heroBg.className = `cr-hero-bg cr-thumb-${(ip.id.length % 10) + 1}`;
+      }
+    }
+    const badgeText = document.getElementById('crHeroBadgeText');
+    if (badgeText) badgeText.textContent = `${BEARIP_STAGE_LABELS[stage]} · 오늘의 추천`;
+    const titleEl = document.getElementById('crHeroTitle');
+    if (titleEl) titleEl.textContent = ip.title || '제목 없는 IP';
+    const descEl = document.getElementById('crHeroDesc');
+    if (descEl) descEl.textContent = ip.logline || ip.synopsis || '아직 소개가 없어요.';
+    const actions = document.getElementById('crHeroActions');
+    if (actions) actions.hidden = false;
+    const infoBtn = document.getElementById('crHeroInfoBtn');
+    if (infoBtn) infoBtn.addEventListener('click', () => crGoToIp(ip));
+    // No real per-episode content exists yet (content-detail.html is a
+    // static mockup, not wired to any real IP), so the hero only offers the
+    // one action that's genuinely real: the IP's own detail page.
+    const playBtn = document.getElementById('crHeroPlayBtn');
+    if (playBtn) playBtn.remove();
+  }
 });

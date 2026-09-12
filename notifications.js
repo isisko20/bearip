@@ -63,7 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('ntRoot').classList.add('theme-dark');
   }
 
-  bearipSeedNotificationsIfEmpty();
   ntRender();
 
   document.getElementById('ntReadAllBtn').addEventListener('click', () => {

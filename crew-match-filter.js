@@ -73,5 +73,9 @@ document.addEventListener('DOMContentLoaded', () => {
     sessionStorage.removeItem('bearip_cm_role_filter');
     const tab = roleTabs.querySelector(`.od-tab[data-role="${incomingRole}"]`);
     if (tab) tab.click();
+  } else {
+    // No demo cards ship with the page anymore, so the empty-state message
+    // needs an initial check too, not just on the next filter/search change.
+    applyFilter();
   }
 });

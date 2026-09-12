@@ -1,13 +1,13 @@
 // "모집글 올리기" — CREW MATCH recruiting post creation flow.
 
-const CM_DEMO_IP = { id: 'demo', title: '서울 야행수선단' };
 const CM_THUMBS = ['thumb-1', 'thumb-2', 'thumb-3', 'thumb-4', 'thumb-5', 'thumb-6', 'thumb-7', 'thumb-8'];
 
 function cmPopulateIpSelect() {
   const select = document.getElementById('postIp');
   const savedIps = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
-  const options = [CM_DEMO_IP, ...savedIps];
-  select.innerHTML = options.map((ip) => `<option value="${ip.id}">${ip.title}</option>`).join('');
+  select.innerHTML = savedIps.length
+    ? savedIps.map((ip) => `<option value="${ip.id}">${ip.title}</option>`).join('')
+    : '<option value="">먼저 MY DNA에서 IP를 만들어주세요</option>';
 }
 
 const CM_SKILL_TO_ROLE = {
@@ -37,33 +37,15 @@ function cmFormatRelativeTime(iso) {
   return `${Math.floor(hr / 24)}일 전`;
 }
 
-// The other static browse-list projects (besides the demo IP) aren't backed
-// by a real IP object anywhere — these are their fixed breakdowns, so their
-// DNA badges are real and clickable like everything else on those cards
-// (e.g. 지원하기 already works for them) instead of silently doing nothing.
-const CM_MOCK_DNA_BREAKDOWNS = {
-  '고양이 탐정 모모': { concept: 85, world: 60, character: 90, story: 55, visual: 70, assets: 66 },
-  '기억을 걷는 소녀': { concept: 70, world: 55, character: 75, story: 60, visual: 65, assets: 59 },
-  '별을 품은 탑': { concept: 65, world: 70, character: 55, story: 50, visual: 68, assets: 46 },
-  'OCEAN PLANET': { concept: 60, world: 65, character: 40, story: 45, visual: 58, assets: 50 },
-};
-
 // Resolves the IP behind a project title (positions only store ipTitle, not
-// an id — same lookup convention as my-dna-applicants.js): the demo IP's
-// shared breakdown, a real user-created IP, or one of the other static
-// browse-list projects' fixed breakdown above.
+// an id — same lookup convention as my-dna-applicants.js).
 function cmResolveIpByTitle(ipTitle) {
-  if (ipTitle === CM_DEMO_IP.title) {
-    return { title: CM_DEMO_IP.title, dnaBreakdown: BEARIP_DEMO_DNA_BREAKDOWN, dnaScore: bearipRecomputeDnaScore(BEARIP_DEMO_DNA_BREAKDOWN) };
-  }
   const ips = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
   const ip = ips.find((i) => i.title === ipTitle);
   if (ip) {
     bearipEnsureDnaBreakdown(ip);
     return ip;
   }
-  const mock = CM_MOCK_DNA_BREAKDOWNS[ipTitle];
-  if (mock) return { title: ipTitle, dnaBreakdown: mock, dnaScore: bearipRecomputeDnaScore(mock) };
   return null;
 }
 
@@ -71,10 +53,9 @@ function cmResolveIpForPosition(pos) {
   return cmResolveIpByTitle(pos.ipTitle);
 }
 
-// One delegated listener covers every DNA badge on the browse list — the 5
-// static cards already in the DOM at load, and any user-posted cards
-// inserted later by cmRenderPositionCard, without needing to wire each card
-// individually.
+// One delegated listener covers every DNA badge on the browse list — any
+// user-posted card inserted by cmRenderPositionCard — without needing to
+// wire each card individually.
 const cmPositionsListEl = document.getElementById('positionsList');
 if (cmPositionsListEl) {
   cmPositionsListEl.addEventListener('click', (e) => {

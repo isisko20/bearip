@@ -245,11 +245,6 @@ function bearipRecomputeDnaScore(breakdown) {
   return Math.round(keys.reduce((sum, k) => sum + (breakdown[k] || 0), 0) / keys.length);
 }
 
-// The demo IP's breakdown ("서울 야행수선단") — shared so MY DNA, OPEN DNA's
-// static demo card, and the DNA ROOM home never show mismatched numbers for
-// the same example project.
-const BEARIP_DEMO_DNA_BREAKDOWN = { concept: 90, world: 65, character: 85, story: 55, visual: 75, assets: 40 };
-
 // Older/incomplete IPs may only have a single dnaScore number. Seeds all 6
 // categories from it (so nothing looks broken) and persists the migration,
 // idempotently — safe to call on every read.
@@ -625,55 +620,6 @@ function bearipMarkAllNotificationsRead() {
 
 function bearipMarkNotificationRead(id) {
   const list = bearipLoadNotifications().map((n) => (n.id === id ? Object.assign({}, n, { read: true }) : n));
-  bearipSaveNotifications(list);
-}
-
-// Seeds a handful of demo notifications the very first time this browser
-// visits (i.e. the notifications key has never been set) so the inbox and
-// unread dot aren't empty on a fresh session. Real actions (creating an IP,
-// posting/applying to a position, ...) add their own notifications on top.
-function bearipSeedNotificationsIfEmpty() {
-  if (localStorage.getItem(BEARIP_NOTIFICATIONS_KEY) !== null) return;
-  const now = Date.now();
-  const seed = [
-    {
-      type: 'system',
-      title: 'Thinkit에 오신 걸 환영해요',
-      message: '프로필을 채우고 CREW MATCH에서 함께할 크루를 찾아보세요.',
-      link: 'profile.html',
-      minutesAgo: 60 * 24 * 3,
-    },
-    {
-      type: 'ip',
-      title: '챌린지로 승급했어요',
-      message: '서울 야행수선단이 DNA SCORE 78%를 달성해 챌린지 단계로 승급했어요.',
-      link: 'open-dna.html',
-      minutesAgo: 60 * 20,
-    },
-    {
-      type: 'crew',
-      title: '매치 제안이 수락됐어요',
-      message: 'OCEAN PLANET · 레터링 스페셜리스트 포지션에 합류하게 됐어요.',
-      link: 'crew-match.html',
-      minutesAgo: 60 * 5,
-    },
-    {
-      type: 'discussion',
-      title: '라라님이 댓글을 남겼어요',
-      message: 'EP03 콘티 초안 올렸어요! 배경 톤 관련해서 의견 부탁드려요 🙏',
-      link: 'my-dna.html',
-      minutesAgo: 40,
-    },
-  ];
-  const list = seed.map((n, i) => ({
-    id: 'ntf_seed_' + i,
-    type: n.type,
-    title: n.title,
-    message: n.message,
-    link: n.link,
-    read: false,
-    createdAt: new Date(now - n.minutesAgo * 60000).toISOString(),
-  }));
   bearipSaveNotifications(list);
 }
 
