@@ -423,7 +423,10 @@
 /* ---- 전문가 검토 결과 read-only view (opened from a roadmap step's own
    action button now — see .md-road-action-btn below — not a separate badge). ---- */
 .md-admin-review-body { display: flex; flex-direction: column; gap: 12px; }
-.md-admin-review-submission { display: flex; flex-direction: column; gap: 8px; }
+.md-admin-review-submission { display: flex; flex-direction: column; gap: 12px; }
+.md-admin-review-entry { display: flex; flex-direction: column; gap: 8px; }
+.md-admin-review-entry + .md-admin-review-entry { padding-top: 12px; border-top: 1px dashed var(--dr-border); }
+.md-admin-review-entry-label { font-size: 11.5px; font-weight: 800; color: var(--dr-purple); }
 .md-admin-review-thumb {
   width: 100%; aspect-ratio: 16/9; border-radius: 10px; background-color: var(--dr-bg-soft);
   background-size: cover; background-position: center;
@@ -469,8 +472,33 @@
 }
 .md-expert-review-btn:hover { opacity: 0.9; }
 
-/* ---- 개발 항목 자료 등록/수정 modal (openStepMaterialEditor) ---- */
+/* ---- 개발 항목 자료 등록/수정 modal (openStepMaterialEditor) — a step can
+   hold several registered entries (e.g. 시나리오의 1화/2화), so the modal
+   body is a scrollable list of entries plus an "+ 자료 추가" row. ---- */
 .md-step-material-body { display: flex; flex-direction: column; gap: 12px; }
+.md-step-material-entries { display: flex; flex-direction: column; gap: 12px; max-height: 52vh; overflow-y: auto; }
+.md-step-material-empty { font-size: 12.5px; color: var(--dr-ink-soft); padding: 8px 2px; }
+.md-step-material-entry {
+  border: 1px dashed var(--dr-border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px;
+}
+.md-step-material-entry-head { display: flex; align-items: center; gap: 8px; }
+.md-step-material-entry-label {
+  flex: 1; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--dr-border);
+  background: var(--dr-panel); font-size: 12.5px; color: var(--dr-ink); font-family: inherit;
+}
+.md-step-material-entry-label:focus { outline: none; border-color: var(--dr-purple); }
+.md-step-material-entry-remove {
+  flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--dr-border);
+  background: var(--dr-panel); color: var(--dr-ink-soft); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.md-step-material-entry-remove svg { width: 13px; height: 13px; }
+.md-step-material-entry-remove:hover { border-color: #d64545; color: #d64545; }
+.md-step-material-add {
+  padding: 10px; border-radius: 10px; border: 1.5px dashed var(--dr-purple);
+  background: transparent; color: var(--dr-purple); font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.md-step-material-add:hover { background: var(--dr-active-bg); }
 .md-step-material-upload {
   position: relative; border: 1.5px dashed var(--dr-border); border-radius: 12px;
   padding: 20px; text-align: center; cursor: pointer; color: var(--dr-ink-soft);
@@ -490,6 +518,8 @@
 }
 .md-step-material-upload.has-file svg { display: none; }
 .md-step-material-upload.has-file .t, .md-step-material-upload.has-file .d { position: relative; z-index: 1; color: #fff; }
+.md-step-material-upload.error { border-color: #d64545; }
+.md-step-material-upload.error .d { color: #d64545; }
 .md-step-material-note {
   width: 100%; min-height: 64px; padding: 10px 12px; border-radius: 10px;
   border: 1px solid var(--dr-border); background: var(--dr-bg-soft); color: var(--dr-ink);

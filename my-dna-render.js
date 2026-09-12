@@ -1,5 +1,5 @@
 // Renders the MY DNA workspace from the currently selected IP in localStorage
-// (falls back to a static demo IP when nothing has been created yet).
+// (redirects to my-projects.html when nothing has been created yet).
 
 const GOAL_LABELS = { webnovel: '웹소설', webtoon: '웹툰', video: '영상', multi: '멀티포맷' };
 
@@ -55,6 +55,10 @@ function loadCurrentIP() {
   // dnaScore number — this seeds all 6 categories from it so nothing looks
   // broken, then the score itself becomes the derived average going forward.
   bearipEnsureDnaBreakdown(currentIP);
+  // Older IPs (created before a step could hold several registered items)
+  // only have a single `submission` object per step — migrates those to the
+  // current `submissions` array shape.
+  bearipEnsureRoadmapSubmissions(currentIP);
   // These three are fully derived from the roadmap now (not self-input), so
   // refresh them on every load in case ip-reviews.js or production-requests.js
   // changed the underlying roadmap data since this IP was last opened here.
@@ -268,7 +272,7 @@ function renderStatus() {
   document.getElementById('dnaScoreValue').textContent = currentIP.dnaScore + '%';
   document.getElementById('dnaScoreBar').style.width = currentIP.dnaScore + '%';
   const steps = currentIP.roadmap || [];
-  const registeredCount = steps.filter((s) => !!s.submission).length;
+  const registeredCount = steps.filter((s) => s.submissions && s.submissions.length > 0).length;
   document.getElementById('dnaScoreDesc').textContent = steps.length
     ? `개발 항목 ${registeredCount}/${steps.length}개 등록 · 눌러서 자세히 보기`
     : '눌러서 자세히 보기';
@@ -323,7 +327,7 @@ function recomputeDnaScore() {
 function recomputeWritingCompleteness() {
   if (currentIP.id === 'demo') return;
   const steps = currentIP.roadmap || [];
-  currentIP.dnaScore = steps.length ? Math.round((steps.filter((s) => !!s.submission).length / steps.length) * 100) : 0;
+  currentIP.dnaScore = steps.length ? Math.round((steps.filter((s) => s.submissions && s.submissions.length > 0).length / steps.length) * 100) : 0;
   bearipUpdateIP(currentIP.id, { dnaScore: currentIP.dnaScore });
 }
 
@@ -361,7 +365,7 @@ function openWritingCompletenessView() {
   const body = document.getElementById('writingCompletenessBody');
   body.innerHTML = (currentIP.roadmap || [])
     .map((s) => {
-      const done = !!s.submission;
+      const done = !!(s.submissions && s.submissions.length);
       return `<div class="md-wc-row"><span>${s.label.replace(/<br>/g, ' ')}</span><span class="md-wc-flag${done ? ' done' : ''}">${done ? '등록됨' : '미등록'}</span></div>`;
     })
     .join('');
@@ -511,18 +515,23 @@ function closeAdminReviewView() {
 
 function openAdminReviewView(stepKey) {
   const step = (currentIP.roadmap || []).find((s) => s.key === stepKey);
-  if (!step || !step.submission) return;
+  if (!step || !step.submissions || !step.submissions.length) return;
   const overlay = ensureAdminReviewViewOverlay();
   overlay.parentNode.appendChild(overlay);
   document.getElementById('adminReviewViewTitle').textContent = step.label.replace(/<br>/g, ' ');
 
-  const sub = step.submission;
-  const previewHtml = sub.imageData
-    ? `<div class="md-admin-review-thumb" style="background-image:url('${sub.imageData}')"></div>`
-    : sub.fileName
-      ? `<div class="md-admin-review-file">${bearipEscapeHtml(sub.fileName)}${sub.fileSize ? ` · ${mdFormatFileSize(sub.fileSize)}` : ''}</div>`
-      : '';
-  const noteHtml = sub.note ? `<p class="md-admin-review-note">${bearipEscapeHtml(sub.note)}</p>` : '';
+  const submissionsHtml = step.submissions
+    .map((sub) => {
+      const labelHtml = sub.label ? `<div class="md-admin-review-entry-label">${bearipEscapeHtml(sub.label)}</div>` : '';
+      const previewHtml = sub.imageData
+        ? `<div class="md-admin-review-thumb" style="background-image:url('${sub.imageData}')"></div>`
+        : sub.fileName
+          ? `<div class="md-admin-review-file">${bearipEscapeHtml(sub.fileName)}${sub.fileSize ? ` · ${mdFormatFileSize(sub.fileSize)}` : ''}</div>`
+          : '';
+      const noteHtml = sub.note ? `<p class="md-admin-review-note">${bearipEscapeHtml(sub.note)}</p>` : '';
+      return `<div class="md-admin-review-entry">${labelHtml}${previewHtml}${noteHtml}</div>`;
+    })
+    .join('');
 
   const resultHtml =
     step.reviewStatus === 'reviewed'
@@ -534,8 +543,7 @@ function openAdminReviewView(stepKey) {
 
   document.getElementById('adminReviewViewBody').innerHTML = `
     <div class="md-admin-review-submission">
-      ${previewHtml}
-      ${noteHtml}
+      ${submissionsHtml}
     </div>
     ${resultHtml}
   `;
@@ -880,7 +888,7 @@ function mdStepStatus(step) {
   if (step.mode === 'requested') return 'production_requested';
   if (step.reviewStatus === 'reviewed') return step.needsRevision ? 'needs_revision' : 'ready';
   if (step.reviewStatus === 'requested') return 'reviewing';
-  if (step.submission) return 'writing';
+  if (step.submissions && step.submissions.length) return 'writing';
   return 'unregistered';
 }
 
@@ -935,6 +943,51 @@ function renderRoadmap() {
 // switches to a read-only view instead, so this never edits under a
 // reviewer's feet).
 let stepMaterialIndex = null;
+// Working copy edited inside the overlay — only written back onto the IP's
+// roadmap (and localStorage) when 저장 is clicked, so opening the editor and
+// closing it without saving never touches the real data.
+let stepMaterialWorkingEntries = [];
+
+function mdMakeEntryId() {
+  return 'entry_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+function stepMaterialEntryHtml(entry) {
+  const hasFile = !!(entry.imageData || entry.fileName);
+  const uploadClass = hasFile ? 'md-step-material-upload has-file' : 'md-step-material-upload';
+  const uploadStyle = entry.imageData ? ` style="background-image:url('${entry.imageData}')"` : '';
+  const uploadText = hasFile ? entry.fileName || '파일 첨부됨' : '클릭해서 파일 업로드';
+  const uploadHint = hasFile ? '다른 파일을 선택하려면 클릭하세요' : '이미지, 영상, 문서 — 최대 50MB';
+  return `
+    <div class="md-step-material-entry" data-entry-id="${entry.id}">
+      <div class="md-step-material-entry-head">
+        <input type="text" class="md-step-material-entry-label" placeholder="예: 1화, 설정 자료" maxlength="30" value="${bearipEscapeHtml(entry.label || '')}">
+        <button type="button" class="md-step-material-entry-remove" aria-label="이 자료 삭제">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="${uploadClass}"${uploadStyle}>
+        <input type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 15l5-5 4 4 4-4 5 5"/><circle cx="8" cy="9" r="1.4"/></svg>
+        <div class="t">${bearipEscapeHtml(uploadText)}</div>
+        <div class="d">${bearipEscapeHtml(uploadHint)}</div>
+      </div>
+      <textarea class="md-step-material-note" placeholder="간단한 설명이나 메모 (선택)" maxlength="200">${bearipEscapeHtml(entry.note || '')}</textarea>
+    </div>
+  `;
+}
+
+function renderStepMaterialEntries() {
+  const wrap = document.getElementById('stepMaterialEntries');
+  if (!wrap) return;
+  wrap.innerHTML = stepMaterialWorkingEntries.length
+    ? stepMaterialWorkingEntries.map(stepMaterialEntryHtml).join('')
+    : '<div class="md-step-material-empty">아직 등록된 자료가 없어요.</div>';
+}
+
+function findStepMaterialEntry(entryId) {
+  return stepMaterialWorkingEntries.find((e) => e.id === entryId);
+}
 
 function ensureStepMaterialOverlay() {
   let overlay = document.getElementById('stepMaterialOverlay');
@@ -952,13 +1005,8 @@ function ensureStepMaterialOverlay() {
         </button>
       </div>
       <div class="md-step-material-body">
-        <div class="md-step-material-upload" id="stepMaterialUpload">
-          <input type="file" id="stepMaterialInput" accept="image/*,video/*,.pdf,.doc,.docx,.txt" style="display:none">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 15l5-5 4 4 4-4 5 5"/><circle cx="8" cy="9" r="1.4"/></svg>
-          <div class="t" id="stepMaterialUploadText">클릭해서 파일 업로드</div>
-          <div class="d" id="stepMaterialUploadHint">이미지, 영상, 문서 — 최대 50MB</div>
-        </div>
-        <textarea class="md-step-material-note" id="stepMaterialNote" placeholder="간단한 설명이나 메모 (선택)" maxlength="200"></textarea>
+        <div class="md-step-material-entries" id="stepMaterialEntries"></div>
+        <button type="button" class="md-step-material-add" id="stepMaterialAddBtn">+ 자료 추가</button>
         <button type="button" class="md-step-material-save" id="stepMaterialSave">저장</button>
       </div>
     </div>
@@ -969,61 +1017,96 @@ function ensureStepMaterialOverlay() {
       closeStepMaterialEditor();
       return;
     }
-    if (e.target.closest('#stepMaterialUpload')) {
-      document.getElementById('stepMaterialInput').click();
-    }
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && overlay.style.display !== 'none') closeStepMaterialEditor();
   });
 
-  document.getElementById('stepMaterialInput').addEventListener('change', async (e) => {
-    const file = e.target.files && e.target.files[0];
+  const entriesWrap = document.getElementById('stepMaterialEntries');
+
+  entriesWrap.addEventListener('click', (e) => {
+    const removeBtn = e.target.closest('.md-step-material-entry-remove');
+    if (removeBtn) {
+      const entryId = removeBtn.closest('.md-step-material-entry').dataset.entryId;
+      stepMaterialWorkingEntries = stepMaterialWorkingEntries.filter((en) => en.id !== entryId);
+      renderStepMaterialEntries();
+      return;
+    }
+    const upload = e.target.closest('.md-step-material-upload');
+    if (upload) upload.querySelector('input[type="file"]').click();
+  });
+
+  entriesWrap.addEventListener('change', async (e) => {
+    const input = e.target.closest('input[type="file"]');
+    if (!input) return;
+    const file = input.files[0];
     if (!file) return;
-    const uploadEl = document.getElementById('stepMaterialUpload');
+    const entryEl = input.closest('.md-step-material-entry');
+    const entry = findStepMaterialEntry(entryEl.dataset.entryId);
+    const uploadEl = input.closest('.md-step-material-upload');
+    if (!entry) return;
+
     if (file.size > BEARIP_MAX_ASSET_FILE_BYTES) {
-      bearipShowToast('파일이 너무 커요 (최대 50MB)');
+      uploadEl.classList.add('error');
+      uploadEl.querySelector('.d').textContent = '파일이 너무 커요 (최대 50MB)';
       return;
     }
     if (!(await bearipCheckStorageRoom(file.size))) {
-      bearipShowToast('저장 공간이 부족해요. 다른 파일을 시도해보세요.');
+      uploadEl.classList.add('error');
+      uploadEl.querySelector('.d').textContent = '저장 공간이 부족해요. 다른 파일을 시도해보세요.';
       return;
     }
-    const pending = { fileName: file.name, fileSize: file.size, mime: file.type, imageData: null };
+
+    entry.fileName = file.name;
+    entry.fileSize = file.size;
+    entry.mime = file.type;
+    entry.imageData = null;
     if (file.type.startsWith('image/')) {
       try {
-        pending.imageData = await bearipResizeImageToDataUrl(file, 720, 0.85);
+        entry.imageData = await bearipResizeImageToDataUrl(file, 720, 0.85);
       } catch (err) {
-        bearipShowToast(err.message || '이미지를 불러오지 못했어요');
+        uploadEl.classList.add('error');
+        uploadEl.querySelector('.d').textContent = err.message || '이미지를 불러오지 못했어요';
         return;
       }
     }
-    overlay.dataset.pendingFile = JSON.stringify(pending);
+
+    uploadEl.classList.remove('error');
     uploadEl.classList.add('has-file');
-    uploadEl.style.backgroundImage = pending.imageData ? `url('${pending.imageData}')` : '';
-    document.getElementById('stepMaterialUploadText').textContent = file.name;
-    document.getElementById('stepMaterialUploadHint').textContent = '다른 파일을 선택하려면 클릭하세요';
+    uploadEl.style.backgroundImage = entry.imageData ? `url('${entry.imageData}')` : '';
+    uploadEl.querySelector('.t').textContent = file.name;
+    uploadEl.querySelector('.d').textContent = '다른 파일을 선택하려면 클릭하세요';
+  });
+
+  entriesWrap.addEventListener('input', (e) => {
+    const entryEl = e.target.closest('.md-step-material-entry');
+    if (!entryEl) return;
+    const entry = findStepMaterialEntry(entryEl.dataset.entryId);
+    if (!entry) return;
+    if (e.target.classList.contains('md-step-material-entry-label')) entry.label = e.target.value;
+    if (e.target.classList.contains('md-step-material-note')) entry.note = e.target.value;
+  });
+
+  document.getElementById('stepMaterialAddBtn').addEventListener('click', () => {
+    stepMaterialWorkingEntries.push({ id: mdMakeEntryId(), label: '', note: '', imageData: null, fileName: null, fileSize: null, mime: null });
+    renderStepMaterialEntries();
   });
 
   document.getElementById('stepMaterialSave').addEventListener('click', () => {
     if (stepMaterialIndex === null) return;
     const step = currentIP.roadmap[stepMaterialIndex];
-    const note = document.getElementById('stepMaterialNote').value.trim();
-    const pendingRaw = overlay.dataset.pendingFile;
-    const pending = pendingRaw ? JSON.parse(pendingRaw) : null;
-    const existing = step.submission;
-    const fileFields = pending || existing || {};
-    if (!pending && !existing && !note) {
-      bearipShowToast('파일이나 메모를 하나는 등록해주세요');
-      return;
-    }
-    step.submission = {
-      imageData: fileFields.imageData || null,
-      fileName: fileFields.fileName || null,
-      fileSize: fileFields.fileSize || null,
-      mime: fileFields.mime || null,
-      note,
-    };
+    const cleaned = stepMaterialWorkingEntries
+      .filter((en) => en.imageData || en.fileName || (en.note && en.note.trim()))
+      .map((en) => ({
+        id: en.id,
+        label: en.label ? en.label.trim() : '',
+        imageData: en.imageData || null,
+        fileName: en.fileName || null,
+        fileSize: en.fileSize || null,
+        mime: en.mime || null,
+        note: en.note ? en.note.trim() : '',
+      }));
+    step.submissions = cleaned;
     if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { roadmap: currentIP.roadmap });
     recomputeWritingCompleteness();
     renderRoadmap();
@@ -1037,11 +1120,9 @@ function ensureStepMaterialOverlay() {
 
 function closeStepMaterialEditor() {
   const overlay = document.getElementById('stepMaterialOverlay');
-  if (overlay) {
-    overlay.style.display = 'none';
-    delete overlay.dataset.pendingFile;
-  }
+  if (overlay) overlay.style.display = 'none';
   stepMaterialIndex = null;
+  stepMaterialWorkingEntries = [];
 }
 
 function openStepMaterialEditor(index) {
@@ -1049,19 +1130,11 @@ function openStepMaterialEditor(index) {
   if (!step) return;
   const overlay = ensureStepMaterialOverlay();
   overlay.parentNode.appendChild(overlay);
-  delete overlay.dataset.pendingFile;
   stepMaterialIndex = index;
   document.getElementById('stepMaterialTitle').textContent = step.label.replace(/<br>/g, ' ');
 
-  const uploadEl = document.getElementById('stepMaterialUpload');
-  const sub = step.submission;
-  uploadEl.classList.toggle('has-file', !!(sub && (sub.imageData || sub.fileName)));
-  uploadEl.style.backgroundImage = sub && sub.imageData ? `url('${sub.imageData}')` : '';
-  document.getElementById('stepMaterialUploadText').textContent = sub && sub.fileName ? sub.fileName : '클릭해서 파일 업로드';
-  document.getElementById('stepMaterialUploadHint').textContent =
-    sub && (sub.imageData || sub.fileName) ? '다른 파일을 선택하려면 클릭하세요' : '이미지, 영상, 문서 — 최대 50MB';
-  document.getElementById('stepMaterialNote').value = (sub && sub.note) || '';
-  document.getElementById('stepMaterialInput').value = '';
+  stepMaterialWorkingEntries = (step.submissions || []).map((sub) => Object.assign({}, sub));
+  renderStepMaterialEntries();
 
   overlay.style.display = 'flex';
 }
@@ -1072,7 +1145,7 @@ function openStepMaterialEditor(index) {
 // it's a separate, deliberate action so nothing half-finished gets sent by
 // accident.
 function mdStepsAwaitingRequest() {
-  return (currentIP.roadmap || []).filter((s) => !!s.submission && !s.reviewStatus);
+  return (currentIP.roadmap || []).filter((s) => s.submissions && s.submissions.length && !s.reviewStatus);
 }
 
 function updateRequestReviewButton() {
@@ -1095,7 +1168,7 @@ function mdRequestExpertReview() {
       ipTitle: currentIP.title,
       stepKey: step.key,
       stepLabel: step.label.replace(/<br>/g, ' '),
-      submission: step.submission,
+      submissions: step.submissions,
       requestedAt,
       status: 'pending',
       adminProgress: null,

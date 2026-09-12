@@ -6,15 +6,17 @@ function niEscapeHtml(str) {
   return div.innerHTML;
 }
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 let currentStep = 1;
 let selectedGoal = 'webnovel';
 let selectedGenres = [];
 let selectedVis = 'public';
 let coverFile = null;
 let coverImageData = null;
-// keyed by roadmap step key: { hasContent, imageData, fileName, fileSize, mime, note }
-let roadmapSubmissions = {};
+// keyed by roadmap step key -> array of entries, each a separate registered
+// item under that step (e.g. 시나리오의 1화/2화를 따로): { id, label, note,
+// imageData, fileName, fileSize, mime }
+let roadmapItems = {};
 
 const panels = document.querySelectorAll('.ni-panel');
 const steps = document.querySelectorAll('.ni-step');
@@ -32,7 +34,7 @@ function renderStep() {
   stepCount.textContent = `${currentStep} / ${TOTAL_STEPS}`;
   prevBtn.disabled = currentStep === 1;
 
-  if (currentStep === 4) {
+  if (currentStep === 3) {
     renderRoadmapItemsStep();
   }
 
@@ -78,7 +80,7 @@ function populateSummary() {
     });
   }
 
-  const hasAnySubmission = Object.values(roadmapSubmissions).some((s) => s && s.hasContent);
+  const hasAnySubmission = Object.values(roadmapItems).some((entries) => (entries || []).length > 0);
   document.getElementById('sumReviewNotice').hidden = !hasAnySubmission;
 }
 
@@ -153,7 +155,7 @@ document.querySelectorAll('.ni-vis-option').forEach((opt) => {
   });
 });
 
-// Step 3: cover upload
+// Step 2: cover upload
 const coverUpload = document.getElementById('coverUpload');
 const coverInput = document.getElementById('coverInput');
 const coverText = document.getElementById('coverText');
@@ -220,36 +222,53 @@ coverInput.addEventListener('change', async () => {
   }
 });
 
-// Step 4: 로드맵 항목 1차 등록 — rebuilt from the *selected goal's* roadmap
+// Step 3: 로드맵 항목 1차 등록 — rebuilt from the *selected goal's* roadmap
 // (bearipBuildRoadmap already knows each goal's own item set), so this
 // naturally adapts to webnovel/webtoon/video/multi without hardcoding a
-// video-specific list here.
-function roadItemBlockHtml(step) {
-  const sub = roadmapSubmissions[step.key] || { hasContent: false };
-  const hasFile = !!(sub.imageData || sub.fileName);
+// video-specific list here. Each item can hold several entries (e.g. 시나리오
+// 1화, 2화 등록해서 따로 자료를 붙일 수 있음), not just one.
+function niMakeEntryId() {
+  return 'entry_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+function roadEntryHtml(entry) {
+  const hasFile = !!(entry.imageData || entry.fileName);
   const uploadClass = hasFile ? 'ni-road-upload has-file' : 'ni-road-upload';
-  const uploadStyle = sub.imageData ? ` style="background-image:url('${sub.imageData}')"` : '';
-  const uploadText = hasFile ? sub.fileName || '파일 첨부됨' : '클릭해서 파일 업로드';
+  const uploadStyle = entry.imageData ? ` style="background-image:url('${entry.imageData}')"` : '';
+  const uploadText = hasFile ? entry.fileName || '파일 첨부됨' : '클릭해서 파일 업로드';
   const uploadHint = hasFile ? '다른 파일을 선택하려면 클릭하세요' : '이미지, 영상, 문서 — 최대 50MB';
+  return `
+    <div class="ni-road-entry" data-entry-id="${entry.id}">
+      <div class="ni-road-entry-head">
+        <input type="text" class="ni-road-entry-label" placeholder="예: 1화, 설정 자료" maxlength="30" value="${niEscapeHtml(entry.label || '')}">
+        <button type="button" class="ni-road-entry-remove" aria-label="이 자료 삭제">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="${uploadClass}"${uploadStyle}>
+        <input type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 15l5-5 4 4 4-4 5 5"/><circle cx="8" cy="9" r="1.4"/></svg>
+        <div class="t">${niEscapeHtml(uploadText)}</div>
+        <div class="d">${niEscapeHtml(uploadHint)}</div>
+      </div>
+      <textarea class="ni-road-item-note" placeholder="간단한 설명이나 메모 (선택)" maxlength="200">${niEscapeHtml(entry.note || '')}</textarea>
+    </div>
+  `;
+}
+
+function roadItemBlockHtml(step) {
+  const entries = roadmapItems[step.key] || [];
   const label = step.label.replace(/<br>/g, ' ');
+  const entriesHtml = entries.length
+    ? entries.map(roadEntryHtml).join('')
+    : '<div class="ni-road-item-empty">아직 등록된 자료가 없어요.</div>';
   return `
     <div class="ni-road-item" data-key="${step.key}">
       <div class="ni-road-item-head">
         <span class="ni-road-item-label">${niEscapeHtml(label)}</span>
-        <div class="ni-road-item-toggle">
-          <button type="button" class="ni-road-toggle-btn${sub.hasContent ? '' : ' active'}" data-choice="none">아직 없어요</button>
-          <button type="button" class="ni-road-toggle-btn${sub.hasContent ? ' active' : ''}" data-choice="has">자료 등록</button>
-        </div>
       </div>
-      <div class="ni-road-item-body"${sub.hasContent ? '' : ' hidden'}>
-        <div class="${uploadClass}"${uploadStyle}>
-          <input type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" style="display:none">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 15l5-5 4 4 4-4 5 5"/><circle cx="8" cy="9" r="1.4"/></svg>
-          <div class="t">${niEscapeHtml(uploadText)}</div>
-          <div class="d">${niEscapeHtml(uploadHint)}</div>
-        </div>
-        <textarea class="ni-road-item-note" placeholder="간단한 설명이나 메모 (선택)" maxlength="200">${niEscapeHtml(sub.note || '')}</textarea>
-      </div>
+      <div class="ni-road-item-entries">${entriesHtml}</div>
+      <button type="button" class="ni-road-add-entry-btn" data-key="${step.key}">+ 자료 추가</button>
     </div>
   `;
 }
@@ -260,17 +279,28 @@ function renderRoadmapItemsStep() {
   list.innerHTML = goalSteps.map(roadItemBlockHtml).join('');
 }
 
+function findEntry(key, entryId) {
+  return (roadmapItems[key] || []).find((e) => e.id === entryId);
+}
+
 const roadItemsList = document.getElementById('roadItemsList');
 
 roadItemsList.addEventListener('click', (e) => {
-  const toggleBtn = e.target.closest('.ni-road-toggle-btn');
-  if (toggleBtn) {
-    const itemEl = toggleBtn.closest('.ni-road-item');
+  const addBtn = e.target.closest('.ni-road-add-entry-btn');
+  if (addBtn) {
+    const key = addBtn.dataset.key;
+    if (!roadmapItems[key]) roadmapItems[key] = [];
+    roadmapItems[key].push({ id: niMakeEntryId(), label: '', note: '', imageData: null, fileName: null, fileSize: null, mime: null });
+    renderRoadmapItemsStep();
+    return;
+  }
+  const removeBtn = e.target.closest('.ni-road-entry-remove');
+  if (removeBtn) {
+    const entryEl = removeBtn.closest('.ni-road-entry');
+    const itemEl = removeBtn.closest('.ni-road-item');
     const key = itemEl.dataset.key;
-    const hasContent = toggleBtn.dataset.choice === 'has';
-    roadmapSubmissions[key] = Object.assign({ hasContent: false }, roadmapSubmissions[key], { hasContent });
-    itemEl.querySelectorAll('.ni-road-toggle-btn').forEach((b) => b.classList.toggle('active', b === toggleBtn));
-    itemEl.querySelector('.ni-road-item-body').hidden = !hasContent;
+    roadmapItems[key] = (roadmapItems[key] || []).filter((en) => en.id !== entryEl.dataset.entryId);
+    renderRoadmapItemsStep();
     return;
   }
   const upload = e.target.closest('.ni-road-upload');
@@ -282,9 +312,12 @@ roadItemsList.addEventListener('change', async (e) => {
   if (!input) return;
   const file = input.files[0];
   if (!file) return;
+  const entryEl = input.closest('.ni-road-entry');
   const itemEl = input.closest('.ni-road-item');
   const key = itemEl.dataset.key;
+  const entry = findEntry(key, entryEl.dataset.entryId);
   const uploadEl = input.closest('.ni-road-upload');
+  if (!entry) return;
 
   if (file.size > BEARIP_MAX_ASSET_FILE_BYTES) {
     uploadEl.classList.add('error');
@@ -297,36 +330,35 @@ roadItemsList.addEventListener('change', async (e) => {
     return;
   }
 
-  const sub = Object.assign({ hasContent: true }, roadmapSubmissions[key], {
-    hasContent: true,
-    fileName: file.name,
-    fileSize: file.size,
-    mime: file.type,
-    imageData: null,
-  });
+  entry.fileName = file.name;
+  entry.fileSize = file.size;
+  entry.mime = file.type;
+  entry.imageData = null;
   if (file.type.startsWith('image/')) {
     try {
-      sub.imageData = await bearipResizeImageToDataUrl(file, 720, 0.85);
+      entry.imageData = await bearipResizeImageToDataUrl(file, 720, 0.85);
     } catch (err) {
       uploadEl.classList.add('error');
       uploadEl.querySelector('.d').textContent = err.message || '이미지를 불러오지 못했어요';
       return;
     }
   }
-  roadmapSubmissions[key] = sub;
 
   uploadEl.classList.remove('error');
   uploadEl.classList.add('has-file');
-  uploadEl.style.backgroundImage = sub.imageData ? `url('${sub.imageData}')` : '';
+  uploadEl.style.backgroundImage = entry.imageData ? `url('${entry.imageData}')` : '';
   uploadEl.querySelector('.t').textContent = file.name;
   uploadEl.querySelector('.d').textContent = '다른 파일을 선택하려면 클릭하세요';
 });
 
 roadItemsList.addEventListener('input', (e) => {
-  const note = e.target.closest('.ni-road-item-note');
-  if (!note) return;
-  const key = note.closest('.ni-road-item').dataset.key;
-  roadmapSubmissions[key] = Object.assign({ hasContent: true }, roadmapSubmissions[key], { note: note.value });
+  const entryEl = e.target.closest('.ni-road-entry');
+  if (!entryEl) return;
+  const itemEl = entryEl.closest('.ni-road-item');
+  const entry = findEntry(itemEl.dataset.key, entryEl.dataset.entryId);
+  if (!entry) return;
+  if (e.target.classList.contains('ni-road-entry-label')) entry.label = e.target.value;
+  if (e.target.classList.contains('ni-road-item-note')) entry.note = e.target.value;
 });
 
 // Footer nav
@@ -364,11 +396,16 @@ function createIP() {
 
   const roadmap = bearipBuildRoadmap(selectedGoal, null);
   roadmap.forEach((step) => {
-    const sub = roadmapSubmissions[step.key];
-    const hasContent = !!(sub && sub.hasContent);
-    step.submission = hasContent
-      ? { imageData: sub.imageData || null, fileName: sub.fileName || null, fileSize: sub.fileSize || null, mime: sub.mime || null, note: sub.note || '' }
-      : null;
+    const entries = (roadmapItems[step.key] || []).filter((en) => en.imageData || en.fileName || (en.note && en.note.trim()));
+    step.submissions = entries.map((en) => ({
+      id: en.id,
+      label: en.label ? en.label.trim() : '',
+      imageData: en.imageData || null,
+      fileName: en.fileName || null,
+      fileSize: en.fileSize || null,
+      mime: en.mime || null,
+      note: en.note ? en.note.trim() : '',
+    }));
     // null (not requested yet) rather than any "pending" value — a step
     // with material sits in 작성 중 until 전문가 검토 요청 is actually sent.
     step.reviewStatus = null;
@@ -378,7 +415,7 @@ function createIP() {
     step.adminReviewedAt = null;
   });
 
-  const filledCount = roadmap.filter((s) => !!s.submission).length;
+  const filledCount = roadmap.filter((s) => s.submissions.length > 0).length;
 
   const ip = {
     id: 'ip_' + Date.now(),
@@ -386,7 +423,7 @@ function createIP() {
     goal: selectedGoal,
     genres: selectedGenres.slice(),
     logline: document.getElementById('ipLogline').value.trim(),
-    synopsis: document.getElementById('ipSynopsis').value.trim(),
+    synopsis: '',
     coverImage: coverImageData || undefined,
     visibility: selectedVis,
     createdAt: new Date().toISOString(),
@@ -410,11 +447,12 @@ function createIP() {
     message: `'${ip.title}'가 MY DNA에 추가됐어요.`,
     link: 'my-dna.html',
   });
+  clearDraft();
   return ip;
 }
 
 function requestExpertReviewForIp(ip) {
-  const steps = ip.roadmap.filter((s) => !!s.submission && !s.reviewStatus);
+  const steps = ip.roadmap.filter((s) => s.submissions && s.submissions.length && !s.reviewStatus);
   if (!steps.length) return;
   const requestedAt = new Date().toISOString();
   steps.forEach((step) => {
@@ -425,7 +463,7 @@ function requestExpertReviewForIp(ip) {
       ipTitle: ip.title,
       stepKey: step.key,
       stepLabel: step.label.replace(/<br>/g, ' '),
-      submission: step.submission,
+      submissions: step.submissions,
       requestedAt,
       status: 'pending',
       adminProgress: null,
@@ -461,4 +499,131 @@ document.getElementById('finishRequestReviewBtn').addEventListener('click', () =
   location.href = 'my-dna.html';
 });
 
+// ---- 임시저장 — this wizard has no autosave, so leaving mid-way (accidental
+// tab close, browser crash) used to lose everything. Saves just the wizard's
+// own in-progress state (not yet a real IP) to a single-slot localStorage
+// draft; creating the IP for real clears it.
+const DRAFT_KEY = 'bearip_new_ip_draft';
+
+function flashDraftBtn(text) {
+  const btn = document.getElementById('draftSaveBtn');
+  if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
+  btn.textContent = text;
+  btn.disabled = true;
+  setTimeout(() => {
+    btn.textContent = btn.dataset.originalText;
+    btn.disabled = false;
+  }, 1400);
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+function saveDraft() {
+  const draft = {
+    currentStep,
+    selectedGoal,
+    selectedGenres: selectedGenres.slice(),
+    selectedVis,
+    title: document.getElementById('ipTitle').value,
+    logline: document.getElementById('ipLogline').value,
+    coverImageData,
+    coverFileName: coverFile ? coverFile.name : null,
+    roadmapItems,
+  };
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    flashDraftBtn('저장됨 ✓');
+  } catch (err) {
+    flashDraftBtn('저장 실패');
+  }
+}
+
+function applyDraft(draft) {
+  selectedGoal = draft.selectedGoal || 'webnovel';
+  document.querySelectorAll('.ni-goal').forEach((g) => g.classList.toggle('active', g.dataset.goal === selectedGoal));
+
+  document.querySelectorAll('.ni-chip.custom').forEach((c) => c.remove());
+  document.querySelectorAll('.ni-chip').forEach((c) => c.classList.remove('active'));
+  selectedGenres = [];
+  (draft.selectedGenres || []).forEach((g) => {
+    if (selectedGenres.length >= 3) return;
+    const existing = Array.from(document.querySelectorAll('.ni-chip')).find((c) => c.dataset.genre === g);
+    if (existing) {
+      existing.classList.add('active');
+    } else {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'ni-chip active custom';
+      chip.dataset.genre = g;
+      chip.textContent = g;
+      genreChipsWrap.appendChild(chip);
+    }
+    selectedGenres.push(g);
+  });
+
+  document.getElementById('ipTitle').value = draft.title || '';
+  document.getElementById('ipLogline').value = draft.logline || '';
+
+  selectedVis = draft.selectedVis === 'private' ? 'private' : 'public';
+  document.querySelectorAll('.ni-vis-option').forEach((o) => o.classList.toggle('active', o.dataset.vis === selectedVis));
+
+  coverImageData = draft.coverImageData || null;
+  coverFile = coverImageData && draft.coverFileName ? { name: draft.coverFileName, size: undefined } : null;
+  if (coverImageData) {
+    coverUpload.classList.add('has-file');
+    coverUpload.classList.remove('error');
+    coverUpload.style.backgroundImage = `url('${coverImageData}')`;
+    coverText.textContent = draft.coverFileName || '커버 이미지';
+    coverHint.textContent = '다른 이미지를 선택하려면 클릭하세요';
+    coverRemoveBtn.hidden = false;
+  } else {
+    clearCover();
+  }
+
+  roadmapItems = draft.roadmapItems || {};
+
+  currentStep = draft.currentStep >= 1 && draft.currentStep <= TOTAL_STEPS ? draft.currentStep : 1;
+  renderStep();
+}
+
+function checkForDraft() {
+  let raw;
+  try {
+    raw = localStorage.getItem(DRAFT_KEY);
+  } catch (e) {
+    raw = null;
+  }
+  if (raw) document.getElementById('draftBanner').hidden = false;
+}
+
+document.getElementById('draftSaveBtn').addEventListener('click', saveDraft);
+
+document.getElementById('draftResumeBtn').addEventListener('click', () => {
+  document.getElementById('draftBanner').hidden = true;
+  let raw;
+  try {
+    raw = localStorage.getItem(DRAFT_KEY);
+  } catch (e) {
+    raw = null;
+  }
+  if (!raw) return;
+  try {
+    applyDraft(JSON.parse(raw));
+  } catch (e) {
+    /* corrupted draft — ignore and start fresh */
+  }
+});
+
+document.getElementById('draftDiscardBtn').addEventListener('click', () => {
+  clearDraft();
+  document.getElementById('draftBanner').hidden = true;
+});
+
+checkForDraft();
 renderStep();

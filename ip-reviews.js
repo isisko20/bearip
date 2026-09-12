@@ -27,12 +27,21 @@ function irFormatRelativeTime(iso) {
 
 let irActiveFilter = 'all';
 
-function irSubmissionHtml(sub) {
-  if (!sub) return '';
+// Accepts the current shape (an array of registered items — e.g. 시나리오의
+// 1화/2화 등 여러 개) or, defensively, an older single-object review record
+// from before a step could hold more than one, so past requests still render.
+function irSubmissionEntryHtml(sub) {
+  const label = sub.label ? `<div class="ir-submission-label">${bearipEscapeHtml(sub.label)}</div>` : '';
   const thumb = sub.imageData ? `<div class="ir-submission-thumb" style="background-image:url('${sub.imageData}')"></div>` : '';
   const file = !sub.imageData && sub.fileName ? `<div class="ir-submission-file">${bearipEscapeHtml(sub.fileName)}${sub.fileSize ? ` · ${irFormatFileSize(sub.fileSize)}` : ''}</div>` : '';
   const note = sub.note ? `<div class="ir-submission-note">"${bearipEscapeHtml(sub.note)}"</div>` : '';
-  return `<div class="ir-submission">${thumb}${file}${note}</div>`;
+  return `<div class="ir-submission">${label}${thumb}${file}${note}</div>`;
+}
+
+function irSubmissionHtml(subs) {
+  if (!subs) return '';
+  const list = Array.isArray(subs) ? subs : [subs];
+  return list.map(irSubmissionEntryHtml).join('');
 }
 
 // Groups the flat request list by IP so each IP's 종합 코멘트 (overall,
@@ -96,7 +105,7 @@ function irRenderList() {
             <span class="pr-status ${r.status === 'reviewed' ? 'done' : 'pending'}">${IR_STATUS_LABEL[r.status] || r.status}</span>
           </div>
           <div class="pr-card-meta"><span>${irFormatRelativeTime(r.requestedAt)}</span></div>
-          ${irSubmissionHtml(r.submission)}
+          ${irSubmissionHtml(r.submissions || r.submission)}
           ${
             r.status === 'reviewed'
               ? `<div class="pr-card-result"><span>전문가 준비도 ${r.adminProgress}%${r.needsRevision ? ' · 보완 필요' : ''}</span>${r.adminComment ? bearipEscapeHtml(r.adminComment) : ''}</div>`

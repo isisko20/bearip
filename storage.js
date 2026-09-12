@@ -259,6 +259,27 @@ function bearipEnsureDnaBreakdown(ip) {
   return breakdown;
 }
 
+// A roadmap step used to hold at most one registered item (`step.submission`,
+// a single object). Steps can now hold several (`step.submissions`, an
+// array — e.g. 시나리오의 1화/2화를 따로 등록), so any step still in the old
+// shape gets migrated in place the first time it's read, idempotently, same
+// pattern as bearipEnsureDnaBreakdown above.
+function bearipEnsureRoadmapSubmissions(ip) {
+  if (!ip || !Array.isArray(ip.roadmap)) return;
+  let migrated = false;
+  ip.roadmap.forEach((step) => {
+    if (Array.isArray(step.submissions)) return;
+    if (step.submission) {
+      step.submissions = [Object.assign({ id: 'legacy' }, step.submission)];
+    } else {
+      step.submissions = [];
+    }
+    delete step.submission;
+    migrated = true;
+  });
+  if (migrated && ip.id && ip.id !== 'demo') bearipUpdateIP(ip.id, { roadmap: ip.roadmap });
+}
+
 // ---- Unified growth stage (OPEN DNA badges + CONTENT ROOM rows) ----
 // Both pages used to show a stage word with nothing real behind it (OPEN
 // DNA's real published cards were hardcoded "MY IP", CONTENT ROOM's rows
