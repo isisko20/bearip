@@ -120,8 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (titleEl) titleEl.textContent = ip.title || '제목 없는 IP';
     const descEl = document.getElementById('crHeroDesc');
     if (descEl) descEl.textContent = ip.logline || ip.synopsis || '아직 소개가 없어요.';
+    // Not the `hidden` attribute — .cr-hero-actions sets `display: flex`
+    // unconditionally, which wins over the UA's `[hidden]` rule regardless
+    // of specificity, so the buttons would show even with no real hero IP.
     const actions = document.getElementById('crHeroActions');
-    if (actions) actions.hidden = false;
+    if (actions) actions.style.display = 'flex';
     const infoBtn = document.getElementById('crHeroInfoBtn');
     if (infoBtn) infoBtn.addEventListener('click', () => crGoToIp(ip));
     // No real per-episode content exists yet (content-detail.html is a
