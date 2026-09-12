@@ -1,12 +1,33 @@
-// "IP 전문가 검토 관리" — lets whoever's reviewing (page admin, stood in here
-// by the same single mock account) see every roadmap-step submission a
-// creator sent via 전문가 검토 요청 (from new-ip.html's 1차 등록, or later from
-// MY DNA) and set a 0-100 전문가 준비도 + 보완 필요 여부 + one-line 코멘트 per
-// step. Separate from 제작요청 관리 (production-requests.js): that's about
-// outsourcing a step to a Creator; this is the manager scoring how
-// complete/real the creator's own submitted material already is. Results
-// are written back onto the IP's own roadmap[i] (see irSyncIpStep) so MY
-// DNA can show them without reading this list.
+// "IP 전문가 검토 관리" — lets whoever's reviewing see every roadmap-step
+// submission a creator sent via 전문가 검토 요청 (from new-ip.html's 1차 등록,
+// or later from MY DNA) and set a 0-100 전문가 준비도 + 보완 필요 여부 +
+// one-line 코멘트 per step. Separate from 제작요청 관리 (production-requests.js):
+// that's about outsourcing a step to a Creator; this is the manager scoring
+// how complete/real the creator's own submitted material already is.
+// Results are written back onto the IP's own roadmap[i] (see irSyncIpStep)
+// so MY DNA can show them without reading this list.
+//
+// Gated to a single mock "관리자" account (temporary nickname: GM — there's
+// no real backend/roles yet, so this is just a nickname check like every
+// other "login" on this prototype) so a regular creator browsing around
+// doesn't stumble onto the page that scores their own submissions.
+function irIsGm() {
+  const user = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
+  return !!(user && user.nickname === 'GM');
+}
+
+function irShowGmLocked() {
+  const filterRow = document.getElementById('irFilterRow');
+  const list = document.getElementById('irList');
+  const empty = document.getElementById('irEmpty');
+  const locked = document.getElementById('irGmLocked');
+  if (filterRow) filterRow.style.display = 'none';
+  if (list) list.style.display = 'none';
+  if (empty) empty.style.display = 'none';
+  if (locked) locked.style.display = 'flex';
+  const loginBtn = document.getElementById('irGmLoginBtn');
+  if (loginBtn) loginBtn.addEventListener('click', () => bearipGoToLogin('ip-reviews.html'));
+}
 
 const IR_STATUS_LABEL = { pending: '검토 대기', reviewed: '전문가 진단 완료' };
 
@@ -228,4 +249,10 @@ document.getElementById('irFilterRow').addEventListener('click', (e) => {
   irRenderList();
 });
 
-document.addEventListener('DOMContentLoaded', irRenderList);
+document.addEventListener('DOMContentLoaded', () => {
+  if (!irIsGm()) {
+    irShowGmLocked();
+    return;
+  }
+  irRenderList();
+});

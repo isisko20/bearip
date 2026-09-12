@@ -41,9 +41,13 @@ function renderStep() {
   // Last step swaps the single nextBtn for two explicit choices — creating
   // the IP no longer also fires the 전문가 검토 요청 automatically, so the
   // creator picks whether to send it right away or review in MY DNA first.
+  // Not the `hidden` attribute — .ni-btn-primary/.ni-footer-final both set
+  // `display: flex` in the stylesheet, which (author CSS always beats the
+  // UA's `[hidden]` rule, regardless of specificity) would keep showing the
+  // element anyway, so both button rows would stack on every step.
   const isFinalStep = currentStep === TOTAL_STEPS;
-  nextBtn.hidden = isFinalStep;
-  document.getElementById('niFooterFinal').hidden = !isFinalStep;
+  nextBtn.style.display = isFinalStep ? 'none' : '';
+  document.getElementById('niFooterFinal').style.display = isFinalStep ? 'flex' : 'none';
   if (isFinalStep) {
     populateSummary();
   } else {
@@ -80,8 +84,11 @@ function populateSummary() {
     });
   }
 
+  // Not the `hidden` attribute — .ni-checklist-item sets `display: flex`,
+  // which would keep showing this regardless (see the isFinalStep note in
+  // renderStep above for why).
   const hasAnySubmission = Object.values(roadmapItems).some((entries) => (entries || []).length > 0);
-  document.getElementById('sumReviewNotice').hidden = !hasAnySubmission;
+  document.getElementById('sumReviewNotice').style.display = hasAnySubmission ? 'flex' : 'none';
 }
 
 // Step 1: goal selection
@@ -592,6 +599,16 @@ function applyDraft(draft) {
   renderStep();
 }
 
+// Not the `hidden` attribute — .ni-draft-banner sets `display: flex`, which
+// would keep showing the banner on every visit (even a genuinely first-ever
+// one) regardless of whether a draft actually exists.
+function setDraftBannerVisible(visible) {
+  document.getElementById('draftBanner').style.display = visible ? 'flex' : 'none';
+}
+
+// Only ever shows the banner when a real, parseable draft was actually
+// saved — a missing or corrupted key just gets dropped silently instead of
+// prompting to "resume" something that isn't really there.
 function checkForDraft() {
   let raw;
   try {
@@ -599,13 +616,20 @@ function checkForDraft() {
   } catch (e) {
     raw = null;
   }
-  if (raw) document.getElementById('draftBanner').hidden = false;
+  if (!raw) return;
+  try {
+    JSON.parse(raw);
+  } catch (e) {
+    clearDraft();
+    return;
+  }
+  setDraftBannerVisible(true);
 }
 
 document.getElementById('draftSaveBtn').addEventListener('click', saveDraft);
 
 document.getElementById('draftResumeBtn').addEventListener('click', () => {
-  document.getElementById('draftBanner').hidden = true;
+  setDraftBannerVisible(false);
   let raw;
   try {
     raw = localStorage.getItem(DRAFT_KEY);
@@ -622,7 +646,7 @@ document.getElementById('draftResumeBtn').addEventListener('click', () => {
 
 document.getElementById('draftDiscardBtn').addEventListener('click', () => {
   clearDraft();
-  document.getElementById('draftBanner').hidden = true;
+  setDraftBannerVisible(false);
 });
 
 checkForDraft();
