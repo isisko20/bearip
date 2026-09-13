@@ -166,10 +166,14 @@ function bearipUpdateIP(id, patch) {
 function bearipDeleteIP(id) {
   const ip = bearipLoadIPs().find((i) => i.id === id);
   bearipSaveIPs(bearipLoadIPs().filter((i) => i.id !== id));
-  // Falls back to the demo project the next time anything reads the current
-  // IP (bearipGetCurrentIP already treats an id with no matching IP as "none").
+  // bearipGetCurrentIP/bearipGetFeaturedId already treat an id with no
+  // matching IP as "none", but clearing these outright avoids a stale id
+  // silently pointing at nothing.
   if (localStorage.getItem(BEARIP_CURRENT_KEY) === id) {
     localStorage.removeItem(BEARIP_CURRENT_KEY);
+  }
+  if (bearipGetFeaturedId() === id) {
+    bearipSetFeaturedId(null);
   }
   if (!ip) return;
 
@@ -329,6 +333,29 @@ function bearipGetCurrentIP() {
 
 function bearipSetCurrentId(id) {
   localStorage.setItem(BEARIP_CURRENT_KEY, id);
+}
+
+// ---- "대표 프로젝트" — separate from bearip_current_ip (which is just
+// "whichever IP MY DNA is showing right now"). This is a deliberate pick the
+// creator makes from the IP switcher list; only one IP can be featured at a
+// time, so setting a new one silently replaces whichever was featured before.
+const BEARIP_FEATURED_KEY = 'bearip_featured_ip';
+
+function bearipGetFeaturedId() {
+  try {
+    return localStorage.getItem(BEARIP_FEATURED_KEY);
+  } catch (e) {
+    return null;
+  }
+}
+
+function bearipSetFeaturedId(id) {
+  try {
+    if (id) localStorage.setItem(BEARIP_FEATURED_KEY, id);
+    else localStorage.removeItem(BEARIP_FEATURED_KEY);
+  } catch (e) {
+    /* ignore */
+  }
 }
 
 // ---- CREW MATCH recruiting posts ----

@@ -74,6 +74,12 @@ function renderHeader() {
   const dnaBadge = document.getElementById('currentIpDnaBadge');
   if (dnaBadge) dnaBadge.textContent = `DNA ${currentIP.dnaScore || 0}%`;
 
+  const featuredBadge = document.getElementById('currentIpFeaturedBadge');
+  if (featuredBadge) {
+    const isFeatured = typeof bearipGetFeaturedId === 'function' && bearipGetFeaturedId() === currentIP.id;
+    featuredBadge.style.display = isFeatured ? '' : 'none';
+  }
+
   const thumbEl = document.getElementById('currentIpThumb');
   const iconEl = document.getElementById('currentIpThumbIcon');
   if (thumbEl && iconEl) {
@@ -117,18 +123,26 @@ function renderIpSwitcherMenu() {
   if (!menu) return;
 
   const myIPs = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
+  const featuredId = typeof bearipGetFeaturedId === 'function' ? bearipGetFeaturedId() : null;
   const rowsHtml = myIPs
     .map((ip) => {
       const isActive = ip.id === currentIP.id;
+      const isFeatured = ip.id === featuredId;
       const goalLabel = GOAL_LABELS[ip.goal] || '';
       return `
-        <button type="button" class="md-ip-switcher-row${isActive ? ' active' : ''}" data-switch-ip="${ip.id}">
-          <span class="dot"></span>
-          <span class="info">
-            <span class="t">${bearipEscapeHtml(ip.title || '제목 없는 IP')}</span>
-            <span class="m">${goalLabel} · DNA ${ip.dnaScore || 0}%</span>
-          </span>
-        </button>
+        <div class="md-ip-switcher-item">
+          <button type="button" class="md-ip-switcher-row${isActive ? ' active' : ''}" data-switch-ip="${ip.id}">
+            <span class="dot"></span>
+            <span class="info">
+              <span class="t">${bearipEscapeHtml(ip.title || '제목 없는 IP')}</span>
+              <span class="m">${goalLabel} · DNA ${ip.dnaScore || 0}%</span>
+            </span>
+            ${isFeatured ? '<span class="md-ip-switcher-featured-tag">대표</span>' : ''}
+          </button>
+          <button type="button" class="md-ip-switcher-star${isFeatured ? ' active' : ''}" data-feature-ip="${ip.id}" aria-label="대표 프로젝트로 설정" title="대표 프로젝트로 설정">
+            <svg viewBox="0 0 24 24" fill="${isFeatured ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.8 1.4 6.8L12 17.3 5.9 20.7l1.4-6.8-5.1-4.8 6.9-.8z"/></svg>
+          </button>
+        </div>
       `;
     })
     .join('');
@@ -155,6 +169,17 @@ function renderIpSwitcherMenu() {
       }
       bearipSetCurrentId(id);
       location.reload();
+    });
+  });
+
+  menu.querySelectorAll('[data-feature-ip]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.featureIp;
+      bearipSetFeaturedId(bearipGetFeaturedId() === id ? null : id);
+      renderIpSwitcherMenu();
+      const featuredBadge = document.getElementById('currentIpFeaturedBadge');
+      if (featuredBadge) featuredBadge.style.display = bearipGetFeaturedId() === currentIP.id ? '' : 'none';
     });
   });
 }
