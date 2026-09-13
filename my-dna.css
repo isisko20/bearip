@@ -15,9 +15,11 @@
 /* Current-project card — doubles as the project-switcher trigger, replacing
    the old small "📁 title ▾" chip with a real cover thumbnail + title so
    it's obvious at a glance which project MY DNA is showing. */
-.md-ip-hero { flex: 1 1 320px; max-width: 420px; }
+.md-ip-hero { flex: 1 1 400px; max-width: 520px; }
 /* Whole chip sized up ~50% from its original (56px thumb / 15.5px title /
-   11px badge / 15px chevron) so it reads as the primary control it is. */
+   11px badge / 15px chevron) so it reads as the primary control it is.
+   DNA/대표 badges sit under the title (not beside it) so the fixed-width
+   thumb + chevron don't crowd out the title on a real project name. */
 .md-current-ip-card {
   display: flex; align-items: center; gap: 21px; width: 100%;
   padding: 15px 24px 15px 10px; border-radius: var(--dr-radius);
@@ -31,16 +33,17 @@
   display: flex; align-items: center; justify-content: center; color: var(--dr-purple);
 }
 .md-current-ip-thumb svg { width: 33px; height: 33px; }
-.md-current-ip-info { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
-.md-current-ip-eyebrow { font-size: 15px; font-weight: 700; color: var(--dr-ink-soft); text-transform: uppercase; letter-spacing: 0.4px; }
-.md-current-ip-title { font-size: 23px; font-weight: 800; color: var(--dr-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.md-current-ip-info { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.md-current-ip-eyebrow { font-size: 11px; font-weight: 700; color: var(--dr-ink-soft); text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
+.md-current-ip-title { font-size: 20px; font-weight: 800; color: var(--dr-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.md-current-ip-meta { display: flex; align-items: center; gap: 6px; }
 .md-current-ip-featured {
-  flex-shrink: 0; font-size: 12.5px; font-weight: 800; color: #fff;
-  background: linear-gradient(120deg, var(--dr-purple), #a78bfa); padding: 5px 11px; border-radius: 999px; white-space: nowrap;
+  flex-shrink: 0; font-size: 11px; font-weight: 800; color: #fff;
+  background: linear-gradient(120deg, var(--dr-purple), #a78bfa); padding: 3px 9px; border-radius: 999px; white-space: nowrap;
 }
 .md-current-ip-dna {
-  flex-shrink: 0; font-size: 16.5px; font-weight: 800; color: var(--dr-purple);
-  background: var(--dr-active-bg); padding: 8px 15px; border-radius: 999px; white-space: nowrap;
+  flex-shrink: 0; font-size: 12px; font-weight: 800; color: var(--dr-purple);
+  background: var(--dr-active-bg); padding: 4px 10px; border-radius: 999px; white-space: nowrap;
 }
 .md-current-ip-card .chev { width: 22px; height: 22px; color: var(--dr-ink-soft); flex-shrink: 0; transition: transform 0.15s; }
 .md-ip-switcher.open .md-current-ip-card .chev { transform: rotate(180deg); }
