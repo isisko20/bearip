@@ -263,21 +263,38 @@ function bearipEnsureDnaBreakdown(ip) {
 // a single object). Steps can now hold several (`step.submissions`, an
 // array — e.g. 시나리오의 1화/2화를 따로 등록), so any step still in the old
 // shape gets migrated in place the first time it's read, idempotently, same
-// pattern as bearipEnsureDnaBreakdown above.
+// pattern as bearipEnsureDnaBreakdown above. Also defaults `targetCount`
+// (how many entries "counts as done" for that step — e.g. 총 10화) to 1 for
+// any step that doesn't have one yet, so a lone registered item still reads
+// as 100% exactly like it did before targetCount existed.
 function bearipEnsureRoadmapSubmissions(ip) {
   if (!ip || !Array.isArray(ip.roadmap)) return;
   let migrated = false;
   ip.roadmap.forEach((step) => {
-    if (Array.isArray(step.submissions)) return;
-    if (step.submission) {
-      step.submissions = [Object.assign({ id: 'legacy' }, step.submission)];
-    } else {
-      step.submissions = [];
+    if (!Array.isArray(step.submissions)) {
+      if (step.submission) {
+        step.submissions = [Object.assign({ id: 'legacy' }, step.submission)];
+      } else {
+        step.submissions = [];
+      }
+      delete step.submission;
+      migrated = true;
     }
-    delete step.submission;
-    migrated = true;
+    if (!step.targetCount) {
+      step.targetCount = 1;
+      migrated = true;
+    }
   });
   if (migrated && ip.id && ip.id !== 'demo') bearipUpdateIP(ip.id, { roadmap: ip.roadmap });
+}
+
+// How complete a single roadmap step is, as a % — registered entries out of
+// its target count (e.g. 4/10화 = 40%), capped at 100 so extra entries past
+// the target don't overflow the bar/number.
+function bearipStepCompletionPercent(step) {
+  const target = step.targetCount || 1;
+  const count = (step.submissions || []).length;
+  return Math.max(0, Math.min(100, Math.round((count / target) * 100)));
 }
 
 // ---- Unified growth stage (OPEN DNA badges + CONTENT ROOM rows) ----

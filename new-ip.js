@@ -17,6 +17,10 @@ let coverImageData = null;
 // item under that step (e.g. 시나리오의 1화/2화를 따로): { id, label, note,
 // imageData, fileName, fileSize, mime }
 let roadmapItems = {};
+// keyed by roadmap step key -> target entry count (e.g. 시나리오는 총 10화),
+// used later to compute that step's real % (등록 수 ÷ 목표 수량). Defaults
+// to 1 (매칭: no target set = a single registered item already counts as done).
+let roadmapTargets = {};
 
 const panels = document.querySelectorAll('.ni-panel');
 const steps = document.querySelectorAll('.ni-step');
@@ -266,6 +270,7 @@ function roadEntryHtml(entry) {
 function roadItemBlockHtml(step) {
   const entries = roadmapItems[step.key] || [];
   const label = step.label.replace(/<br>/g, ' ');
+  const target = roadmapTargets[step.key] || 1;
   const entriesHtml = entries.length
     ? entries.map(roadEntryHtml).join('')
     : '<div class="ni-road-item-empty">아직 등록된 자료가 없어요.</div>';
@@ -273,6 +278,10 @@ function roadItemBlockHtml(step) {
     <div class="ni-road-item" data-key="${step.key}">
       <div class="ni-road-item-head">
         <span class="ni-road-item-label">${niEscapeHtml(label)}</span>
+        <div class="ni-road-item-target">
+          <label>목표 수량</label>
+          <input type="number" class="ni-road-target-input" min="1" max="999" value="${target}">
+        </div>
       </div>
       <div class="ni-road-item-entries">${entriesHtml}</div>
       <button type="button" class="ni-road-add-entry-btn" data-key="${step.key}">+ 자료 추가</button>
@@ -359,6 +368,12 @@ roadItemsList.addEventListener('change', async (e) => {
 });
 
 roadItemsList.addEventListener('input', (e) => {
+  if (e.target.classList.contains('ni-road-target-input')) {
+    const itemEl = e.target.closest('.ni-road-item');
+    const n = parseInt(e.target.value, 10);
+    roadmapTargets[itemEl.dataset.key] = n > 0 ? n : 1;
+    return;
+  }
   const entryEl = e.target.closest('.ni-road-entry');
   if (!entryEl) return;
   const itemEl = entryEl.closest('.ni-road-item');
@@ -413,6 +428,7 @@ function createIP() {
       mime: en.mime || null,
       note: en.note ? en.note.trim() : '',
     }));
+    step.targetCount = roadmapTargets[step.key] || 1;
     // null (not requested yet) rather than any "pending" value — a step
     // with material sits in 작성 중 until 전문가 검토 요청 is actually sent.
     step.reviewStatus = null;
@@ -422,7 +438,9 @@ function createIP() {
     step.adminReviewedAt = null;
   });
 
-  const filledCount = roadmap.filter((s) => s.submissions.length > 0).length;
+  const dnaScore = roadmap.length
+    ? Math.round(roadmap.reduce((sum, s) => sum + bearipStepCompletionPercent(s), 0) / roadmap.length)
+    : 0;
 
   const ip = {
     id: 'ip_' + Date.now(),
@@ -436,7 +454,7 @@ function createIP() {
     createdAt: new Date().toISOString(),
     // 작성 완성도 is derived from roadmap submissions from the start (see
     // recomputeWritingCompleteness in my-dna-render.js), not self-input.
-    dnaScore: roadmap.length ? Math.round((filledCount / roadmap.length) * 100) : 0,
+    dnaScore,
     dnaBreakdown: { concept: 0, world: 0, character: 0, story: 0, visual: 0, assets: 0 },
     readinessScore: 0,
     productionProgress: null,
@@ -542,6 +560,7 @@ function saveDraft() {
     coverImageData,
     coverFileName: coverFile ? coverFile.name : null,
     roadmapItems,
+    roadmapTargets,
   };
   try {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
@@ -594,6 +613,7 @@ function applyDraft(draft) {
   }
 
   roadmapItems = draft.roadmapItems || {};
+  roadmapTargets = draft.roadmapTargets || {};
 
   currentStep = draft.currentStep >= 1 && draft.currentStep <= TOTAL_STEPS ? draft.currentStep : 1;
   renderStep();

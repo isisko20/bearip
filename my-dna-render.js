@@ -321,13 +321,16 @@ function recomputeDnaScore() {
 }
 
 // 작성 완성도 — replaces the old self-slider dnaScore with something the
-// creator can't fudge: the % of this goal's roadmap items that actually
-// have submitted material (new-ip.html's 1차 등록, or added later from MY
-// DNA). Demo IP keeps its curated fixed numbers untouched.
+// creator can't fudge: the average of each roadmap item's own completion %
+// (registered entries out of its targetCount — e.g. 4/10화 = 40%), not just
+// whether it has any material at all. Demo IP keeps its curated fixed
+// numbers untouched.
 function recomputeWritingCompleteness() {
   if (currentIP.id === 'demo') return;
   const steps = currentIP.roadmap || [];
-  currentIP.dnaScore = steps.length ? Math.round((steps.filter((s) => s.submissions && s.submissions.length > 0).length / steps.length) * 100) : 0;
+  currentIP.dnaScore = steps.length
+    ? Math.round(steps.reduce((sum, s) => sum + bearipStepCompletionPercent(s), 0) / steps.length)
+    : 0;
   bearipUpdateIP(currentIP.id, { dnaScore: currentIP.dnaScore });
 }
 
@@ -346,7 +349,7 @@ function ensureWritingCompletenessOverlay() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
-      <p class="md-wc-note">개발 항목마다 자료를 등록했는지로 자동 계산돼요.</p>
+      <p class="md-wc-note">개발 항목마다 등록한 자료 수 ÷ 목표 수량으로 자동 계산돼요.</p>
       <div class="md-wc-list" id="writingCompletenessBody"></div>
     </div>
   `;
@@ -365,8 +368,18 @@ function openWritingCompletenessView() {
   const body = document.getElementById('writingCompletenessBody');
   body.innerHTML = (currentIP.roadmap || [])
     .map((s) => {
-      const done = !!(s.submissions && s.submissions.length);
-      return `<div class="md-wc-row"><span>${s.label.replace(/<br>/g, ' ')}</span><span class="md-wc-flag${done ? ' done' : ''}">${done ? '등록됨' : '미등록'}</span></div>`;
+      const pct = bearipStepCompletionPercent(s);
+      const count = (s.submissions || []).length;
+      const target = s.targetCount || 1;
+      return `
+        <div class="md-wc-row">
+          <span class="md-wc-label">${s.label.replace(/<br>/g, ' ')}</span>
+          <span class="md-wc-right">
+            <span class="md-wc-count">${count}/${target}</span>
+            <span class="md-wc-flag${pct >= 100 ? ' done' : ''}">${pct}%</span>
+          </span>
+        </div>
+      `;
     })
     .join('');
   overlay.style.display = 'flex';
@@ -919,6 +932,12 @@ function renderRoadmap() {
     const isDoneLike = statusKey === 'ready' || statusKey === 'production_done';
     const checkHtml = isDoneLike ? `<span class="md-road-check">${CHECK_SVG}</span>` : '';
 
+    // Registered entries ÷ targetCount (e.g. 4/10화 = 40%) — real content,
+    // not the coarser "has this step started at all" the status label alone
+    // gives; only shown once there's actually a target/entries worth ratio.
+    const pct = bearipStepCompletionPercent(step);
+    const pctHtml = statusKey === 'unregistered' ? '' : `<div class="md-road-percent">${pct}%</div>`;
+
     stepEl.innerHTML = `
       <div class="md-road-ic-wrap">
         <div class="md-road-ic">${ROAD_ICONS[step.key] || ''}</div>
@@ -926,6 +945,7 @@ function renderRoadmap() {
       </div>
       <div class="md-road-name">${step.label}</div>
       <div class="md-road-status">${meta.label}</div>
+      ${pctHtml}
       <button type="button" class="md-road-action-btn ${meta.cls}" data-index="${i}" data-status="${statusKey}">${meta.btn}</button>
     `;
     container.appendChild(stepEl);
@@ -1005,6 +1025,11 @@ function ensureStepMaterialOverlay() {
         </button>
       </div>
       <div class="md-step-material-body">
+        <div class="md-step-material-target">
+          <label for="stepMaterialTarget">목표 수량</label>
+          <input type="number" id="stepMaterialTarget" min="1" max="999">
+          <span class="md-step-material-target-hint">예: 시나리오는 총 화수, 캐릭터는 필요한 인원 수</span>
+        </div>
         <div class="md-step-material-entries" id="stepMaterialEntries"></div>
         <button type="button" class="md-step-material-add" id="stepMaterialAddBtn">+ 자료 추가</button>
         <button type="button" class="md-step-material-save" id="stepMaterialSave">저장</button>
@@ -1107,6 +1132,8 @@ function ensureStepMaterialOverlay() {
         note: en.note ? en.note.trim() : '',
       }));
     step.submissions = cleaned;
+    const targetRaw = parseInt(document.getElementById('stepMaterialTarget').value, 10);
+    step.targetCount = targetRaw > 0 ? targetRaw : 1;
     if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { roadmap: currentIP.roadmap });
     recomputeWritingCompleteness();
     renderRoadmap();
@@ -1132,6 +1159,7 @@ function openStepMaterialEditor(index) {
   overlay.parentNode.appendChild(overlay);
   stepMaterialIndex = index;
   document.getElementById('stepMaterialTitle').textContent = step.label.replace(/<br>/g, ' ');
+  document.getElementById('stepMaterialTarget').value = step.targetCount || 1;
 
   stepMaterialWorkingEntries = (step.submissions || []).map((sub) => Object.assign({}, sub));
   renderStepMaterialEntries();
