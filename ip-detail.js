@@ -24,27 +24,39 @@ function ipdSetApplyUI(btn, applied) {
 
 const IPD_GOAL_LABELS = { webnovel: '웹소설', webtoon: '웹툰', video: '영상', multi: '멀티포맷' };
 
-// Rewrites the static placeholder markup in place for a user-created IP,
-// if the visitor arrived here via a "IP 보기 / 참여하기" click from OPEN DNA
-// (open-dna-published.js sets this one-shot flag before navigating). There's
-// no real multi-user data for this prototype, so anything we can't honestly
-// derive from the IP itself (crew roster, past updates, published episodes)
-// is shown as an empty state instead of being left as fake demo content.
-// Arriving with no id at all (direct navigation) leaves the static
+// Rewrites the static placeholder markup in place for a user-created IP, if
+// the visitor arrived here via a "IP 보기 / 참여하기" click from OPEN DNA
+// (open-dna-published.js sets this one-shot flag before navigating, with the
+// FULL IP object — not just an id, since a publicly published IP may not
+// exist in this visitor's own local storage at all). There's no real
+// multi-user data for this prototype, so anything we can't honestly derive
+// from the IP itself (crew roster, past updates, published episodes) is
+// shown as an empty state instead of being left as fake demo content.
+// Arriving with no snapshot at all (direct navigation) leaves the static
 // placeholder in place.
 function ipdApplyDynamicIP() {
-  const viewId = sessionStorage.getItem('bearip_view_ip_id');
-  sessionStorage.removeItem('bearip_view_ip_id');
-  if (!viewId) return;
-
-  const ip = (typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : []).find((i) => i.id === viewId);
-  if (!ip) return;
+  const raw = sessionStorage.getItem('bearip_view_ip_snapshot');
+  sessionStorage.removeItem('bearip_view_ip_snapshot');
+  if (!raw) return;
+  let ip;
+  try {
+    ip = JSON.parse(raw);
+  } catch (e) {
+    return;
+  }
+  if (!ip || !ip.id) return;
 
   // CONTENT ROOM's cards and TOP 100 ranking read views/likes straight off
   // the IP, so — unlike the demo's follower/cheer numbers, which have
-  // always been session-local only — this needs to actually persist.
-  ip.views = (ip.views || 0) + 1;
-  bearipUpdateIP(ip.id, { views: ip.views });
+  // always been session-local only — this needs to actually persist. Only
+  // meaningful (and only actually writable) for an IP that lives in this
+  // visitor's own local storage — someone else's published IP has no local
+  // copy to update here, so it's just left showing its already-known count.
+  const isOwnIP = typeof bearipLoadIPs === 'function' && bearipLoadIPs().some((i) => i.id === ip.id);
+  if (isOwnIP) {
+    ip.views = (ip.views || 0) + 1;
+    bearipUpdateIP(ip.id, { views: ip.views });
+  }
 
   const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
   const goalLabel = IPD_GOAL_LABELS[ip.goal] || '';
@@ -96,12 +108,18 @@ function ipdApplyDynamicIP() {
   if (descEl) descEl.textContent = ip.synopsis || ip.logline || '아직 작성된 소개가 없어요.';
 
   const user = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
+  // ip.ownerNickname only exists on IPs published after this field was
+  // added — for an IP that IS this viewer's own (isOwnIP), whoever's logged
+  // in now IS the owner regardless; for someone else's older IP with no
+  // recorded owner, fall back to a neutral label instead of misreporting
+  // the current *viewer* as the owner.
+  const ownerName = ip.ownerNickname || (isOwnIP && user ? user.nickname : null);
   const creatorsWrap = document.querySelector('.ipd-creators');
   if (creatorsWrap) {
     creatorsWrap.innerHTML = `
       <div class="ipd-creator-row">
         <div class="ipd-creator-avatar thumb-2"></div>
-        <div class="ipd-creator-info"><div class="n">${esc(user ? user.nickname : '나')}</div><div class="r">오너</div></div>
+        <div class="ipd-creator-info"><div class="n">${esc(ownerName || '크리에이터')}</div><div class="r">오너</div></div>
         <span class="ipd-creator-badge">오너</span>
       </div>
       <div class="ipd-creators-empty">아직 합류한 크루가 없어요. CREW MATCH에서 모집해보세요.</div>

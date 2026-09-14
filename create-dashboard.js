@@ -35,13 +35,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// Injects real published IPs (visibility === 'public', same flag MY DNA's
-// OPEN DNA에 공개하기 button sets) into the OPEN DNA panel's carousel.
-document.addEventListener('DOMContentLoaded', () => {
+// Injects every publicly published IP (from Firebase — see
+// bearipLoadPublicIPs in storage.js, same 'public' flag MY DNA's OPEN DNA에
+// 공개하기 button sets) into the OPEN DNA panel's carousel. Re-rendered
+// whenever that live list changes, not just on page load.
+function drRenderOpenDnaTrack() {
   const track = document.getElementById('openDnaTrack');
-  if (!track || typeof bearipLoadIPs !== 'function') return;
+  if (!track || typeof bearipLoadPublicIPs !== 'function') return;
 
-  const publicIPs = bearipLoadIPs().filter((ip) => ip.visibility === 'public');
+  track.querySelectorAll('.dr-card[data-published="1"]').forEach((el) => el.remove());
+
+  const publicIPs = bearipLoadPublicIPs();
   if (!publicIPs.length) return;
 
   const emptyEl = document.getElementById('openDnaTrackEmpty');
@@ -51,9 +55,12 @@ document.addEventListener('DOMContentLoaded', () => {
   publicIPs.forEach((ip, i) => {
     const card = document.createElement('article');
     card.className = 'dr-card';
+    card.dataset.published = '1';
     card.style.cursor = 'pointer';
     card.onclick = () => {
-      sessionStorage.setItem('bearip_view_ip_id', ip.id);
+      // The full snapshot, not just the id — someone else's published IP
+      // may not exist in this visitor's own local storage at all.
+      sessionStorage.setItem('bearip_view_ip_snapshot', JSON.stringify(ip));
       location.href = 'ip-detail.html';
     };
     const genreText = ip.genres && ip.genres.length ? ip.genres.join(', ') : '장르 미정';
@@ -73,6 +80,11 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     track.insertBefore(card, track.firstChild);
   });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  drRenderOpenDnaTrack();
+  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('publicIPs', drRenderOpenDnaTrack);
 });
 
 // Hero "상상력 구체화하기" CTA — jumps into the most recently touched real

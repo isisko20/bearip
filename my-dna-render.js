@@ -219,7 +219,16 @@ function toggleIPVisibility() {
   if (!bearipRequireLogin('my-dna.html')) return;
   const nowPublic = currentIP.visibility !== 'public';
   currentIP.visibility = nowPublic ? 'public' : 'private';
-  bearipUpdateIP(currentIP.id, { visibility: currentIP.visibility });
+  // Only ever mattered locally before (whoever's viewing an IP IS its
+  // owner), but a published IP can now be viewed by someone else entirely —
+  // ip-detail.js needs a real answer for "참여 크리에이터"/오너, not whoever
+  // happens to be logged in on the viewer's own device.
+  if (!currentIP.ownerNickname) currentIP.ownerNickname = bearipScopeSuffix();
+  bearipUpdateIP(currentIP.id, { visibility: currentIP.visibility, ownerNickname: currentIP.ownerNickname });
+  // MY DNA's own IP data is local-only, so without this, "공개" would only
+  // ever be visible in this same browser — push/pull a snapshot so OPEN DNA
+  // can actually show it to everyone else (see storage.js).
+  if (typeof bearipSetIpPublic === 'function') bearipSetIpPublic(currentIP, nowPublic);
   renderPublishButton();
   if (nowPublic) {
     bearipAddNotification({

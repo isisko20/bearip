@@ -188,7 +188,9 @@ if (odCardsContainer) {
     const btn = e.target.closest('[data-dna-report]');
     if (!btn) return;
     const id = btn.dataset.dnaReport;
-    const ip = (typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : []).find((i) => i.id === id);
+    const ip =
+      (typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : []).find((i) => i.id === id) ||
+      (typeof bearipLoadPublicIPs === 'function' ? bearipLoadPublicIPs() : []).find((i) => i.id === id);
     if (!ip) return;
     bearipEnsureDnaBreakdown(ip);
     odOpenDnaReport(ip.title || '제목 없는 IP', ip.dnaBreakdown, ip.dnaScore);

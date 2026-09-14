@@ -217,6 +217,12 @@ function bearipUpdateIP(id, patch) {
   if (idx === -1) return null;
   ips[idx] = Object.assign({}, ips[idx], patch);
   bearipSaveIPs(ips);
+  // Keep the public snapshot (bearipSetIpPublic, below) fresh on every edit
+  // — not just the initial publish — so "공개" doesn't freeze the IP at
+  // whatever it looked like the moment it was first made public.
+  if (ips[idx].visibility === 'public' && typeof bearipSetIpPublic === 'function') {
+    bearipSetIpPublic(ips[idx], true);
+  }
   return ips[idx];
 }
 
@@ -518,8 +524,8 @@ function bearipSafePathSegment(str) {
   return String(str || '').replace(/[.#$[\]/]/g, '_') || '_guest';
 }
 
-const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {} };
-const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [] };
+const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {} };
+const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [] };
 
 function bearipOnDataChange(kind, fn) {
   if (_bearipDataListeners[kind]) _bearipDataListeners[kind].push(fn);
@@ -610,6 +616,23 @@ function bearipSetIpOverallComment(ipId, comment) {
   if (!bearipFirebaseReady()) return;
   const ref = firebase.database().ref('ipOverallComments/' + ipId);
   if (comment) ref.set(comment);
+  else ref.remove();
+}
+
+// ---- Published IPs — MY DNA's own IP data is otherwise local-only (see the
+// per-account scoping above), so without this, "OPEN DNA에 공개하기" only
+// ever showed up in the SAME browser that published it. A snapshot of the IP
+// goes here the moment its owner publishes it, and is removed the moment
+// they unpublish; open-dna-published.js reads this list instead of the
+// local one so a small friend group actually sees each other's public IPs.
+function bearipLoadPublicIPs() {
+  return Object.values(_bearipDataCache.publicIPs || {});
+}
+
+function bearipSetIpPublic(ip, isPublic) {
+  if (!bearipFirebaseReady() || !ip || !ip.id) return;
+  const ref = firebase.database().ref('publicIPs/' + ip.id);
+  if (isPublic) ref.set(ip);
   else ref.remove();
 }
 
@@ -905,4 +928,5 @@ function bearipDeleteAssetFile(id) {
   _bearipWatchPath('productionRequests', 'productionRequests');
   _bearipWatchPath('ipReviews', 'ipReviews');
   _bearipWatchPath('ipOverallComments', 'ipOverallComments');
+  _bearipWatchPath('publicIPs', 'publicIPs');
 })();

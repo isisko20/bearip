@@ -1,21 +1,27 @@
-// Injects real published IPs (visibility === 'public') into CONTENT ROOM's
-// 라이징/챌린지/오피셜 rows (clearing each row's "아직 콘텐츠가 없어요"
-// placeholder the first time it gets a real card) and features the most
-// engaged one in the hero — using the same growth stage (bearipGrowthStage,
-// storage.js) that drives OPEN DNA's badges, so "how developed is this IP"
-// means the same thing on both pages. SEED-stage IPs don't appear here yet;
-// there's nothing worth watching or reading that early. This connects at
-// the IP level (not per-episode) — clicking a card goes to ip-detail.html
-// via the same one-shot sessionStorage flag open-dna-published.js already
-// uses.
+// Injects every publicly published IP (from Firebase — see
+// bearipLoadPublicIPs in storage.js) into CONTENT ROOM's 라이징/챌린지/오피셜
+// rows (clearing each row's "아직 콘텐츠가 없어요" placeholder the first time
+// it gets a real card) and features the most engaged one in the hero — using
+// the same growth stage (bearipGrowthStage, storage.js) that drives OPEN
+// DNA's badges, so "how developed is this IP" means the same thing on both
+// pages. SEED-stage IPs don't appear here yet; there's nothing worth
+// watching or reading that early. This connects at the IP level (not
+// per-episode) — clicking a card goes to ip-detail.html via the same
+// one-shot sessionStorage flag open-dna-published.js already uses, carrying
+// the full IP snapshot since a published IP may not exist in this visitor's
+// own local storage at all.
 //
 // 조회수/좋아요 are real per-IP counts (ip.views/ip.likes, updated from
-// ip-detail.js), not placeholders — so is the TOP 100 row below, ranked by
-// combined engagement across CHALLENGE + OFFICIAL tier content only,
-// matching that row's own "챌린지 + 오피셜 콘텐츠를 합산한" description.
+// ip-detail.js — only for IPs the viewer actually owns locally, see there),
+// not placeholders — so is the TOP 100 row below, ranked by combined
+// engagement across CHALLENGE + OFFICIAL tier content only, matching that
+// row's own "챌린지 + 오피셜 콘텐츠를 합산한" description.
+//
+// Re-rendered whenever the published list changes, not just on page load —
+// see crRenderPublished's own DOMContentLoaded wiring at the bottom.
 
 function crGoToIp(ip) {
-  sessionStorage.setItem('bearip_view_ip_id', ip.id);
+  sessionStorage.setItem('bearip_view_ip_snapshot', JSON.stringify(ip));
   location.href = 'ip-detail.html';
 }
 
@@ -29,9 +35,15 @@ function crPosterAttrs(ip, index) {
   return { style, className };
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  if (typeof bearipLoadIPs !== 'function') return;
-  const publicIPs = bearipLoadIPs().filter((ip) => ip.visibility === 'public');
+function crRenderPublished() {
+  if (typeof bearipLoadPublicIPs !== 'function') return;
+
+  // Clear anything a previous run of this function inserted, so a live
+  // update (someone publishing/unpublishing while this page is open)
+  // redraws instead of piling up duplicate cards.
+  document.querySelectorAll('.cr-card[data-published="1"], .cr-rank-card[data-published="1"]').forEach((el) => el.remove());
+
+  const publicIPs = bearipLoadPublicIPs();
   if (!publicIPs.length) return;
 
   const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
@@ -56,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const { style, className } = crPosterAttrs(ip, i);
     const card = document.createElement('article');
     card.className = 'cr-card';
+    card.dataset.published = '1';
     card.innerHTML = `
       <div class="poster ${className}"${style}>
         <span class="cr-tier-badge ${stage}">${BEARIP_STAGE_LABELS[stage]}</span>
@@ -79,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const { style, className } = crPosterAttrs(ip, i);
     const card = document.createElement('article');
     card.className = 'cr-rank-card';
+    card.dataset.published = '1';
     card.innerHTML = `
       <div class="cr-rank-num">${i + 1}</div>
       <div class="cr-rank-poster-wrap">
@@ -133,4 +147,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const playBtn = document.getElementById('crHeroPlayBtn');
     if (playBtn) playBtn.remove();
   }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  crRenderPublished();
+  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('publicIPs', crRenderPublished);
 });

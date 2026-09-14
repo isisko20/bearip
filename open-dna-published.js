@@ -1,8 +1,12 @@
-// Renders IPs the user has published from MY DNA (ip.visibility === 'public')
-// as real cards in the "지금 성장 중인 OPEN DNA" grid, ahead of the mock
-// placeholder slots. "IP 보기" / "참여하기" pass the IP id to ip-detail.html
-// via a one-shot sessionStorage flag, which ip-detail.js reads to rewrite
-// the (otherwise static, demo-only) detail page for this IP.
+// Renders every publicly published IP (ip.visibility === 'public') as real
+// cards in the "지금 성장 중인 OPEN DNA" grid, ahead of the mock placeholder
+// slots. These come from Firebase (bearipLoadPublicIPs, storage.js), not
+// local storage — MY DNA's own IP data is otherwise local-only, so this is
+// what actually lets a small friend group see each other's published work.
+// "IP 보기" / "참여하기" pass the full IP snapshot (already in hand from the
+// card data) to ip-detail.html via a one-shot sessionStorage flag, rather
+// than just an id — avoids ip-detail.html having to re-fetch/await Firebase
+// data itself on a fresh page load.
 
 const OD_GOAL_TAG = { webnovel: 'WEBNOVEL', webtoon: 'WEBTOON', video: 'VIDEO', multi: 'MULTI' };
 
@@ -88,9 +92,7 @@ function odBuildPublishedCard(ip, index) {
 function odRenderHeroStats() {
   const statsEl = document.getElementById('odHeroStats');
   if (!statsEl) return;
-  const publicCount = (typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : []).filter(
-    (ip) => ip.visibility === 'public'
-  ).length;
+  const publicCount = typeof bearipLoadPublicIPs === 'function' ? bearipLoadPublicIPs().length : 0;
   const recruitingCount = typeof bearipLoadPositions === 'function' ? bearipLoadPositions().length : 0;
   statsEl.innerHTML = `
     <span class="stat">공개된 IP <b>${publicCount}</b>개</span>
@@ -115,27 +117,45 @@ function odWireHeroPublishBtn() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', odRenderHeroStats);
+document.addEventListener('DOMContentLoaded', () => {
+  odRenderHeroStats();
+  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('publicIPs', odRenderHeroStats);
+});
 document.addEventListener('DOMContentLoaded', odWireHeroPublishBtn);
 
-document.addEventListener('DOMContentLoaded', () => {
+// Re-runnable so a live change from Firebase (someone else publishing,
+// unpublishing, or editing a public IP) redraws the grid without a reload —
+// previously-rendered cards are cleared first (tagged via data-published)
+// since bearipLoadPublicIPs() is re-read fresh each time.
+function odRenderPublishedCards() {
   const container = document.querySelector('.od-cards');
-  if (!container || typeof bearipLoadIPs !== 'function') return;
+  if (!container || typeof bearipLoadPublicIPs !== 'function') return;
 
-  const publicIPs = bearipLoadIPs().filter((ip) => ip.visibility === 'public');
+  container.querySelectorAll('.od-card[data-published="1"]').forEach((el) => el.remove());
+
+  const publicIPs = bearipLoadPublicIPs();
   if (!publicIPs.length) return;
 
   const firstMock = container.querySelector('.mock-slot');
   publicIPs.forEach((ip, i) => {
     const card = odBuildPublishedCard(ip, i);
+    card.dataset.published = '1';
     if (firstMock) container.insertBefore(card, firstMock);
     else container.appendChild(card);
     card.querySelectorAll('.od-bookmark').forEach(odWireBookmarkButton);
     card.querySelectorAll('[data-view-ip]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        sessionStorage.setItem('bearip_view_ip_id', btn.dataset.viewIp);
+        // The full snapshot, not just the id — this IP may not exist in
+        // this visitor's own local storage at all (someone else's IP), so
+        // ip-detail.html can't look it up itself; hand it over directly.
+        sessionStorage.setItem('bearip_view_ip_snapshot', JSON.stringify(ip));
         location.href = 'ip-detail.html';
       });
     });
   });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  odRenderPublishedCards();
+  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('publicIPs', odRenderPublishedCards);
 });
