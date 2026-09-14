@@ -111,6 +111,13 @@ const BEARIP_ROADMAP_STEP_PRICE = {
   upload: 20,
 };
 
+// Flat credit cost for 전문가 검토 요청 (asking the page-admin/GM to score a
+// step's already-registered material), regardless of which step it is —
+// this is feedback on existing work, not commissioning new work, so it's
+// deliberately cheap and uniform rather than using BEARIP_ROADMAP_STEP_PRICE
+// (that's the much pricier "make this for me" 제작요청 rate).
+const BEARIP_EXPERT_REVIEW_PRICE = 15;
+
 // Builds the roadmap for a goal, preserving status/progress/mode for any
 // step that also exists in the previous roadmap (matched by key) —
 // switching goals shouldn't silently discard progress on shared steps like

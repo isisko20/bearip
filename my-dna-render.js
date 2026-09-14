@@ -971,6 +971,9 @@ function renderRoadmap() {
       <div class="md-road-ic-wrap">
         <div class="md-road-ic">${ROAD_ICONS[step.key] || ''}</div>
         ${checkHtml}
+        <button type="button" class="md-road-edit-material-btn" data-index="${i}" aria-label="자료 수정" title="자료 수정">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+        </button>
       </div>
       <div class="md-road-name">${step.label}</div>
       <div class="md-road-status">${meta.label}</div>
@@ -982,8 +985,6 @@ function renderRoadmap() {
       container.insertAdjacentHTML('beforeend', ARROW_HTML);
     }
   });
-
-  updateRequestReviewButton();
 }
 
 // ---- 개발 항목 자료 등록/수정 — the same 1차 등록 UI new-ip.html's step 4
@@ -1196,53 +1197,130 @@ function openStepMaterialEditor(index) {
   overlay.style.display = 'flex';
 }
 
-// ---- 전문가 검토 요청 — batches every step that has material but hasn't
-// been sent yet (reviewStatus null) into one bearip_ip_reviews entry each,
-// same shape new-ip.html used to create automatically at IP creation. Now
-// it's a separate, deliberate action so nothing half-finished gets sent by
-// accident.
-function mdStepsAwaitingRequest() {
-  return (currentIP.roadmap || []).filter((s) => s.submissions && s.submissions.length && !s.reviewStatus);
+// ---- 전문가 의뢰 — a single always-visible entry point (mdExpertHelpBtn)
+// that opens a modal listing every roadmap step (시나리오 검토, 캐릭터/컨셉
+// 디자인 검토, ...) so the creator can see and request help item-by-item,
+// instead of one silent free bulk action. Each request now genuinely costs
+// BEARIP_EXPERT_REVIEW_PRICE credits — real feedback from the page-admin/GM
+// has a cost, same principle as 제작요청 already had for actual production.
+function mdExpertHelpRowMeta(step) {
+  const status = mdStepStatus(step);
+  if (status === 'unregistered') return { tag: '자료 먼저 등록해주세요', action: false };
+  if (status === 'writing') return { tag: null, action: true, actionLabel: `검토 요청 · ${BEARIP_EXPERT_REVIEW_PRICE}C` };
+  if (status === 'reviewing') return { tag: '검토 대기 중', action: false };
+  if (status === 'needs_revision') return { tag: null, action: true, actionLabel: `다시 요청하기 · ${BEARIP_EXPERT_REVIEW_PRICE}C` };
+  if (status === 'ready') return { tag: `검토 완료 · ${step.adminProgress}%`, action: false };
+  if (status === 'production_requested') return { tag: '제작 의뢰 중', action: false };
+  if (status === 'production_done') return { tag: '제작 완료', action: false };
+  return { tag: null, action: false };
 }
 
-function updateRequestReviewButton() {
-  const btn = document.getElementById('mdRequestReviewBtn');
-  if (!btn) return;
-  const count = mdStepsAwaitingRequest().length;
-  btn.hidden = count === 0;
-  btn.textContent = count ? `전문가 검토 요청 (${count})` : '전문가 검토 요청';
+function expertHelpRowHtml(step, index) {
+  const label = step.label.replace(/<br>/g, ' ');
+  const meta = mdExpertHelpRowMeta(step);
+  const rightHtml = meta.action
+    ? `<button type="button" class="md-expert-help-row-btn" data-index="${index}">${meta.actionLabel}</button>`
+    : `<span class="md-expert-help-row-tag">${meta.tag || ''}</span>`;
+  return `
+    <div class="md-expert-help-row">
+      <span class="md-expert-help-row-label">${bearipEscapeHtml(label)}</span>
+      ${rightHtml}
+    </div>
+  `;
 }
 
-function mdRequestExpertReview() {
-  const steps = mdStepsAwaitingRequest();
-  if (!steps.length) return;
-  const requestedAt = new Date().toISOString();
-  steps.forEach((step) => {
-    step.reviewStatus = 'requested';
-    bearipAddIpReview({
-      id: 'ipreview_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-      ipId: currentIP.id,
-      ipTitle: currentIP.title,
-      stepKey: step.key,
-      stepLabel: step.label.replace(/<br>/g, ' '),
-      submissions: step.submissions,
-      requestedAt,
-      status: 'pending',
-      adminProgress: null,
-      adminComment: null,
-      needsRevision: false,
-      reviewedAt: null,
-    });
+function renderExpertHelpList() {
+  const list = document.getElementById('expertHelpList');
+  if (!list) return;
+  list.innerHTML = (currentIP.roadmap || []).map((step, i) => expertHelpRowHtml(step, i)).join('');
+  const balanceEl = document.getElementById('expertHelpBalance');
+  if (balanceEl) balanceEl.textContent = bearipGetCredits() + 'C';
+}
+
+function ensureExpertHelpOverlay() {
+  let overlay = document.getElementById('expertHelpOverlay');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.className = 'md-road-edit-overlay';
+  overlay.id = 'expertHelpOverlay';
+  overlay.style.display = 'none';
+  overlay.innerHTML = `
+    <div class="md-road-edit-box md-expert-help-box">
+      <div class="md-road-edit-head">
+        <span>전문가 의뢰</span>
+        <button type="button" class="md-road-edit-close" id="expertHelpClose" aria-label="닫기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <p class="md-expert-help-desc">항목을 골라 전문가 검토를 요청하세요. 크레딧이 결제되고, 담당 IP 매니저가 확인 후 항목별 전문가 준비도와 코멘트를 알려드려요.</p>
+      <div class="md-expert-help-balance">보유 크레딧 <span id="expertHelpBalance" class="bearip-credit-balance-display">0C</span> · <a href="#" id="expertHelpTopup">충전하러 가기 →</a></div>
+      <div class="md-expert-help-list" id="expertHelpList"></div>
+    </div>
+  `;
+  (document.querySelector('.dna-app') || document.body).appendChild(overlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('#expertHelpClose')) {
+      closeExpertHelpModal();
+      return;
+    }
+    const btn = e.target.closest('.md-expert-help-row-btn');
+    if (btn) mdSpendAndRequestReview(parseInt(btn.dataset.index, 10));
+  });
+  document.getElementById('expertHelpTopup').addEventListener('click', (e) => {
+    e.preventDefault();
+    if (typeof bearipOpenCreditTopup === 'function') bearipOpenCreditTopup();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.style.display !== 'none') closeExpertHelpModal();
+  });
+  return overlay;
+}
+
+function closeExpertHelpModal() {
+  const overlay = document.getElementById('expertHelpOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function openExpertHelpModal() {
+  const overlay = ensureExpertHelpOverlay();
+  overlay.parentNode.appendChild(overlay);
+  renderExpertHelpList();
+  overlay.style.display = 'flex';
+}
+
+function mdSpendAndRequestReview(index) {
+  const step = currentIP.roadmap[index];
+  if (!step) return;
+  if (!bearipSpendCredits(BEARIP_EXPERT_REVIEW_PRICE)) {
+    bearipShowToast('크레딧이 부족해요');
+    return;
+  }
+  step.reviewStatus = 'requested';
+  bearipAddIpReview({
+    id: 'ipreview_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+    ipId: currentIP.id,
+    ipTitle: currentIP.title,
+    stepKey: step.key,
+    stepLabel: step.label.replace(/<br>/g, ' '),
+    submissions: step.submissions,
+    requestedAt: new Date().toISOString(),
+    status: 'pending',
+    adminProgress: null,
+    adminComment: null,
+    needsRevision: false,
+    reviewedAt: null,
   });
   if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { roadmap: currentIP.roadmap });
   bearipAddNotification({
     type: 'ip',
     title: '전문가 검토를 요청했어요',
-    message: `'${currentIP.title}'의 ${steps.length}개 항목을 담당 IP 매니저에게 전달했어요.`,
+    message: `'${currentIP.title}'의 '${step.label.replace(/<br>/g, ' ')}' 항목을 담당 IP 매니저에게 전달했어요. ${BEARIP_EXPERT_REVIEW_PRICE}C가 결제됐어요.`,
     link: 'my-dna.html',
   });
+  if (typeof bearipRefreshCreditDisplays === 'function') bearipRefreshCreditDisplays();
+  renderExpertHelpList();
   renderRoadmap();
-  bearipShowToast('전문가 검토를 요청했어요');
+  bearipShowToast(`전문가 검토를 요청했어요. ${BEARIP_EXPERT_REVIEW_PRICE}C가 결제됐어요.`);
 }
 
 // ---- Asset folders — a free-form, user-created grouping on top of the
@@ -1643,13 +1721,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const productionCard = document.querySelector('.md-status-card.green');
   if (productionCard) productionCard.addEventListener('click', jumpToRoadmap);
 
-  const requestReviewBtn = document.getElementById('mdRequestReviewBtn');
-  if (requestReviewBtn) requestReviewBtn.addEventListener('click', mdRequestExpertReview);
+  const expertHelpBtn = document.getElementById('mdExpertHelpBtn');
+  if (expertHelpBtn) expertHelpBtn.addEventListener('click', openExpertHelpModal);
 
   // One action per step now (미등록/작성 중/전문가 검토 중/보완 필요/준비 완료/
   // 제작 의뢰 중/제작 완료), each routed to whichever existing flow already
   // handles that state — real <button>s, so no separate keydown wiring needed.
   document.getElementById('roadmapContainer').addEventListener('click', (e) => {
+    const editBtn = e.target.closest('.md-road-edit-material-btn');
+    if (editBtn) {
+      e.stopPropagation();
+      openStepMaterialEditor(parseInt(editBtn.dataset.index, 10));
+      return;
+    }
     const btn = e.target.closest('.md-road-action-btn');
     if (!btn) return;
     e.stopPropagation();

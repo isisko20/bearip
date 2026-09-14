@@ -422,6 +422,19 @@
 }
 .md-road-check svg { width: 10px; height: 10px; }
 
+/* Always available regardless of status — fixes material becoming
+   permanently uneditable once a step reaches 준비 완료/제작 의뢰 등 (the
+   main action button's job at that point is the status action, not editing). */
+.md-road-edit-material-btn {
+  position: absolute; top: -2px; right: -2px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--dr-panel); color: var(--dr-ink-soft);
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--dr-bg); cursor: pointer; padding: 0;
+}
+.md-road-edit-material-btn svg { width: 9px; height: 9px; }
+.md-road-edit-material-btn:hover { background: var(--dr-purple); color: #fff; border-color: var(--dr-purple); }
+
 .md-road-name { font-size: 12px; font-weight: 700; }
 .md-road-status { font-size: 11px; color: var(--dr-ink-soft); }
 .md-road-percent { font-size: 13px; font-weight: 800; color: var(--dr-purple); }
@@ -487,12 +500,41 @@
 .md-road-step.ready .md-road-status,
 .md-road-step.done .md-road-status { color: var(--dr-purple); font-weight: 700; }
 
-/* ---- 전문가 검토 요청 button — roadmap section header ---- */
-.md-expert-review-btn {
-  margin-left: auto; padding: 7px 14px; border-radius: 999px; border: none; cursor: pointer;
-  font-size: 12px; font-weight: 700; font-family: inherit; background: var(--dr-purple); color: #fff;
+/* ---- 전문가 의뢰 button — roadmap section header. Bigger/always-visible
+   now (used to be a small button that only appeared once something was
+   registered) since it opens a picker of every item rather than firing a
+   free bulk request on its own. ---- */
+.md-expert-help-btn-main {
+  margin-left: auto; padding: 11px 20px; border-radius: 999px; border: none; cursor: pointer;
+  font-size: 13.5px; font-weight: 800; font-family: inherit; background: var(--dr-purple); color: #fff;
+  display: flex; align-items: center; gap: 7px; box-shadow: 0 6px 16px rgba(143,107,255,0.35);
 }
-.md-expert-review-btn:hover { opacity: 0.9; }
+.md-expert-help-btn-main svg { width: 16px; height: 16px; }
+.md-expert-help-btn-main:hover { opacity: 0.92; }
+
+/* ---- 전문가 의뢰 modal (openExpertHelpModal) — lists every roadmap item
+   so the creator can request/re-request expert review item-by-item, each
+   costing BEARIP_EXPERT_REVIEW_PRICE credits. ---- */
+.md-expert-help-box { max-width: 420px; }
+.md-expert-help-desc { font-size: 12.5px; color: var(--dr-ink-soft); line-height: 1.55; margin-bottom: 14px; }
+.md-expert-help-balance {
+  font-size: 11.5px; color: var(--dr-ink-soft); margin-bottom: 14px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--dr-border);
+}
+.md-expert-help-balance a { color: var(--dr-purple); font-weight: 700; text-decoration: none; }
+.md-expert-help-balance a:hover { text-decoration: underline; }
+.md-expert-help-list { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; }
+.md-expert-help-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 12px; border-radius: 10px; background: var(--dr-bg-soft);
+}
+.md-expert-help-row-label { font-size: 12.5px; font-weight: 700; color: var(--dr-ink); }
+.md-expert-help-row-tag { font-size: 11px; color: var(--dr-ink-soft); white-space: nowrap; }
+.md-expert-help-row-btn {
+  padding: 7px 12px; border-radius: 999px; border: none; cursor: pointer; white-space: nowrap;
+  font-size: 11.5px; font-weight: 700; font-family: inherit; background: var(--dr-purple); color: #fff;
+}
+.md-expert-help-row-btn:hover { opacity: 0.9; }
 
 /* ---- 개발 항목 자료 등록/수정 modal (openStepMaterialEditor) — a step can
    hold several registered entries (e.g. 시나리오의 1화/2화), so the modal
