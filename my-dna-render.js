@@ -637,7 +637,11 @@ function updateProductionRequestPayState() {
     payBtn.disabled = !enough;
     payBtn.textContent = enough ? '결제하고 요청하기' : '크레딧이 부족해요';
   }
-  if (topupLink) topupLink.hidden = enough;
+  // Not the `hidden` attribute — .md-production-request-topup sets
+  // `display: block` unconditionally, which wins over the UA's `[hidden]`
+  // rule regardless of specificity, so `.hidden = true` was a no-op and the
+  // "충전하러 가기" link stayed visible even once the balance was enough.
+  if (topupLink) topupLink.style.display = enough ? 'none' : 'block';
 }
 
 // bearipRefreshCreditDisplays (auth-ui.js) calls this after a top-up so a
@@ -673,7 +677,7 @@ function ensureProductionRequestOverlay() {
       </div>
       <div class="md-production-request-balance">보유 크레딧 <span id="productionRequestBalance" class="bearip-credit-balance-display">0C</span></div>
       <button type="button" class="md-production-request-pay" id="productionRequestPayBtn">결제하고 요청하기</button>
-      <a href="#" class="md-production-request-topup" id="productionRequestTopup" hidden>크레딧 충전하러 가기 →</a>
+      <a href="#" class="md-production-request-topup" id="productionRequestTopup" style="display:none">크레딧 충전하러 가기 →</a>
     </div>
   `;
   // Appended inside .dna-app (not just body) so it inherits --dr-* theme
