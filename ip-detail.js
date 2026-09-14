@@ -220,7 +220,9 @@ function ipdRenderGmMaterials(ip) {
           const subsHtml = (step.submissions || [])
             .map((sub) => {
               const subLabel = sub.label ? `<div class="ipd-gm-sub-label">${esc(sub.label)}</div>` : '';
-              const thumb = sub.imageData ? `<div class="ipd-gm-sub-thumb" style="background-image:url('${sub.imageData}')"></div>` : '';
+              const thumb = sub.imageData
+                ? `<div class="ipd-gm-sub-thumb" style="background-image:url('${sub.imageData}')" data-full="${sub.imageData}" title="눌러서 크게 보기"></div>`
+                : '';
               const fileSize = sub.fileSize ? ` · ${Math.max(1, Math.round(sub.fileSize / 1024))}KB` : '';
               const file = !sub.imageData && sub.fileName
                 ? sub.fileData
@@ -252,6 +254,47 @@ function ipdRenderGmMaterials(ip) {
   const introPanel = mainCol.querySelector('.ipd-panel');
   if (introPanel) introPanel.after(section);
   else mainCol.appendChild(section);
+
+  section.querySelectorAll('.ipd-gm-sub-thumb').forEach((thumb) => {
+    thumb.addEventListener('click', () => ipdOpenImageLightbox(thumb.dataset.full));
+  });
+}
+
+// Same reasoning as ip-reviews.js's own lightbox: a submitted image forced
+// into a fixed small thumb is easy to miss detail in — click to see it full
+// size instead of guessing from a 140px box.
+function ipdEnsureImageLightbox() {
+  let overlay = document.getElementById('ipdImageLightbox');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.className = 'ipd-gm-lightbox-overlay';
+  overlay.id = 'ipdImageLightbox';
+  overlay.innerHTML = `
+    <button type="button" class="ipd-gm-lightbox-close" aria-label="닫기">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <img class="ipd-gm-lightbox-img" id="ipdLightboxImg" alt="">
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('.ipd-gm-lightbox-close')) ipdCloseImageLightbox();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.classList.contains('show')) ipdCloseImageLightbox();
+  });
+  return overlay;
+}
+
+function ipdOpenImageLightbox(src) {
+  if (!src) return;
+  const overlay = ipdEnsureImageLightbox();
+  document.getElementById('ipdLightboxImg').src = src;
+  overlay.classList.add('show');
+}
+
+function ipdCloseImageLightbox() {
+  const overlay = document.getElementById('ipdImageLightbox');
+  if (overlay) overlay.classList.remove('show');
 }
 
 function ipdInjectGmMaterialsStyles() {
@@ -267,10 +310,23 @@ function ipdInjectGmMaterialsStyles() {
     .ipd-gm-step-status { font-size: 11px; font-weight: 700; color: var(--od-purple); white-space: nowrap; }
     .ipd-gm-sub { padding: 10px; background: var(--od-bg); border-radius: 10px; margin-bottom: 8px; font-size: 12px; color: var(--od-ink); }
     .ipd-gm-sub-label { font-weight: 700; margin-bottom: 4px; }
-    .ipd-gm-sub-thumb { width: 100%; height: 120px; border-radius: 8px; background-size: cover; background-position: center; margin-bottom: 6px; }
+    .ipd-gm-sub-thumb { width: 140px; height: 140px; border-radius: 8px; background-size: cover; background-position: center; margin-bottom: 6px; cursor: zoom-in; }
     .ipd-gm-sub-file { color: var(--od-purple); text-decoration: underline; display: block; margin-bottom: 4px; word-break: break-all; }
     .ipd-gm-sub-file.plain { color: var(--od-ink-soft); text-decoration: none; }
     .ipd-gm-sub-note { color: var(--od-ink-soft); font-style: italic; }
+    .ipd-gm-lightbox-overlay {
+      position: fixed; inset: 0; z-index: 1200; background: rgba(10,8,16,0.82);
+      display: none; align-items: center; justify-content: center; padding: 32px;
+    }
+    .ipd-gm-lightbox-overlay.show { display: flex; }
+    .ipd-gm-lightbox-img { max-width: 100%; max-height: 100%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .ipd-gm-lightbox-close {
+      position: fixed; top: 20px; right: 20px; width: 38px; height: 38px; border-radius: 50%;
+      border: none; background: rgba(255,255,255,0.12); color: #fff;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .ipd-gm-lightbox-close:hover { background: rgba(255,255,255,0.22); }
+    .ipd-gm-lightbox-close svg { width: 16px; height: 16px; }
   `;
   document.head.appendChild(style);
 }

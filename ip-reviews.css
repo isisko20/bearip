@@ -41,9 +41,25 @@
 .ir-submission + .ir-submission { border-top: 1px dashed var(--dr-border); }
 .ir-submission-label { font-size: 11.5px; font-weight: 800; color: var(--dr-purple); }
 .ir-submission-thumb {
-  width: 100%; aspect-ratio: 16/9; border-radius: 10px; background-color: var(--dr-bg-soft);
-  background-size: cover; background-position: center;
+  width: 140px; height: 140px; border-radius: 10px; background-color: var(--dr-bg-soft);
+  background-size: cover; background-position: center; cursor: zoom-in;
 }
+
+/* ---- 이미지 크게 보기 ---- */
+.ir-lightbox-overlay {
+  position: fixed; inset: 0; z-index: 1200;
+  background: rgba(10,8,16,0.82);
+  display: none; align-items: center; justify-content: center; padding: 32px;
+}
+.ir-lightbox-overlay.show { display: flex; }
+.ir-lightbox-img { max-width: 100%; max-height: 100%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+.ir-lightbox-close {
+  position: fixed; top: 20px; right: 20px; width: 38px; height: 38px; border-radius: 50%;
+  border: none; background: rgba(255,255,255,0.12); color: #fff;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.ir-lightbox-close:hover { background: rgba(255,255,255,0.22); }
+.ir-lightbox-close svg { width: 16px; height: 16px; }
 .ir-submission-file {
   padding: 9px 12px; border-radius: 10px; background: var(--dr-bg-soft);
   font-size: 12px; font-weight: 700; color: var(--dr-ink);

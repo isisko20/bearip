@@ -56,7 +56,9 @@ let irActiveFilter = 'all';
 // from before a step could hold more than one, so past requests still render.
 function irSubmissionEntryHtml(sub) {
   const label = sub.label ? `<div class="ir-submission-label">${bearipEscapeHtml(sub.label)}</div>` : '';
-  const thumb = sub.imageData ? `<div class="ir-submission-thumb" style="background-image:url('${sub.imageData}')"></div>` : '';
+  const thumb = sub.imageData
+    ? `<div class="ir-submission-thumb" style="background-image:url('${sub.imageData}')" data-full="${sub.imageData}" title="눌러서 크게 보기"></div>`
+    : '';
   // fileData (워드/PDF/텍스트) is an actual openable file, not just a name —
   // link it so GM can open/save it, not just see that something was uploaded.
   const fileMeta = sub.fileSize ? ` · ${irFormatFileSize(sub.fileSize)}` : '';
@@ -73,6 +75,44 @@ function irSubmissionHtml(subs) {
   if (!subs) return '';
   const list = Array.isArray(subs) ? subs : [subs];
   return list.map(irSubmissionEntryHtml).join('');
+}
+
+// Submission thumbnails render small by default (a full-size image forced
+// into a fixed thumb box used to dominate the whole card) — click one to see
+// it at full size instead. Built once and reused, same pattern as
+// production-requests.js's own confirm modal.
+function irEnsureImageLightbox() {
+  let overlay = document.getElementById('irImageLightbox');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.className = 'ir-lightbox-overlay';
+  overlay.id = 'irImageLightbox';
+  overlay.innerHTML = `
+    <button type="button" class="ir-lightbox-close" aria-label="닫기">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <img class="ir-lightbox-img" id="irLightboxImg" alt="">
+  `;
+  (document.querySelector('.dna-app') || document.body).appendChild(overlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('.ir-lightbox-close')) irCloseImageLightbox();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.classList.contains('show')) irCloseImageLightbox();
+  });
+  return overlay;
+}
+
+function irOpenImageLightbox(src) {
+  if (!src) return;
+  const overlay = irEnsureImageLightbox();
+  document.getElementById('irLightboxImg').src = src;
+  overlay.classList.add('show');
+}
+
+function irCloseImageLightbox() {
+  const overlay = document.getElementById('irImageLightbox');
+  if (overlay) overlay.classList.remove('show');
 }
 
 // Groups the flat request list by IP so each IP's 종합 코멘트 (overall,
@@ -155,6 +195,9 @@ function irRenderList() {
 
   list.querySelectorAll('.ir-review-btn').forEach((btn) => {
     btn.addEventListener('click', () => irOpenReviewModal(btn.dataset.id));
+  });
+  list.querySelectorAll('.ir-submission-thumb').forEach((thumb) => {
+    thumb.addEventListener('click', () => irOpenImageLightbox(thumb.dataset.full));
   });
   list.querySelectorAll('.ir-overall-save').forEach((btn) => {
     btn.addEventListener('click', () => {
