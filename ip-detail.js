@@ -182,6 +182,97 @@ function ipdApplyDynamicIP() {
   if (infoStage) infoStage.textContent = stageLabel;
   const heroStage = document.getElementById('ipdHeroStage');
   if (heroStage) heroStage.textContent = stageLabel;
+
+  ipdRenderGmMaterials(ip);
+}
+
+// GM-only — 제작 시뮬레이션을 위해 개발 맵의 각 항목에 실제 등록된 자료(이미지/문서/메모)를
+// 그대로 보여준다. ip-detail.html은 보통 공개용 요약(소개/참여 크리에이터 등)만 보여주는
+// 페이지라 이 항목이 없었는데, 그 요약만으로는 GM이 실제로 검토/제작할 내용을 알 수 없었다.
+function ipdRenderGmMaterials(ip) {
+  const existing = document.getElementById('ipdGmMaterials');
+  if (existing) existing.remove();
+
+  const user = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
+  if (!user || user.nickname !== 'GM') return;
+
+  const mainCol = document.querySelector('.ipd-main-col');
+  if (!mainCol) return;
+
+  ipdInjectGmMaterialsStyles();
+
+  const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
+  const steps = (ip.roadmap || []).filter((s) => (s.submissions || []).length);
+
+  const section = document.createElement('section');
+  section.className = 'ipd-panel';
+  section.id = 'ipdGmMaterials';
+
+  const body = steps.length
+    ? steps
+        .map((step) => {
+          const label = (step.label || '').replace(/<br>/g, ' ');
+          const statusBits = [];
+          if (step.reviewStatus === 'reviewed') statusBits.push(`검토 완료 · ${step.adminProgress}%${step.needsRevision ? ' · 보완 필요' : ''}`);
+          else if (step.reviewStatus === 'requested') statusBits.push('검토 대기 중');
+          if (step.mode === 'requested') statusBits.push('제작 의뢰 중');
+          else if (step.mode === 'done') statusBits.push('제작 완료');
+          const subsHtml = (step.submissions || [])
+            .map((sub) => {
+              const subLabel = sub.label ? `<div class="ipd-gm-sub-label">${esc(sub.label)}</div>` : '';
+              const thumb = sub.imageData ? `<div class="ipd-gm-sub-thumb" style="background-image:url('${sub.imageData}')"></div>` : '';
+              const fileSize = sub.fileSize ? ` · ${Math.max(1, Math.round(sub.fileSize / 1024))}KB` : '';
+              const file = !sub.imageData && sub.fileName
+                ? sub.fileData
+                  ? `<a class="ipd-gm-sub-file" href="${sub.fileData}" download="${esc(sub.fileName)}" target="_blank" rel="noopener">${esc(sub.fileName)}${fileSize}</a>`
+                  : `<div class="ipd-gm-sub-file plain">${esc(sub.fileName)}${fileSize}</div>`
+                : '';
+              const note = sub.note ? `<div class="ipd-gm-sub-note">"${esc(sub.note)}"</div>` : '';
+              return `<div class="ipd-gm-sub">${subLabel}${thumb}${file}${note}</div>`;
+            })
+            .join('');
+          return `
+            <div class="ipd-gm-step">
+              <div class="ipd-gm-step-head">
+                <span class="ipd-gm-step-name">${esc(label)}</span>
+                ${statusBits.length ? `<span class="ipd-gm-step-status">${esc(statusBits.join(' · '))}</span>` : ''}
+              </div>
+              ${subsHtml}
+            </div>
+          `;
+        })
+        .join('')
+    : '<p class="desc">등록된 개발 자료가 아직 없어요.</p>';
+
+  section.innerHTML = `
+    <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>개발 맵 자료<span class="ipd-gm-badge">GM 전용</span></h2>
+    ${body}
+  `;
+
+  const introPanel = mainCol.querySelector('.ipd-panel');
+  if (introPanel) introPanel.after(section);
+  else mainCol.appendChild(section);
+}
+
+function ipdInjectGmMaterialsStyles() {
+  if (document.getElementById('ipd-gm-materials-style')) return;
+  const style = document.createElement('style');
+  style.id = 'ipd-gm-materials-style';
+  style.textContent = `
+    .ipd-gm-badge { font-size: 10px; font-weight: 800; color: var(--od-purple); background: rgba(139,107,255,0.14); padding: 2px 8px; border-radius: 999px; margin-left: 8px; vertical-align: middle; }
+    .ipd-gm-step { padding: 12px 0; border-bottom: 1px solid var(--od-border); }
+    .ipd-gm-step:last-child { border-bottom: none; }
+    .ipd-gm-step-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+    .ipd-gm-step-name { font-size: 13px; font-weight: 800; color: var(--od-ink); }
+    .ipd-gm-step-status { font-size: 11px; font-weight: 700; color: var(--od-purple); white-space: nowrap; }
+    .ipd-gm-sub { padding: 10px; background: var(--od-bg); border-radius: 10px; margin-bottom: 8px; font-size: 12px; color: var(--od-ink); }
+    .ipd-gm-sub-label { font-weight: 700; margin-bottom: 4px; }
+    .ipd-gm-sub-thumb { width: 100%; height: 120px; border-radius: 8px; background-size: cover; background-position: center; margin-bottom: 6px; }
+    .ipd-gm-sub-file { color: var(--od-purple); text-decoration: underline; display: block; margin-bottom: 4px; word-break: break-all; }
+    .ipd-gm-sub-file.plain { color: var(--od-ink-soft); text-decoration: none; }
+    .ipd-gm-sub-note { color: var(--od-ink-soft); font-style: italic; }
+  `;
+  document.head.appendChild(style);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

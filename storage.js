@@ -910,6 +910,39 @@ function bearipResizeImageToDataUrl(file, maxDim, quality) {
   });
 }
 
+// A registered roadmap-step document (시나리오 등의 워드/PDF/텍스트 파일) needs to
+// actually be openable later — including by GM on a different device, once
+// it's synced through Firebase with the rest of the IP — so it's read inline
+// as a data URL here, the same way an image becomes its thumbnail above.
+// Kept well under BEARIP_MAX_ASSET_FILE_BYTES (the IndexedDB-backed ASSETS
+// tab's 50MB limit): this instead lands in the IP's own JSON (localStorage +
+// Firebase), which has nowhere near that much headroom.
+const BEARIP_MAX_INLINE_DOC_BYTES = 5 * 1024 * 1024; // 5MB — localStorage's own
+// per-origin quota (separate from, and much smaller than, what navigator.
+// storage.estimate() reports) is typically only ~5-10MB total, shared with
+// every other IP/submission already saved there.
+
+const BEARIP_INLINE_DOC_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+];
+
+function bearipIsInlineDocFile(file) {
+  if (BEARIP_INLINE_DOC_TYPES.includes(file.type)) return true;
+  return /\.(pdf|docx?|txt)$/i.test(file.name || '');
+}
+
+function bearipReadFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('파일을 읽지 못했어요'));
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(file);
+  });
+}
+
 // Best-effort pre-flight check using the Storage API; returns true when the
 // browser doesn't support estimate() so we fall through to the real write
 // (which still fails safely via try/catch if space actually runs out).

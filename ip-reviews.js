@@ -57,7 +57,14 @@ let irActiveFilter = 'all';
 function irSubmissionEntryHtml(sub) {
   const label = sub.label ? `<div class="ir-submission-label">${bearipEscapeHtml(sub.label)}</div>` : '';
   const thumb = sub.imageData ? `<div class="ir-submission-thumb" style="background-image:url('${sub.imageData}')"></div>` : '';
-  const file = !sub.imageData && sub.fileName ? `<div class="ir-submission-file">${bearipEscapeHtml(sub.fileName)}${sub.fileSize ? ` · ${irFormatFileSize(sub.fileSize)}` : ''}</div>` : '';
+  // fileData (워드/PDF/텍스트) is an actual openable file, not just a name —
+  // link it so GM can open/save it, not just see that something was uploaded.
+  const fileMeta = sub.fileSize ? ` · ${irFormatFileSize(sub.fileSize)}` : '';
+  const file = !sub.imageData && sub.fileName
+    ? sub.fileData
+      ? `<a class="ir-submission-file" href="${sub.fileData}" download="${bearipEscapeHtml(sub.fileName)}" target="_blank" rel="noopener">${bearipEscapeHtml(sub.fileName)}${fileMeta}</a>`
+      : `<div class="ir-submission-file">${bearipEscapeHtml(sub.fileName)}${fileMeta}</div>`
+    : '';
   const note = sub.note ? `<div class="ir-submission-note">"${bearipEscapeHtml(sub.note)}"</div>` : '';
   return `<div class="ir-submission">${label}${thumb}${file}${note}</div>`;
 }

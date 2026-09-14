@@ -1102,7 +1102,7 @@ function stepMaterialEntryHtml(entry) {
   const uploadClass = hasFile ? 'md-step-material-upload has-file' : 'md-step-material-upload';
   const uploadStyle = entry.imageData ? ` style="background-image:url('${entry.imageData}')"` : '';
   const uploadText = hasFile ? entry.fileName || '파일 첨부됨' : '클릭해서 파일 업로드';
-  const uploadHint = hasFile ? '다른 파일을 선택하려면 클릭하세요' : '이미지, 영상, 문서 — 최대 50MB';
+  const uploadHint = hasFile ? '다른 파일을 선택하려면 클릭하세요' : '이미지, PDF, 워드(doc/docx), 텍스트 — 문서는 최대 5MB';
   return `
     <div class="md-step-material-entry" data-entry-id="${entry.id}">
       <div class="md-step-material-entry-head">
@@ -1211,12 +1211,26 @@ function ensureStepMaterialOverlay() {
     entry.fileSize = file.size;
     entry.mime = file.type;
     entry.imageData = null;
+    entry.fileData = null;
     if (file.type.startsWith('image/')) {
       try {
         entry.imageData = await bearipResizeImageToDataUrl(file, 720, 0.85);
       } catch (err) {
         uploadEl.classList.add('error');
         uploadEl.querySelector('.d').textContent = err.message || '이미지를 불러오지 못했어요';
+        return;
+      }
+    } else if (bearipIsInlineDocFile(file)) {
+      if (file.size > BEARIP_MAX_INLINE_DOC_BYTES) {
+        uploadEl.classList.add('error');
+        uploadEl.querySelector('.d').textContent = '문서 파일은 최대 5MB까지 등록할 수 있어요';
+        return;
+      }
+      try {
+        entry.fileData = await bearipReadFileAsDataUrl(file);
+      } catch (err) {
+        uploadEl.classList.add('error');
+        uploadEl.querySelector('.d').textContent = err.message || '파일을 불러오지 못했어요';
         return;
       }
     }
@@ -1251,6 +1265,7 @@ function ensureStepMaterialOverlay() {
         id: en.id,
         label: en.label ? en.label.trim() : '',
         imageData: en.imageData || null,
+        fileData: en.fileData || null,
         fileName: en.fileName || null,
         fileSize: en.fileSize || null,
         mime: en.mime || null,
