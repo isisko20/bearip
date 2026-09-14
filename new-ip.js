@@ -1,3 +1,17 @@
+// GM is a fixed admin nickname (see irIsGm in ip-reviews.js) that only
+// reviews other creators' IPs — it should never end up "owning" one itself.
+// bearipLoadIPs already self-heals away any IP that somehow lands under GM's
+// account (storage.js), but letting GM reach this form and fill it out would
+// be a silent dead end (the IP would just vanish on the next page load)
+// rather than an honest block, so stop it here instead.
+if (typeof bearipGetUser === 'function') {
+  const niCurrentUser = bearipGetUser();
+  if (niCurrentUser && niCurrentUser.nickname === 'GM') {
+    alert('GM 계정은 IP를 만들 수 없어요. 다른 계정으로 로그인해주세요.');
+    location.href = 'profile.html';
+  }
+}
+
 // This page doesn't load auth-ui.js (no profile-chip header to wire up),
 // so it doesn't get the shared bearipEscapeHtml from there — small local copy.
 function niEscapeHtml(str) {
