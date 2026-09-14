@@ -88,11 +88,12 @@ function odBuildPublishedCard(ip, index) {
 }
 
 // Hero stat line — real counts, not fabricated platform numbers: how many
-// IPs are actually public right now, and how many are actively recruiting.
+// IPs are actually public right now (or, for GM, how many exist at all —
+// see bearipLoadBrowsableIPs), and how many are actively recruiting.
 function odRenderHeroStats() {
   const statsEl = document.getElementById('odHeroStats');
   if (!statsEl) return;
-  const publicCount = typeof bearipLoadPublicIPs === 'function' ? bearipLoadPublicIPs().length : 0;
+  const publicCount = typeof bearipLoadBrowsableIPs === 'function' ? bearipLoadBrowsableIPs().length : 0;
   const recruitingCount = typeof bearipLoadPositions === 'function' ? bearipLoadPositions().length : 0;
   statsEl.innerHTML = `
     <span class="stat">공개된 IP <b>${publicCount}</b>개</span>
@@ -119,21 +120,26 @@ function odWireHeroPublishBtn() {
 
 document.addEventListener('DOMContentLoaded', () => {
   odRenderHeroStats();
-  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('publicIPs', odRenderHeroStats);
+  if (typeof bearipOnDataChange === 'function') {
+    bearipOnDataChange('publicIPs', odRenderHeroStats);
+    bearipOnDataChange('allIPs', odRenderHeroStats);
+  }
 });
 document.addEventListener('DOMContentLoaded', odWireHeroPublishBtn);
 
 // Re-runnable so a live change from Firebase (someone else publishing,
 // unpublishing, or editing a public IP) redraws the grid without a reload —
 // previously-rendered cards are cleared first (tagged via data-published)
-// since bearipLoadPublicIPs() is re-read fresh each time.
+// since bearipLoadBrowsableIPs() is re-read fresh each time. Shows every IP
+// (not just published ones) when GM is logged in — see
+// bearipLoadBrowsableIPs in storage.js — for 제작 시뮬레이션.
 function odRenderPublishedCards() {
   const container = document.querySelector('.od-cards');
-  if (!container || typeof bearipLoadPublicIPs !== 'function') return;
+  if (!container || typeof bearipLoadBrowsableIPs !== 'function') return;
 
   container.querySelectorAll('.od-card[data-published="1"]').forEach((el) => el.remove());
 
-  const publicIPs = bearipLoadPublicIPs();
+  const publicIPs = bearipLoadBrowsableIPs();
   if (!publicIPs.length) return;
 
   const firstMock = container.querySelector('.mock-slot');
@@ -157,5 +163,8 @@ function odRenderPublishedCards() {
 
 document.addEventListener('DOMContentLoaded', () => {
   odRenderPublishedCards();
-  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('publicIPs', odRenderPublishedCards);
+  if (typeof bearipOnDataChange === 'function') {
+    bearipOnDataChange('publicIPs', odRenderPublishedCards);
+    bearipOnDataChange('allIPs', odRenderPublishedCards);
+  }
 });

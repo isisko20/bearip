@@ -204,10 +204,14 @@ function bearipSaveIPs(ips) {
 }
 
 function bearipAddIP(ip) {
+  // Recorded from the start (not just on publish) so GM's full-IP feed
+  // (bearipSyncIpForGm) can always say whose IP it is.
+  if (!ip.ownerNickname) ip.ownerNickname = bearipScopeSuffix();
   const ips = bearipLoadIPs();
   ips.unshift(ip);
   bearipSaveIPs(ips);
   localStorage.setItem(bearipScopedKey(BEARIP_CURRENT_KEY), ip.id);
+  if (typeof bearipSyncIpForGm === 'function') bearipSyncIpForGm(ip);
   return ip;
 }
 
@@ -223,6 +227,9 @@ function bearipUpdateIP(id, patch) {
   if (ips[idx].visibility === 'public' && typeof bearipSetIpPublic === 'function') {
     bearipSetIpPublic(ips[idx], true);
   }
+  // GM's full feed (제작 시뮬레이션) mirrors every IP regardless of
+  // visibility — separate from the public-only snapshot above.
+  if (typeof bearipSyncIpForGm === 'function') bearipSyncIpForGm(ips[idx]);
   return ips[idx];
 }
 
@@ -237,6 +244,10 @@ function bearipDeleteIP(id) {
   }
   if (bearipGetFeaturedId() === id) {
     bearipSetFeaturedId(null);
+  }
+  if (bearipFirebaseReady()) {
+    firebase.database().ref('allIPs/' + id).remove();
+    firebase.database().ref('publicIPs/' + id).remove();
   }
   if (!ip) return;
 
@@ -524,8 +535,8 @@ function bearipSafePathSegment(str) {
   return String(str || '').replace(/[.#$[\]/]/g, '_') || '_guest';
 }
 
-const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {} };
-const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [] };
+const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {} };
+const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [] };
 
 function bearipOnDataChange(kind, fn) {
   if (_bearipDataListeners[kind]) _bearipDataListeners[kind].push(fn);
@@ -634,6 +645,40 @@ function bearipSetIpPublic(ip, isPublic) {
   const ref = firebase.database().ref('publicIPs/' + ip.id);
   if (isPublic) ref.set(ip);
   else ref.remove();
+}
+
+// ---- GM-only: every IP regardless of publish status — a 제작요청/전문가검토
+// record only carries the one step/item that was submitted, not the whole
+// IP, so GM has no way to see the rest of it for 제작 시뮬레이션. Every IP
+// syncs here on every save (bearipAddIP/bearipUpdateIP, below), separate
+// from bearipSetIpPublic's public-only snapshot above — regular creators
+// still only ever see what others have actually published; only GM's own
+// client subscribes to this feed at all (see bearipInitFirebaseWatchers).
+function bearipSyncIpForGm(ip) {
+  if (!bearipFirebaseReady() || !ip || !ip.id) return;
+  firebase.database().ref('allIPs/' + ip.id).set(ip);
+}
+
+function bearipLoadAllIPsForGm() {
+  return Object.values(_bearipDataCache.allIPs || {});
+}
+
+// What the OPEN DNA / DNA ROOM / CONTENT ROOM published-IP grids should
+// actually render: everything for GM (제작 시뮬레이션), otherwise just what's
+// genuinely public. GM's view is allIPs UNION publicIPs, not allIPs alone —
+// an IP published before allIPs syncing existed (or momentarily out of sync)
+// still needs to show up for GM as long as it's in publicIPs.
+function bearipLoadBrowsableIPs() {
+  const user = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
+  if (!user || user.nickname !== 'GM') return bearipLoadPublicIPs();
+  const byId = {};
+  bearipLoadPublicIPs().forEach((ip) => {
+    byId[ip.id] = ip;
+  });
+  bearipLoadAllIPsForGm().forEach((ip) => {
+    byId[ip.id] = ip;
+  });
+  return Object.values(byId);
 }
 
 // ---- Mock login / current user (no backend — nickname-only) ----
@@ -929,4 +974,8 @@ function bearipDeleteAssetFile(id) {
   _bearipWatchPath('ipReviews', 'ipReviews');
   _bearipWatchPath('ipOverallComments', 'ipOverallComments');
   _bearipWatchPath('publicIPs', 'publicIPs');
+  // Only GM's own client pulls the full every-IP feed — everyone else's
+  // gallery views only ever need (and only ever subscribe to) publicIPs.
+  const _u = bearipGetUser();
+  if (_u && _u.nickname === 'GM') _bearipWatchPath('allIPs', 'allIPs');
 })();

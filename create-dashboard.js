@@ -36,16 +36,17 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Injects every publicly published IP (from Firebase — see
-// bearipLoadPublicIPs in storage.js, same 'public' flag MY DNA's OPEN DNA에
-// 공개하기 button sets) into the OPEN DNA panel's carousel. Re-rendered
-// whenever that live list changes, not just on page load.
+// bearipLoadBrowsableIPs in storage.js, same 'public' flag MY DNA's OPEN
+// DNA에 공개하기 button sets — or, for GM, every IP at all, for 제작
+// 시뮬레이션) into the OPEN DNA panel's carousel. Re-rendered whenever that
+// live list changes, not just on page load.
 function drRenderOpenDnaTrack() {
   const track = document.getElementById('openDnaTrack');
-  if (!track || typeof bearipLoadPublicIPs !== 'function') return;
+  if (!track || typeof bearipLoadBrowsableIPs !== 'function') return;
 
   track.querySelectorAll('.dr-card[data-published="1"]').forEach((el) => el.remove());
 
-  const publicIPs = bearipLoadPublicIPs();
+  const publicIPs = bearipLoadBrowsableIPs();
   if (!publicIPs.length) return;
 
   const emptyEl = document.getElementById('openDnaTrackEmpty');
@@ -84,7 +85,10 @@ function drRenderOpenDnaTrack() {
 
 document.addEventListener('DOMContentLoaded', () => {
   drRenderOpenDnaTrack();
-  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('publicIPs', drRenderOpenDnaTrack);
+  if (typeof bearipOnDataChange === 'function') {
+    bearipOnDataChange('publicIPs', drRenderOpenDnaTrack);
+    bearipOnDataChange('allIPs', drRenderOpenDnaTrack);
+  }
 });
 
 // Hero "상상력 구체화하기" CTA — jumps into the most recently touched real

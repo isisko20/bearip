@@ -36,14 +36,16 @@ function crPosterAttrs(ip, index) {
 }
 
 function crRenderPublished() {
-  if (typeof bearipLoadPublicIPs !== 'function') return;
+  if (typeof bearipLoadBrowsableIPs !== 'function') return;
 
   // Clear anything a previous run of this function inserted, so a live
   // update (someone publishing/unpublishing while this page is open)
   // redraws instead of piling up duplicate cards.
   document.querySelectorAll('.cr-card[data-published="1"], .cr-rank-card[data-published="1"]').forEach((el) => el.remove());
 
-  const publicIPs = bearipLoadPublicIPs();
+  // Every IP regardless of publish status when GM is logged in (제작
+  // 시뮬레이션) — see bearipLoadBrowsableIPs in storage.js.
+  const publicIPs = bearipLoadBrowsableIPs();
   if (!publicIPs.length) return;
 
   const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
@@ -151,5 +153,8 @@ function crRenderPublished() {
 
 document.addEventListener('DOMContentLoaded', () => {
   crRenderPublished();
-  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('publicIPs', crRenderPublished);
+  if (typeof bearipOnDataChange === 'function') {
+    bearipOnDataChange('publicIPs', crRenderPublished);
+    bearipOnDataChange('allIPs', crRenderPublished);
+  }
 });
