@@ -1203,23 +1203,29 @@ function openStepMaterialEditor(index) {
 // instead of one silent free bulk action. Each request now genuinely costs
 // BEARIP_EXPERT_REVIEW_PRICE credits — real feedback from the page-admin/GM
 // has a cost, same principle as 제작요청 already had for actual production.
+// action is null (nothing to do — a real in-progress/finished state, not an
+// empty dead end), 'review' (검토 요청, spends BEARIP_EXPERT_REVIEW_PRICE —
+// scoring material that already exists), or 'production' (제작 요청, spends
+// BEARIP_ROADMAP_STEP_PRICE[key] — commissioning the step from scratch when
+// there's nothing registered yet to review in the first place).
 function mdExpertHelpRowMeta(step) {
   const status = mdStepStatus(step);
-  if (status === 'unregistered') return { tag: '자료 먼저 등록해주세요', action: false };
-  if (status === 'writing') return { tag: null, action: true, actionLabel: `검토 요청 · ${BEARIP_EXPERT_REVIEW_PRICE}C` };
-  if (status === 'reviewing') return { tag: '검토 대기 중', action: false };
-  if (status === 'needs_revision') return { tag: null, action: true, actionLabel: `다시 요청하기 · ${BEARIP_EXPERT_REVIEW_PRICE}C` };
-  if (status === 'ready') return { tag: `검토 완료 · ${step.adminProgress}%`, action: false };
-  if (status === 'production_requested') return { tag: '제작 의뢰 중', action: false };
-  if (status === 'production_done') return { tag: '제작 완료', action: false };
-  return { tag: null, action: false };
+  const productionPrice = BEARIP_ROADMAP_STEP_PRICE[step.key] || 0;
+  if (status === 'unregistered') return { tag: null, action: 'production', actionLabel: `제작 요청 · ${productionPrice}C` };
+  if (status === 'writing') return { tag: null, action: 'review', actionLabel: `검토 요청 · ${BEARIP_EXPERT_REVIEW_PRICE}C` };
+  if (status === 'reviewing') return { tag: '검토 대기 중', action: null };
+  if (status === 'needs_revision') return { tag: null, action: 'review', actionLabel: `다시 요청하기 · ${BEARIP_EXPERT_REVIEW_PRICE}C` };
+  if (status === 'ready') return { tag: `검토 완료 · ${step.adminProgress}%`, action: null };
+  if (status === 'production_requested') return { tag: '제작 의뢰 중', action: null };
+  if (status === 'production_done') return { tag: '제작 완료', action: null };
+  return { tag: null, action: null };
 }
 
 function expertHelpRowHtml(step, index) {
   const label = step.label.replace(/<br>/g, ' ');
   const meta = mdExpertHelpRowMeta(step);
   const rightHtml = meta.action
-    ? `<button type="button" class="md-expert-help-row-btn" data-index="${index}">${meta.actionLabel}</button>`
+    ? `<button type="button" class="md-expert-help-row-btn ${meta.action}" data-index="${index}" data-action="${meta.action}">${meta.actionLabel}</button>`
     : `<span class="md-expert-help-row-tag">${meta.tag || ''}</span>`;
   return `
     <div class="md-expert-help-row">
@@ -1252,7 +1258,7 @@ function ensureExpertHelpOverlay() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
-      <p class="md-expert-help-desc">항목을 골라 전문가 검토를 요청하세요. 크레딧이 결제되고, 담당 IP 매니저가 확인 후 항목별 전문가 준비도와 코멘트를 알려드려요.</p>
+      <p class="md-expert-help-desc">등록한 자료가 있으면 검토 요청, 아직 없으면 제작 요청을 할 수 있어요. 크레딧이 결제되고 담당 IP 매니저에게 전달돼요.</p>
       <div class="md-expert-help-balance">보유 크레딧 <span id="expertHelpBalance" class="bearip-credit-balance-display">0C</span> · <a href="#" id="expertHelpTopup">충전하러 가기 →</a></div>
       <div class="md-expert-help-list" id="expertHelpList"></div>
     </div>
@@ -1264,7 +1270,16 @@ function ensureExpertHelpOverlay() {
       return;
     }
     const btn = e.target.closest('.md-expert-help-row-btn');
-    if (btn) mdSpendAndRequestReview(parseInt(btn.dataset.index, 10));
+    if (!btn) return;
+    const index = parseInt(btn.dataset.index, 10);
+    if (btn.dataset.action === 'production') {
+      const step = currentIP.roadmap[index];
+      if (!step) return;
+      closeExpertHelpModal();
+      openProductionRequest('roadmap', step.key, step.label.replace(/<br>/g, ' '), BEARIP_ROADMAP_STEP_PRICE[step.key] || 0);
+    } else {
+      mdSpendAndRequestReview(index);
+    }
   });
   document.getElementById('expertHelpTopup').addEventListener('click', (e) => {
     e.preventDefault();

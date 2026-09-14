@@ -535,6 +535,10 @@
   font-size: 11.5px; font-weight: 700; font-family: inherit; background: var(--dr-purple); color: #fff;
 }
 .md-expert-help-row-btn:hover { opacity: 0.9; }
+/* 검토 요청 (review, scoring existing material) stays purple; 제작 요청
+   (production, commissioning from nothing) gets its own color so the two
+   kinds of request are distinguishable at a glance in a mixed list. */
+.md-expert-help-row-btn.production { background: var(--dr-blue); }
 
 /* ---- 개발 항목 자료 등록/수정 modal (openStepMaterialEditor) — a step can
    hold several registered entries (e.g. 시나리오의 1화/2화), so the modal
