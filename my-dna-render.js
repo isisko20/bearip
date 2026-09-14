@@ -307,8 +307,9 @@ function renderStatus() {
   document.getElementById('readinessDesc').textContent = `선택한 목표(${GOAL_LABELS[currentIP.goal]}) 준비도`;
   const commentEl = document.getElementById('readinessOverallComment');
   if (commentEl) {
-    if (currentIP.overallReviewComment) {
-      commentEl.textContent = `"${currentIP.overallReviewComment}"`;
+    const overallComment = typeof bearipGetIpOverallComment === 'function' ? bearipGetIpOverallComment(currentIP.id) : '';
+    if (overallComment) {
+      commentEl.textContent = `"${overallComment}"`;
       commentEl.hidden = false;
     } else {
       commentEl.hidden = true;
@@ -600,6 +601,90 @@ function mdSetRoadmapProductionMode(key, mode) {
   if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { roadmap: currentIP.roadmap });
 }
 
+// 제작요청/전문가검토 are now a cross-device queue (storage.js's Firebase-backed
+// bearipLoadProductionRequests/bearipLoadIpReviews) — whoever fulfills them
+// (GM) acts from a different browser and can no longer reach into this
+// browser's localStorage to flip the IP's own roadmap step directly like it
+// used to (prSyncIpMode/irSyncIpStep). Instead, whenever that live queue
+// changes, each creator's own device pulls the latest status for its own
+// IPs and applies it locally here. Safe to re-run: once a step's mode/
+// reviewStatus moves off 'requested' it no longer matches, so a rejection's
+// one-time credit refund can't double-apply.
+function mdReconcileRemoteStatus() {
+  if (typeof bearipLoadIPs !== 'function' || typeof bearipLoadProductionRequests !== 'function') return;
+  const productionRequests = bearipLoadProductionRequests();
+  const ipReviews = bearipLoadIpReviews();
+  let refunded = 0;
+  let touchedCurrent = false;
+
+  const latestFor = (list, matches) =>
+    list.filter(matches).sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt))[0];
+
+  bearipLoadIPs().forEach((ip) => {
+    let changed = false;
+
+    const roadmap = (ip.roadmap || []).map((step) => {
+      let s = step;
+      if (s.mode === 'requested') {
+        const req = latestFor(productionRequests, (r) => r.ipId === ip.id && r.scope !== 'dna' && r.key === s.key);
+        if (req && (req.status === 'done' || req.status === 'rejected')) {
+          s = Object.assign({}, s, { mode: req.status === 'done' ? 'done' : 'self' });
+          if (req.status === 'rejected') refunded += req.price;
+          changed = true;
+        }
+      }
+      if (s.reviewStatus === 'requested') {
+        const rev = latestFor(ipReviews, (r) => r.ipId === ip.id && r.stepKey === s.key);
+        if (rev && rev.status === 'reviewed') {
+          s = Object.assign({}, s, {
+            reviewStatus: 'reviewed',
+            adminProgress: rev.adminProgress,
+            adminComment: rev.adminComment,
+            needsRevision: rev.needsRevision,
+            adminReviewedAt: rev.reviewedAt,
+          });
+          changed = true;
+        }
+      }
+      return s;
+    });
+
+    let dnaProductionMode = ip.dnaProductionMode;
+    if (dnaProductionMode) {
+      const nextDna = Object.assign({}, dnaProductionMode);
+      Object.keys(nextDna).forEach((key) => {
+        if (nextDna[key] !== 'requested') return;
+        const req = latestFor(productionRequests, (r) => r.ipId === ip.id && r.scope === 'dna' && r.key === key);
+        if (req && (req.status === 'done' || req.status === 'rejected')) {
+          nextDna[key] = req.status === 'done' ? 'done' : 'self';
+          if (req.status === 'rejected') refunded += req.price;
+          changed = true;
+        }
+      });
+      dnaProductionMode = nextDna;
+    }
+
+    if (!changed) return;
+    bearipUpdateIP(ip.id, { roadmap, dnaProductionMode });
+    if (currentIP && currentIP.id === ip.id) {
+      currentIP.roadmap = roadmap;
+      currentIP.dnaProductionMode = dnaProductionMode;
+      touchedCurrent = true;
+    }
+  });
+
+  if (refunded > 0) {
+    bearipAddCredits(refunded);
+    if (typeof bearipRefreshCreditDisplays === 'function') bearipRefreshCreditDisplays();
+  }
+  if (touchedCurrent) {
+    if (typeof renderRoadmap === 'function') renderRoadmap();
+    if (typeof renderStatus === 'function') renderStatus();
+    if (typeof renderDnaReportTiles === 'function') renderDnaReportTiles();
+    if (typeof recomputeProductionProgress === 'function') recomputeProductionProgress();
+  }
+}
+
 // Switching back to 자체제작 refunds the credit — nothing was actually
 // delivered, so there's nothing to keep the payment for.
 function mdCancelProductionRequest(scope, key) {
@@ -713,6 +798,7 @@ function ensureProductionRequestOverlay() {
       id: 'preq_' + Date.now(),
       ipId: currentIP.id,
       ipTitle: currentIP.title || '제목 없는 IP',
+      requesterNickname: bearipScopeSuffix(),
       scope,
       key,
       label,
@@ -1315,6 +1401,7 @@ function mdSpendAndRequestReview(index) {
     id: 'ipreview_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
     ipId: currentIP.id,
     ipTitle: currentIP.title,
+    requesterNickname: bearipScopeSuffix(),
     stepKey: step.key,
     stepLabel: step.label.replace(/<br>/g, ' '),
     submissions: step.submissions,
@@ -1698,6 +1785,14 @@ function persistGoalChange(goal) {
 document.addEventListener('DOMContentLoaded', () => {
   if (!loadCurrentIP()) return;
   renderAll();
+
+  if (typeof bearipOnDataChange === 'function') {
+    bearipOnDataChange('productionRequests', mdReconcileRemoteStatus);
+    bearipOnDataChange('ipReviews', mdReconcileRemoteStatus);
+    bearipOnDataChange('ipOverallComments', () => {
+      if (typeof renderStatus === 'function') renderStatus();
+    });
+  }
 
   document.getElementById('mdPublishBtn').addEventListener('click', toggleIPVisibility);
 

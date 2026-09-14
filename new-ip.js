@@ -486,6 +486,7 @@ function requestExpertReviewForIp(ip) {
       id: 'ipreview_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
       ipId: ip.id,
       ipTitle: ip.title,
+      requesterNickname: bearipScopeSuffix(),
       stepKey: step.key,
       stepLabel: step.label.replace(/<br>/g, ' '),
       submissions: step.submissions,

@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   ntRender();
+  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('notifications', ntRender);
 
   document.getElementById('ntReadAllBtn').addEventListener('click', () => {
     bearipMarkAllNotificationsRead();

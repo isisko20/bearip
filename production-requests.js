@@ -1,9 +1,29 @@
-// "제작요청 관리" — lets whoever's fulfilling requests (page admin/expert,
-// stood in here by the same single mock account) see every 제작요청 across
-// every IP and move it to 완료 (done) or 거절 (rejected, refunded) — closing
-// the loop MY DNA's own 제작요청 tab left open at "검토 대기".
-
+// "제작요청 관리" — lets whoever's fulfilling requests (GM) see every
+// 제작요청 across every IP/creator and move it to 완료 (done) or 거절
+// (rejected, refunded) — closing the loop MY DNA's own 제작요청 tab left open
+// at "검토 대기". Now backed by Firebase (see storage.js) so this is genuinely
+// every creator's requests, not just requests made from this same browser —
+// gated to GM the same way ip-reviews.js is, so a regular creator can't
+// browse into (and act on) other people's requests.
 const PR_STATUS_LABEL = { pending: '검토 대기', done: '완료', cancelled: '취소됨', rejected: '거절됨' };
+
+function prIsGm() {
+  const user = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
+  return !!(user && user.nickname === 'GM');
+}
+
+function prShowGmLocked() {
+  const filterRow = document.getElementById('prFilterRow');
+  const list = document.getElementById('prList');
+  const empty = document.getElementById('prEmpty');
+  const locked = document.getElementById('prGmLocked');
+  if (filterRow) filterRow.style.display = 'none';
+  if (list) list.style.display = 'none';
+  if (empty) empty.style.display = 'none';
+  if (locked) locked.style.display = 'flex';
+  const loginBtn = document.getElementById('prGmLoginBtn');
+  if (loginBtn) loginBtn.addEventListener('click', () => bearipGoToLogin('production-requests.html'));
+}
 
 function prFormatRelativeTime(iso) {
   const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
@@ -109,43 +129,27 @@ function prOpenAction(id, kind) {
   });
 }
 
-// Mirrors the self/requested flag mdSetDnaProductionMode/mdSetRoadmapProductionMode
-// (my-dna-render.js) write on the IP itself — done here directly since this
-// page doesn't load my-dna-render.js. 'done' shows as a finished tag with
-// nothing left to cancel; a rejection reverts to 'self' so re-requesting works.
-function prSyncIpMode(req, mode) {
-  const ips = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
-  const ip = ips.find((i) => i.id === req.ipId);
-  if (!ip) return;
-  if (req.scope === 'dna') {
-    const dnaProductionMode = Object.assign({}, ip.dnaProductionMode, { [req.key]: mode });
-    bearipUpdateIP(ip.id, { dnaProductionMode });
-  } else {
-    const roadmap = (ip.roadmap || []).map((s) => (s.key === req.key ? Object.assign({}, s, { mode }) : s));
-    bearipUpdateIP(ip.id, { roadmap });
-  }
-}
-
 function prApplyAction(req, kind, note) {
   const patch = { status: kind };
   if (kind === 'done') patch.resultNote = note;
   bearipUpdateProductionRequest(req.id, patch);
-  prSyncIpMode(req, kind === 'done' ? 'done' : 'self');
+  // GM is on its own device/account now, with no access to the requester's
+  // local IP data — the requester's own MY DNA pulls this result (and, on a
+  // rejection, refunds the credit) in itself once the update above lands,
+  // via mdReconcileRemoteStatus in my-dna-render.js.
 
-  if (kind === 'rejected') {
-    bearipAddCredits(req.price);
-    if (typeof bearipRefreshCreditDisplays === 'function') bearipRefreshCreditDisplays();
-  }
-
-  bearipAddNotification({
-    type: 'production',
-    title: kind === 'done' ? '제작이 완료됐어요' : '제작요청이 거절됐어요',
-    message:
-      kind === 'done'
-        ? `'${req.ipTitle}'의 '${req.label}' 제작이 완료됐어요.${note ? ` ${note}` : ''}`
-        : `'${req.ipTitle}'의 '${req.label}' 제작요청이 거절됐어요. ${req.price}C를 환불했어요.${note ? ` 사유: ${note}` : ''}`,
-    link: 'my-dna.html',
-  });
+  bearipAddNotification(
+    {
+      type: 'production',
+      title: kind === 'done' ? '제작이 완료됐어요' : '제작요청이 거절됐어요',
+      message:
+        kind === 'done'
+          ? `'${req.ipTitle}'의 '${req.label}' 제작이 완료됐어요.${note ? ` ${note}` : ''}`
+          : `'${req.ipTitle}'의 '${req.label}' 제작요청이 거절됐어요. ${req.price}C를 환불했어요.${note ? ` 사유: ${note}` : ''}`,
+      link: 'my-dna.html',
+    },
+    req.requesterNickname
+  );
 
   prRenderList();
   bearipShowToast(kind === 'done' ? '완료 처리했어요' : '요청을 거절했어요');
@@ -160,4 +164,11 @@ document.getElementById('prFilterRow').addEventListener('click', (e) => {
   prRenderList();
 });
 
-document.addEventListener('DOMContentLoaded', prRenderList);
+document.addEventListener('DOMContentLoaded', () => {
+  if (!prIsGm()) {
+    prShowGmLocked();
+    return;
+  }
+  prRenderList();
+  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('productionRequests', prRenderList);
+});

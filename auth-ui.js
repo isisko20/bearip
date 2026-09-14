@@ -283,17 +283,25 @@ document.addEventListener('DOMContentLoaded', () => {
     homeLink.parentNode.insertBefore(backBtn, homeLink);
   });
 
-  const unread = typeof bearipGetUnreadCount === 'function' ? bearipGetUnreadCount() : 0;
+  // Bell: jumps straight to the notifications page. Notifications now arrive
+  // live from Firebase (see storage.js), so the unread dot is refreshed both
+  // now and again whenever fresh data streams in — not just on page load.
+  function bearipRefreshNotifBell() {
+    const unread = typeof bearipGetUnreadCount === 'function' ? bearipGetUnreadCount() : 0;
+    document.querySelectorAll('.dr-icon-btn[aria-label="알림"], .od-icon-btn[aria-label="알림"]').forEach((btn) => {
+      let dot = btn.querySelector('.dot');
+      if (unread > 0 && !dot) {
+        dot = document.createElement('span');
+        dot.className = 'dot';
+        btn.appendChild(dot);
+      }
+      if (dot) dot.style.display = unread > 0 ? '' : 'none';
+    });
+  }
+  bearipRefreshNotifBell();
+  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('notifications', bearipRefreshNotifBell);
 
-  // Bell: unchanged — jumps straight to the notifications page.
   document.querySelectorAll('.dr-icon-btn[aria-label="알림"], .od-icon-btn[aria-label="알림"]').forEach((btn) => {
-    let dot = btn.querySelector('.dot');
-    if (unread > 0 && !dot) {
-      dot = document.createElement('span');
-      dot.className = 'dot';
-      btn.appendChild(dot);
-    }
-    if (dot) dot.style.display = unread > 0 ? '' : 'none';
     btn.style.cursor = 'pointer';
     btn.addEventListener('click', () => {
       location.href = 'notifications.html';
@@ -356,9 +364,13 @@ document.addEventListener('DOMContentLoaded', () => {
         ${creditRowHtml()}
         <button class="bearip-pm-btn primary" data-action="profile">내 정보 수정 →</button>
         <button class="bearip-pm-btn" data-action="notifications">알림함</button>
-        <button class="bearip-pm-btn" data-action="production-admin">제작요청 관리</button>
         <button class="bearip-pm-btn" data-action="crew-applicants">지원자 관리</button>
-        ${isGm ? '<button class="bearip-pm-btn" data-action="ip-review-admin">전문가 검토 관리 (GM)</button>' : ''}
+        ${
+          isGm
+            ? `<button class="bearip-pm-btn" data-action="production-admin">제작요청 관리 (GM)</button>
+        <button class="bearip-pm-btn" data-action="ip-review-admin">전문가 검토 관리 (GM)</button>`
+            : ''
+        }
         ${themeToggleRowHtml()}
         <button class="bearip-pm-btn danger" data-action="logout">로그아웃</button>
       `;

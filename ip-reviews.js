@@ -4,8 +4,11 @@
 // one-line 코멘트 per step. Separate from 제작요청 관리 (production-requests.js):
 // that's about outsourcing a step to a Creator; this is the manager scoring
 // how complete/real the creator's own submitted material already is.
-// Results are written back onto the IP's own roadmap[i] (see irSyncIpStep)
-// so MY DNA can show them without reading this list.
+// Requests/results live in Firebase (see storage.js) so GM can work through
+// them from any device — the requester's own MY DNA pulls the result back
+// onto that IP's roadmap[i] itself (see mdReconcileRemoteStatus in
+// my-dna-render.js) rather than this page reaching into local storage it no
+// longer has access to.
 //
 // Gated to a single mock "관리자" account (temporary nickname: GM — there's
 // no real backend/roles yet, so this is just a nickname check like every
@@ -82,8 +85,7 @@ function irGroupByIp(list) {
 }
 
 function irOverallCommentHtml(ipId) {
-  const ip = (typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : []).find((i) => i.id === ipId);
-  const comment = ip ? ip.overallReviewComment || '' : '';
+  const comment = typeof bearipGetIpOverallComment === 'function' ? bearipGetIpOverallComment(ipId) : '';
   return `
     <div class="ir-overall">
       <span class="ir-overall-label">종합 코멘트 (전문가 준비도 아래 MY DNA에 표시돼요)</span>
@@ -156,7 +158,7 @@ function irRenderList() {
 }
 
 function irSaveOverallComment(ipId, comment) {
-  bearipUpdateIP(ipId, { overallReviewComment: comment || null });
+  bearipSetIpOverallComment(ipId, comment || null);
   bearipShowToast('종합 코멘트를 저장했어요');
 }
 
@@ -203,38 +205,23 @@ function irOpenReviewModal(id) {
   });
 }
 
-// Mirrors the result onto the IP's own roadmap[i] — same reasoning as
-// production-requests.js's prSyncIpMode, done here directly since this page
-// doesn't load my-dna-render.js.
-function irSyncIpStep(req, progress, needsRevision, comment) {
-  const ips = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
-  const ip = ips.find((i) => i.id === req.ipId);
-  if (!ip) return;
-  const roadmap = (ip.roadmap || []).map((s) =>
-    s.key === req.stepKey
-      ? Object.assign({}, s, {
-          reviewStatus: 'reviewed',
-          adminProgress: progress,
-          adminComment: comment,
-          needsRevision,
-          adminReviewedAt: new Date().toISOString(),
-        })
-      : s
-  );
-  bearipUpdateIP(ip.id, { roadmap });
-}
-
 function irApplyReview(req, progress, needsRevision, comment) {
   const reviewedAt = new Date().toISOString();
   bearipUpdateIpReview(req.id, { status: 'reviewed', adminProgress: progress, adminComment: comment, needsRevision, reviewedAt });
-  irSyncIpStep(req, progress, needsRevision, comment);
+  // GM is on its own device/account now, with no access to the requester's
+  // local IP data — the requester's own MY DNA pulls this result in itself
+  // (see mdReconcileRemoteStatus in my-dna-render.js) once the update above
+  // lands, instead of this page reaching into the IP directly like it used to.
 
-  bearipAddNotification({
-    type: 'ip',
-    title: '전문가 검토 결과가 도착했어요',
-    message: `'${req.ipTitle}'의 '${req.stepLabel}' 항목이 ${progress}%로 진단됐어요.${needsRevision ? ' 보완이 필요해요.' : ''}${comment ? ` "${comment}"` : ''}`,
-    link: 'my-dna.html',
-  });
+  bearipAddNotification(
+    {
+      type: 'ip',
+      title: '전문가 검토 결과가 도착했어요',
+      message: `'${req.ipTitle}'의 '${req.stepLabel}' 항목이 ${progress}%로 진단됐어요.${needsRevision ? ' 보완이 필요해요.' : ''}${comment ? ` "${comment}"` : ''}`,
+      link: 'my-dna.html',
+    },
+    req.requesterNickname
+  );
 
   irRenderList();
   bearipShowToast('검토 결과를 저장했어요');
@@ -255,4 +242,5 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
   irRenderList();
+  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('ipReviews', irRenderList);
 });

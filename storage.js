@@ -495,77 +495,122 @@ function bearipUpdateApplicantStatus(positionId, applicantId, status) {
   return list[idx];
 }
 
-// ---- 제작요청 history — every production request a user has submitted
-// from MY DNA, kept separately from the IP's own self/requested mode flag
-// so the user can see a full list (including cancelled ones) later, and so
-// a future 관리자 승인/AI evaluation flow has somewhere to write a 'done'
-// status without changing this shape.
-const BEARIP_PRODUCTION_REQUESTS_KEY = 'bearip_production_requests';
-
-function bearipLoadProductionRequests() {
-  try {
-    const raw = localStorage.getItem(BEARIP_PRODUCTION_REQUESTS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    return [];
-  }
+// ---- Firebase-backed cross-device data ----
+// Everything above is deliberately per-browser (localStorage) — MY DNA's own
+// IPs, credits, portfolio. But 제작요청/전문가검토/알림 only make sense if the
+// person fulfilling them (GM, or a Creator) is a different person on a
+// different device than whoever requested them — localStorage alone can
+// never deliver that. These three (plus the small 종합 코멘트 field GM leaves
+// per IP) live in Firebase Realtime Database instead, loaded via a plain
+// <script> tag (firebase-init.js) before this file on every page.
+//
+// Reads stay synchronous like every other bearipLoad*() here: a live
+// listener keeps an in-memory cache current, so callers don't need to learn
+// async. A renderer that should redraw the moment fresh data arrives (not
+// just on next page load) should register with bearipOnDataChange(kind, fn).
+function bearipFirebaseReady() {
+  return typeof firebase !== 'undefined' && !!firebase.apps && firebase.apps.length > 0;
 }
 
-function bearipSaveProductionRequests(list) {
-  localStorage.setItem(BEARIP_PRODUCTION_REQUESTS_KEY, JSON.stringify(list));
+// Realtime Database path segments can't contain . # $ [ ] / — nicknames are
+// free-typed (see login.js), so sanitize before using one as a path key.
+function bearipSafePathSegment(str) {
+  return String(str || '').replace(/[.#$[\]/]/g, '_') || '_guest';
+}
+
+const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {} };
+const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [] };
+
+function bearipOnDataChange(kind, fn) {
+  if (_bearipDataListeners[kind]) _bearipDataListeners[kind].push(fn);
+}
+
+function _bearipNotifyListeners(kind) {
+  (_bearipDataListeners[kind] || []).forEach((fn) => {
+    try {
+      fn();
+    } catch (e) {
+      /* one broken listener shouldn't break the rest */
+    }
+  });
+}
+
+function _bearipWatchPath(kind, path) {
+  if (!bearipFirebaseReady()) return;
+  firebase
+    .database()
+    .ref(path)
+    .on('value', (snap) => {
+      _bearipDataCache[kind] = snap.val() || {};
+      _bearipNotifyListeners(kind);
+    });
+}
+
+function _bearipMapToArray(map, sortField) {
+  return Object.keys(map || {})
+    .map((id) => Object.assign({ id }, map[id]))
+    .sort((a, b) => new Date(b[sortField] || 0) - new Date(a[sortField] || 0));
+}
+
+// ---- 제작요청 — a global queue (every creator's requests, one place) so
+// whoever fulfills them (GM) can see and close them out from any device, and
+// so the requester sees the result back on theirs. Kept separate from the
+// IP's own self/requested mode flag; my-dna-render.js's mdReconcileRemoteStatus
+// pulls the outcome back onto the requester's own local IP once it lands
+// here, since GM's device has no access to that IP's local data anymore.
+function bearipLoadProductionRequests() {
+  return _bearipMapToArray(_bearipDataCache.productionRequests, 'requestedAt');
 }
 
 function bearipAddProductionRequest(req) {
-  const list = bearipLoadProductionRequests();
-  list.unshift(req);
-  bearipSaveProductionRequests(list);
-  return req;
+  if (!bearipFirebaseReady()) return req;
+  const id = req.id || 'preq_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  const record = Object.assign({}, req);
+  delete record.id; // id is the RTDB key itself, not a field inside the record
+  firebase.database().ref('productionRequests/' + id).set(record);
+  return Object.assign({ id }, record);
 }
 
 function bearipUpdateProductionRequest(id, patch) {
-  const list = bearipLoadProductionRequests();
-  const idx = list.findIndex((r) => r.id === id);
-  if (idx === -1) return null;
-  list[idx] = Object.assign({}, list[idx], patch);
-  bearipSaveProductionRequests(list);
-  return list[idx];
+  if (!bearipFirebaseReady()) return null;
+  firebase.database().ref('productionRequests/' + id).update(patch);
+  return Object.assign({ id }, (_bearipDataCache.productionRequests || {})[id], patch);
 }
 
-// ---- IP 심사 요청 — one entry per roadmap step the creator submitted
-// material for at IP-creation time. Separate from 제작요청 (which is about
-// outsourcing a step to a Creator); this is the page-admin scoring how
-// complete/real a step's submitted material actually is, per step, with a
-// one-line comment — mirrored back onto the IP's own roadmap step (see
-// ip-reviews.js) so MY DNA can show it without re-reading this list.
-const BEARIP_IP_REVIEWS_KEY = 'bearip_ip_reviews';
-
+// ---- IP 심사(전문가 검토) 요청 — same reasoning as 제작요청 above: a global
+// queue GM works through from any device, with the outcome pulled back onto
+// the requester's own local IP by mdReconcileRemoteStatus.
 function bearipLoadIpReviews() {
-  try {
-    const raw = localStorage.getItem(BEARIP_IP_REVIEWS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-function bearipSaveIpReviews(list) {
-  localStorage.setItem(BEARIP_IP_REVIEWS_KEY, JSON.stringify(list));
+  return _bearipMapToArray(_bearipDataCache.ipReviews, 'requestedAt');
 }
 
 function bearipAddIpReview(review) {
-  const list = bearipLoadIpReviews();
-  list.unshift(review);
-  bearipSaveIpReviews(list);
-  return review;
+  if (!bearipFirebaseReady()) return review;
+  const id = review.id || 'ipreview_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  const record = Object.assign({}, review);
+  delete record.id;
+  firebase.database().ref('ipReviews/' + id).set(record);
+  return Object.assign({ id }, record);
 }
 
 function bearipUpdateIpReview(id, patch) {
-  const list = bearipLoadIpReviews();
-  const idx = list.findIndex((r) => r.id === id);
-  if (idx === -1) return null;
-  list[idx] = Object.assign({}, list[idx], patch);
-  bearipSaveIpReviews(list);
-  return list[idx];
+  if (!bearipFirebaseReady()) return null;
+  firebase.database().ref('ipReviews/' + id).update(patch);
+  return Object.assign({ id }, (_bearipDataCache.ipReviews || {})[id], patch);
+}
+
+// ---- 종합 코멘트 — one IP-wide comment GM can leave (ip-reviews.js), shown
+// back on MY DNA (my-dna-render.js). Was stored on the IP object itself,
+// which only worked while every account shared one localStorage bucket.
+function bearipGetIpOverallComment(ipId) {
+  return (_bearipDataCache.ipOverallComments || {})[ipId] || '';
+}
+
+function bearipSetIpOverallComment(ipId, comment) {
+  if (!bearipFirebaseReady()) return;
+  const ref = firebase.database().ref('ipOverallComments/' + ipId);
+  if (comment) ref.set(comment);
+  else ref.remove();
 }
 
 // ---- Mock login / current user (no backend — nickname-only) ----
@@ -707,30 +752,26 @@ function bearipAddComment(contentId, comment) {
   return comment;
 }
 
-// ---- Notifications ----
-const BEARIP_NOTIFICATIONS_KEY = 'bearip_notifications';
+// ---- Notifications — personal, so kept under each nickname's own Firebase
+// path (notifications/<nick>/<id>) rather than the global queues above. This
+// is what lets GM's action on a different device actually reach the right
+// person's bell icon — see bearipAddNotification's targetNickname.
+function bearipNotificationsPath(nickname) {
+  return 'notifications/' + bearipSafePathSegment(nickname || bearipScopeSuffix());
+}
 
 function bearipLoadNotifications() {
-  try {
-    const raw = localStorage.getItem(BEARIP_NOTIFICATIONS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    return [];
-  }
+  return _bearipMapToArray(_bearipDataCache.notifications, 'createdAt');
 }
 
-function bearipSaveNotifications(list) {
-  localStorage.setItem(BEARIP_NOTIFICATIONS_KEY, JSON.stringify(list));
-}
-
-function bearipAddNotification(notif) {
-  const list = bearipLoadNotifications();
-  list.unshift(Object.assign({
-    id: 'ntf_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
-    read: false,
-    createdAt: new Date().toISOString(),
-  }, notif));
-  bearipSaveNotifications(list);
+// targetNickname defaults to whoever's currently logged in (self-notifying
+// about your own action, the common case); pass it explicitly to deliver to
+// someone else, e.g. GM notifying the original requester.
+function bearipAddNotification(notif, targetNickname) {
+  if (!bearipFirebaseReady()) return;
+  const id = 'ntf_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+  const record = Object.assign({ read: false, createdAt: new Date().toISOString() }, notif);
+  firebase.database().ref(bearipNotificationsPath(targetNickname) + '/' + id).set(record);
 }
 
 function bearipGetUnreadCount() {
@@ -738,13 +779,17 @@ function bearipGetUnreadCount() {
 }
 
 function bearipMarkAllNotificationsRead() {
-  const list = bearipLoadNotifications().map((n) => Object.assign({}, n, { read: true }));
-  bearipSaveNotifications(list);
+  if (!bearipFirebaseReady()) return;
+  const updates = {};
+  bearipLoadNotifications().forEach((n) => {
+    if (!n.read) updates[n.id + '/read'] = true;
+  });
+  if (Object.keys(updates).length) firebase.database().ref(bearipNotificationsPath()).update(updates);
 }
 
 function bearipMarkNotificationRead(id) {
-  const list = bearipLoadNotifications().map((n) => (n.id === id ? Object.assign({}, n, { read: true }) : n));
-  bearipSaveNotifications(list);
+  if (!bearipFirebaseReady()) return;
+  firebase.database().ref(bearipNotificationsPath() + '/' + id + '/read').set(true);
 }
 
 // ---- Uploaded asset files (IndexedDB — localStorage's ~5-10MB origin quota
@@ -849,3 +894,15 @@ function bearipDeleteAssetFile(id) {
     )
     .catch(() => {});
 }
+
+// Notifications are personal (per nickname); 제작요청/전문가검토/종합 코멘트 are
+// global queues GM (or any viewer) needs to see in full. Run once per page
+// load — nickname changes always go through a full page reload (see
+// bearipSetUser's callers), so there's no live-switch case to handle here.
+(function bearipInitFirebaseWatchers() {
+  if (!bearipFirebaseReady()) return;
+  _bearipWatchPath('notifications', bearipNotificationsPath());
+  _bearipWatchPath('productionRequests', 'productionRequests');
+  _bearipWatchPath('ipReviews', 'ipReviews');
+  _bearipWatchPath('ipOverallComments', 'ipOverallComments');
+})();
