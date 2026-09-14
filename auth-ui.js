@@ -343,6 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderMenu() {
     const u = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
     if (u) {
+      const isGm = u.nickname === 'GM';
       menu.innerHTML = `
         <div class="bearip-pm-header">
           <div class="bearip-pm-avatar">${bearipEscapeHtml((u.nickname || '?').slice(0, 1))}</div>
@@ -357,6 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <button class="bearip-pm-btn" data-action="notifications">알림함</button>
         <button class="bearip-pm-btn" data-action="production-admin">제작요청 관리</button>
         <button class="bearip-pm-btn" data-action="crew-applicants">지원자 관리</button>
+        ${isGm ? '<button class="bearip-pm-btn" data-action="ip-review-admin">전문가 검토 관리 (GM)</button>' : ''}
         ${themeToggleRowHtml()}
         <button class="bearip-pm-btn danger" data-action="logout">로그아웃</button>
       `;
@@ -419,6 +421,8 @@ document.addEventListener('DOMContentLoaded', () => {
       location.href = 'production-requests.html';
     } else if (action === 'crew-applicants') {
       location.href = 'crew-applicants.html';
+    } else if (action === 'ip-review-admin') {
+      location.href = 'ip-reviews.html';
     } else if (action === 'login') {
       bearipGoToLogin();
     } else if (action === 'toggle-theme') {

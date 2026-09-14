@@ -2,6 +2,39 @@
 const BEARIP_IPS_KEY = 'bearip_ips';
 const BEARIP_CURRENT_KEY = 'bearip_current_ip';
 
+// ---- Per-account scoping ----
+// Login here is nickname-only (no backend/passwords — see bearipGetUser
+// below), but everything a creator would think of as genuinely "mine" (MY
+// DNA's own IPs, credits, applied positions, portfolio) still needs to
+// differ per nickname, or switching accounts on the same browser just shows
+// the previous nickname's data back. Admin queues that are meant to
+// aggregate every creator's requests for GM (제작요청/전문가검토) and public
+// listings (CREW MATCH postings, content comments) are deliberately left
+// un-scoped/global.
+function bearipScopeSuffix() {
+  const user = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
+  return user && user.nickname ? user.nickname : '_guest';
+}
+
+function bearipScopedKey(baseKey) {
+  return baseKey + '::' + bearipScopeSuffix();
+}
+
+// Before this, every nickname silently shared one bucket per key. The first
+// nickname to touch a given key after this change inherits that old shared
+// value instead of finding it empty; every other/new nickname starts fresh.
+function bearipMigrateLegacyKey(baseKey) {
+  const scoped = bearipScopedKey(baseKey);
+  if (localStorage.getItem(scoped) === null) {
+    const legacy = localStorage.getItem(baseKey);
+    if (legacy !== null) {
+      localStorage.setItem(scoped, legacy);
+      localStorage.removeItem(baseKey);
+    }
+  }
+  return scoped;
+}
+
 // ---- Site-wide light/dark preference. Every dr-*/od-* page shares it; only
 // the landing page and CONTENT ROOM are excluded (CONTENT ROOM's CSS isn't
 // variable-driven the same way yet).
@@ -31,12 +64,12 @@ function bearipSetTheme(theme) {
 const BEARIP_CREDITS_KEY = 'bearip_credits';
 
 function bearipGetCredits() {
-  const n = parseInt(localStorage.getItem(BEARIP_CREDITS_KEY), 10);
+  const n = parseInt(localStorage.getItem(bearipMigrateLegacyKey(BEARIP_CREDITS_KEY)), 10);
   return Number.isFinite(n) ? n : 0;
 }
 
 function bearipSetCredits(amount) {
-  localStorage.setItem(BEARIP_CREDITS_KEY, String(Math.max(0, amount)));
+  localStorage.setItem(bearipScopedKey(BEARIP_CREDITS_KEY), String(Math.max(0, amount)));
 }
 
 function bearipAddCredits(amount) {
@@ -142,7 +175,7 @@ function bearipBuildRoadmap(goal, previousRoadmap) {
 
 function bearipLoadIPs() {
   try {
-    const raw = localStorage.getItem(BEARIP_IPS_KEY);
+    const raw = localStorage.getItem(bearipMigrateLegacyKey(BEARIP_IPS_KEY));
     return raw ? JSON.parse(raw) : [];
   } catch (e) {
     return [];
@@ -150,14 +183,14 @@ function bearipLoadIPs() {
 }
 
 function bearipSaveIPs(ips) {
-  localStorage.setItem(BEARIP_IPS_KEY, JSON.stringify(ips));
+  localStorage.setItem(bearipScopedKey(BEARIP_IPS_KEY), JSON.stringify(ips));
 }
 
 function bearipAddIP(ip) {
   const ips = bearipLoadIPs();
   ips.unshift(ip);
   bearipSaveIPs(ips);
-  localStorage.setItem(BEARIP_CURRENT_KEY, ip.id);
+  localStorage.setItem(bearipScopedKey(BEARIP_CURRENT_KEY), ip.id);
   return ip;
 }
 
@@ -176,8 +209,8 @@ function bearipDeleteIP(id) {
   // bearipGetCurrentIP/bearipGetFeaturedId already treat an id with no
   // matching IP as "none", but clearing these outright avoids a stale id
   // silently pointing at nothing.
-  if (localStorage.getItem(BEARIP_CURRENT_KEY) === id) {
-    localStorage.removeItem(BEARIP_CURRENT_KEY);
+  if (localStorage.getItem(bearipMigrateLegacyKey(BEARIP_CURRENT_KEY)) === id) {
+    localStorage.removeItem(bearipScopedKey(BEARIP_CURRENT_KEY));
   }
   if (bearipGetFeaturedId() === id) {
     bearipSetFeaturedId(null);
@@ -203,7 +236,7 @@ function bearipDeleteIP(id) {
   // 포지션" set, so 나의 매치 현황 doesn't show a dangling, unresolvable id.
   const APPLIED_KEY = 'bearip_applied_positions';
   const stillApplied = bearipSetList(APPLIED_KEY).filter((posId) => !orphanedIds.includes(posId));
-  localStorage.setItem(APPLIED_KEY, JSON.stringify(stillApplied));
+  localStorage.setItem(bearipScopedKey(APPLIED_KEY), JSON.stringify(stillApplied));
 }
 
 // ---- Shared "IP DNA 현황" breakdown metadata ----
@@ -333,13 +366,13 @@ function bearipParseCount(text) {
 }
 
 function bearipGetCurrentIP() {
-  const id = localStorage.getItem(BEARIP_CURRENT_KEY);
+  const id = localStorage.getItem(bearipMigrateLegacyKey(BEARIP_CURRENT_KEY));
   if (!id) return null;
   return bearipLoadIPs().find((i) => i.id === id) || null;
 }
 
 function bearipSetCurrentId(id) {
-  localStorage.setItem(BEARIP_CURRENT_KEY, id);
+  localStorage.setItem(bearipScopedKey(BEARIP_CURRENT_KEY), id);
 }
 
 // ---- "대표 프로젝트" — separate from bearip_current_ip (which is just
@@ -350,7 +383,7 @@ const BEARIP_FEATURED_KEY = 'bearip_featured_ip';
 
 function bearipGetFeaturedId() {
   try {
-    return localStorage.getItem(BEARIP_FEATURED_KEY);
+    return localStorage.getItem(bearipMigrateLegacyKey(BEARIP_FEATURED_KEY));
   } catch (e) {
     return null;
   }
@@ -358,8 +391,8 @@ function bearipGetFeaturedId() {
 
 function bearipSetFeaturedId(id) {
   try {
-    if (id) localStorage.setItem(BEARIP_FEATURED_KEY, id);
-    else localStorage.removeItem(BEARIP_FEATURED_KEY);
+    if (id) localStorage.setItem(bearipScopedKey(BEARIP_FEATURED_KEY), id);
+    else localStorage.removeItem(bearipScopedKey(BEARIP_FEATURED_KEY));
   } catch (e) {
     /* ignore */
   }
@@ -568,7 +601,7 @@ const BEARIP_PORTFOLIO_KEY = 'bearip_portfolio';
 
 function bearipGetMyPositions() {
   try {
-    const raw = localStorage.getItem(BEARIP_MY_POSITIONS_KEY);
+    const raw = localStorage.getItem(bearipMigrateLegacyKey(BEARIP_MY_POSITIONS_KEY));
     return raw ? JSON.parse(raw) : [];
   } catch (e) {
     return [];
@@ -576,12 +609,12 @@ function bearipGetMyPositions() {
 }
 
 function bearipSetMyPositions(list) {
-  localStorage.setItem(BEARIP_MY_POSITIONS_KEY, JSON.stringify(list));
+  localStorage.setItem(bearipScopedKey(BEARIP_MY_POSITIONS_KEY), JSON.stringify(list));
 }
 
 function bearipLoadPortfolio() {
   try {
-    const raw = localStorage.getItem(BEARIP_PORTFOLIO_KEY);
+    const raw = localStorage.getItem(bearipMigrateLegacyKey(BEARIP_PORTFOLIO_KEY));
     return raw ? JSON.parse(raw) : [];
   } catch (e) {
     return [];
@@ -589,7 +622,7 @@ function bearipLoadPortfolio() {
 }
 
 function bearipSavePortfolio(list) {
-  localStorage.setItem(BEARIP_PORTFOLIO_KEY, JSON.stringify(list));
+  localStorage.setItem(bearipScopedKey(BEARIP_PORTFOLIO_KEY), JSON.stringify(list));
 }
 
 function bearipAddPortfolioItem(item) {
@@ -606,10 +639,12 @@ function bearipDeletePortfolioItem(id) {
 
 // ---- Generic per-browser "membership" sets, e.g. followed IPs, joined IPs,
 // applied-to positions — anywhere a button just needs an on/off toggle that
-// survives reload, keyed by a namespaced localStorage key. ----
+// survives reload, keyed by a namespaced localStorage key. Every caller's key
+// so far (bearip_applied_positions) is personal ("things I did"), so this is
+// scoped per account like the rest of MY DNA's own data.
 function bearipSetList(key) {
   try {
-    return JSON.parse(localStorage.getItem(key)) || [];
+    return JSON.parse(localStorage.getItem(bearipMigrateLegacyKey(key))) || [];
   } catch (e) {
     return [];
   }
@@ -617,7 +652,7 @@ function bearipSetList(key) {
 
 function bearipSetHas(key, id) {
   try {
-    const arr = JSON.parse(localStorage.getItem(key)) || [];
+    const arr = JSON.parse(localStorage.getItem(bearipMigrateLegacyKey(key))) || [];
     return arr.includes(id);
   } catch (e) {
     return false;
@@ -628,13 +663,13 @@ function bearipSetHas(key, id) {
 function bearipSetToggle(key, id) {
   let arr;
   try {
-    arr = JSON.parse(localStorage.getItem(key)) || [];
+    arr = JSON.parse(localStorage.getItem(bearipMigrateLegacyKey(key))) || [];
   } catch (e) {
     arr = [];
   }
   const has = arr.includes(id);
   arr = has ? arr.filter((x) => x !== id) : arr.concat([id]);
-  localStorage.setItem(key, JSON.stringify(arr));
+  localStorage.setItem(bearipScopedKey(key), JSON.stringify(arr));
   return !has;
 }
 
