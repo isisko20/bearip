@@ -23,8 +23,12 @@ function bearipScopedKey(baseKey) {
 // Before this, every nickname silently shared one bucket per key. The first
 // nickname to touch a given key after this change inherits that old shared
 // value instead of finding it empty; every other/new nickname starts fresh.
+// GM is excluded — it's a fixed admin nickname (see irIsGm in ip-reviews.js)
+// that only reviews other creators' IPs, so it must never inherit whichever
+// creator's leftover data happened to still be sitting in the old bucket.
 function bearipMigrateLegacyKey(baseKey) {
   const scoped = bearipScopedKey(baseKey);
+  if (bearipScopeSuffix() === 'GM') return scoped;
   if (localStorage.getItem(scoped) === null) {
     const legacy = localStorage.getItem(baseKey);
     if (legacy !== null) {
@@ -175,6 +179,19 @@ function bearipBuildRoadmap(goal, previousRoadmap) {
 
 function bearipLoadIPs() {
   try {
+    // Self-heal: an earlier version of the per-account migration above could
+    // have already handed GM someone else's leftover IPs before the GM
+    // exclusion existed. GM never legitimately owns an IP, so wipe it out
+    // instead of leaving a phantom project on screen.
+    if (bearipScopeSuffix() === 'GM') {
+      const gmKey = bearipScopedKey(BEARIP_IPS_KEY);
+      if (localStorage.getItem(gmKey) !== null) {
+        localStorage.removeItem(gmKey);
+        localStorage.removeItem(bearipScopedKey(BEARIP_CURRENT_KEY));
+        localStorage.removeItem(bearipScopedKey(BEARIP_FEATURED_KEY));
+      }
+      return [];
+    }
     const raw = localStorage.getItem(bearipMigrateLegacyKey(BEARIP_IPS_KEY));
     return raw ? JSON.parse(raw) : [];
   } catch (e) {
