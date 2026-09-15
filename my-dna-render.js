@@ -1302,6 +1302,13 @@ function ensureStepMaterialOverlay() {
         fileSize: en.fileSize || null,
         mime: en.mime || null,
         note: en.note ? en.note.trim() : '',
+        // Carries a stripped-to-IndexedDB submission's reference through an
+        // edit that doesn't touch the file itself (fileData stays null on a
+        // reload — see bearipOffloadLocalSubmissionBlobs in storage.js) —
+        // dropping these here would silently orphan the stored file and
+        // leave the entry claiming to have one with nothing to show for it.
+        blobStored: en.blobStored || false,
+        blobId: en.blobId || null,
       }));
     // Registered materials (특히 음향/문서, inline as base64) land in
     // localStorage along with the rest of the IP — unlike the Firebase
@@ -1328,6 +1335,17 @@ function ensureStepMaterialOverlay() {
         bearipShowToast('저장 공간이 부족해요. 파일 용량을 줄이거나 다른 자료를 정리한 뒤 다시 시도해주세요.');
         return;
       }
+    }
+    // Save succeeded — any entry that had an IndexedDB-backed file before
+    // and no longer references it (removed by the user in this edit) has
+    // nothing pointing at that blob anymore, so clean it up now rather than
+    // leaking it. Runs only after a successful save so a failed/rolled-back
+    // save never deletes a blob still referenced by the restored submissions.
+    if (typeof bearipDeleteAssetFile === 'function') {
+      const keptBlobIds = new Set(cleaned.filter((en) => en.blobId).map((en) => en.blobId));
+      (prevSubmissions || [])
+        .filter((sub) => sub.blobId && !keptBlobIds.has(sub.blobId))
+        .forEach((sub) => bearipDeleteAssetFile(sub.blobId));
     }
     recomputeWritingCompleteness();
     renderRoadmap();
@@ -1771,7 +1789,12 @@ function deleteAssetAt(index) {
   const asset = (currentIP.assets || [])[index];
   currentIP.assets = (currentIP.assets || []).filter((_, i) => i !== index);
   if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { assets: currentIP.assets });
-  if (asset && asset.blobStored) bearipDeleteAssetFile(asset.id);
+  // A mirrored roadmap-submission asset (sourceStepKey set) shares its
+  // blobId with the actual submission in storage.js — that file's lifecycle
+  // is owned by the 자료 등록 modal (stepMaterialSave's own cleanup), not by
+  // this tab, so deleting the mirrored card here must not also delete the
+  // underlying material the roadmap step still points at.
+  if (asset && asset.blobStored && !asset.sourceStepKey) bearipDeleteAssetFile(asset.blobId || asset.id);
   renderAssets();
 }
 
@@ -1846,9 +1869,10 @@ async function openAssetPreview(index) {
     return;
   }
 
-  // fileData — a 개요 탭 submission mirrored in via mdSyncStepAssetsFromSubmissions
-  // (문서/음향, read inline as a data URL there, not IndexedDB-backed like
-  // this tab's own uploads) — so there's no bearipGetAssetFile blob to fetch.
+  // fileData — a 개요 탭 submission mirrored in via mdSyncStepAssetsFromSubmissions,
+  // still small enough (or not yet offloaded) to be inline as a data URL
+  // here rather than in IndexedDB. A large one instead falls through to the
+  // asset.blobStored branch below via its mirrored blobId.
   if (asset.fileData) {
     if (asset.mime && asset.mime.startsWith('audio/')) {
       body.innerHTML = `<audio src="${asset.fileData}" controls autoplay></audio>`;
@@ -1870,7 +1894,7 @@ async function openAssetPreview(index) {
   }
 
   try {
-    const record = await bearipGetAssetFile(asset.id);
+    const record = await bearipGetAssetFile(asset.blobId || asset.id);
     if (!record) {
       body.innerHTML = '<div class="md-asset-preview-empty">파일을 찾을 수 없어요</div>';
       return;
@@ -1879,6 +1903,8 @@ async function openAssetPreview(index) {
     mdPreviewObjectUrl = url;
     if (asset.mime && asset.mime.startsWith('video/')) {
       body.innerHTML = `<video src="${url}" controls autoplay></video>`;
+    } else if (asset.mime && asset.mime.startsWith('audio/')) {
+      body.innerHTML = `<audio src="${url}" controls autoplay></audio>`;
     } else if (asset.mime === 'application/pdf') {
       body.innerHTML = `<iframe src="${url}" class="md-asset-preview-pdf"></iframe>`;
     } else {
@@ -2156,6 +2182,14 @@ function mdSyncStepAssetsFromSubmissions(step) {
     if (existingIdx !== -1 && assets[existingIdx].folderId) asset.folderId = assets[existingIdx].folderId;
     if (sub.imageData) asset.imageData = sub.imageData;
     if (sub.fileData) asset.fileData = sub.fileData;
+    // A large fileData submission may have already been moved out to
+    // IndexedDB locally (bearipOffloadLocalSubmissionBlobs, storage.js) by
+    // the time this mirrors it in — carry the reference through so
+    // openAssetPreview can still fetch and show it from the ASSETS tab.
+    if (sub.blobStored && sub.blobId) {
+      asset.blobStored = true;
+      asset.blobId = sub.blobId;
+    }
     if (sub.fileName) {
       asset.fileName = sub.fileName;
       asset.fileSize = sub.fileSize;

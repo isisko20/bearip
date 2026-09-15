@@ -225,8 +225,104 @@ function bearipLoadIPs() {
   }
 }
 
+// A submission's fileData (roadmap-step 문서/음향) is read inline as a data
+// URL so it can travel through Firebase to GM on a different device — see
+// the comment above BEARIP_MAX_INLINE_FILE_BYTES further down. That's fine
+// for Firebase (RTDB has real headroom), but this SAME value also lands in
+// this browser's own localStorage copy of every IP the account owns —
+// several IPs' worth of attachments can push that combined blob past
+// localStorage's ~5-10MB per-origin quota even though each individual file
+// stays under its own 5MB cap. bearipSyncIpForGm/bearipSetIpPublic (called
+// right after bearipSaveIPs, from bearipAddIP/bearipUpdateIP below) are
+// always given the original, un-stripped `ips`/`ip` argument — so this only
+// trims what THIS browser duplicates locally, moving the bytes into
+// IndexedDB (the same file store the ASSETS tab already uses) as a local
+// cache instead of leaving them inline in the localStorage JSON.
+const BEARIP_LOCAL_INLINE_LIMIT_BYTES = 200 * 1024; // 200KB
+
+function bearipDataUrlToBlob(dataUrl) {
+  const comma = dataUrl.indexOf(',');
+  const meta = dataUrl.slice(0, comma);
+  const mimeMatch = /^data:(.*?)(;base64)?$/.exec(meta);
+  const mime = (mimeMatch && mimeMatch[1]) || 'application/octet-stream';
+  const binary = atob(dataUrl.slice(comma + 1));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+// Pure — returns `ips` itself when nothing needs offloading, otherwise a
+// shallow-cloned-where-touched copy, so the caller's own in-memory objects
+// (and whatever it hands to the Firebase sync calls right after) are never
+// mutated by this.
+function bearipOffloadLocalSubmissionBlobs(ips) {
+  let anyChanged = false;
+  const out = ips.map((ip) => {
+    let ipChanged = false;
+    // sourceSubmissionId -> blobId, so a step.submission and the matching
+    // ASSETS-tab mirror it produced (mdSyncStepAssetsFromSubmissions, in
+    // my-dna-render.js) end up pointing at the SAME IndexedDB record
+    // instead of each storing their own full copy of the same file.
+    const blobIdBySubmissionId = {};
+
+    let roadmap = ip.roadmap;
+    if (Array.isArray(ip.roadmap)) {
+      roadmap = ip.roadmap.map((step) => {
+        if (!Array.isArray(step.submissions) || !step.submissions.length) return step;
+        let stepChanged = false;
+        const submissions = step.submissions.map((sub) => {
+          if (typeof sub.fileData !== 'string' || sub.fileData.length <= BEARIP_LOCAL_INLINE_LIMIT_BYTES) return sub;
+          const blobId = sub.blobId || 'sub_' + (sub.id || Math.random().toString(36).slice(2)) + '_file';
+          try {
+            bearipSaveAssetFile(blobId, bearipDataUrlToBlob(sub.fileData)).catch(() => {});
+          } catch (e) {
+            return sub; // couldn't parse — leave it inline rather than lose it
+          }
+          stepChanged = true;
+          if (sub.id) blobIdBySubmissionId[sub.id] = blobId;
+          return Object.assign({}, sub, { fileData: null, blobStored: true, blobId });
+        });
+        if (!stepChanged) return step;
+        ipChanged = true;
+        return Object.assign({}, step, { submissions });
+      });
+    }
+
+    let assets = ip.assets;
+    if (Array.isArray(ip.assets) && ip.assets.length) {
+      let assetsChanged = false;
+      assets = ip.assets.map((asset) => {
+        const mirroredBlobId = asset.sourceSubmissionId && blobIdBySubmissionId[asset.sourceSubmissionId];
+        if (mirroredBlobId && (asset.fileData || asset.blobId !== mirroredBlobId)) {
+          assetsChanged = true;
+          return Object.assign({}, asset, { fileData: null, blobStored: true, blobId: mirroredBlobId });
+        }
+        if (typeof asset.fileData !== 'string' || asset.fileData.length <= BEARIP_LOCAL_INLINE_LIMIT_BYTES) return asset;
+        const blobId = asset.blobId || asset.id;
+        try {
+          bearipSaveAssetFile(blobId, bearipDataUrlToBlob(asset.fileData)).catch(() => {});
+        } catch (e) {
+          return asset;
+        }
+        assetsChanged = true;
+        return Object.assign({}, asset, { fileData: null, blobStored: true, blobId });
+      });
+      if (assetsChanged) ipChanged = true;
+    }
+
+    if (!ipChanged) return ip;
+    anyChanged = true;
+    const clone = Object.assign({}, ip);
+    if (roadmap !== ip.roadmap) clone.roadmap = roadmap;
+    if (assets !== ip.assets) clone.assets = assets;
+    return clone;
+  });
+  return anyChanged ? out : ips;
+}
+
 function bearipSaveIPs(ips) {
-  localStorage.setItem(bearipScopedKey(BEARIP_IPS_KEY), JSON.stringify(ips));
+  const localSafe = bearipOffloadLocalSubmissionBlobs(ips);
+  localStorage.setItem(bearipScopedKey(BEARIP_IPS_KEY), JSON.stringify(localSafe));
 }
 
 function bearipAddIP(ip) {
@@ -693,12 +789,56 @@ function bearipLoadIpReviews() {
   return _bearipMapToArray(_bearipDataCache.ipReviews, 'requestedAt');
 }
 
+// A step's submissions may have had large fileData moved out to this
+// browser's own IndexedDB cache (bearipOffloadLocalSubmissionBlobs, above —
+// only the LOCAL localStorage copy is trimmed, never what's handed to a
+// Firebase write). But `step.submissions` here could itself be a copy that
+// was loaded from that already-trimmed local storage in an earlier session
+// (e.g. currentIP loaded once at page open, then reused for an unrelated
+// save later) — so anything about to cross into Firebase needs to resolve
+// those references back to real bytes first, or GM reviewing from a
+// different device would see an empty attachment. Best-effort: a
+// submission that can't be rehydrated (rare — IndexedDB failure) still goes
+// out with its filename/metadata intact rather than blocking the request.
+async function bearipHydrateSubmissionsForRemote(submissions) {
+  if (!Array.isArray(submissions) || !submissions.length) return submissions;
+  if (!submissions.some((s) => s.blobStored && s.blobId && !s.fileData)) return submissions;
+  return Promise.all(
+    submissions.map(async (sub) => {
+      if (!sub.blobStored || !sub.blobId || sub.fileData) return sub;
+      try {
+        const record = await bearipGetAssetFile(sub.blobId);
+        if (record && record.blob) {
+          const dataUrl = await bearipReadFileAsDataUrl(record.blob);
+          return Object.assign({}, sub, { fileData: dataUrl });
+        }
+      } catch (e) {}
+      return sub;
+    })
+  );
+}
+
+async function bearipHydrateIpForRemote(ip) {
+  if (!ip || !Array.isArray(ip.roadmap)) return ip;
+  const roadmap = await Promise.all(
+    ip.roadmap.map(async (step) => {
+      if (!Array.isArray(step.submissions) || !step.submissions.length) return step;
+      const submissions = await bearipHydrateSubmissionsForRemote(step.submissions);
+      return submissions === step.submissions ? step : Object.assign({}, step, { submissions });
+    })
+  );
+  return Object.assign({}, ip, { roadmap });
+}
+
 function bearipAddIpReview(review) {
   if (!bearipFirebaseReady()) return review;
   const id = review.id || 'ipreview_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
   const record = Object.assign({}, review);
   delete record.id;
-  _bearipFirebaseWrite(() => firebase.database().ref('ipReviews/' + id).set(bearipFirebaseSafe(record)));
+  bearipHydrateSubmissionsForRemote(record.submissions).then((submissions) => {
+    const toWrite = submissions === record.submissions ? record : Object.assign({}, record, { submissions });
+    _bearipFirebaseWrite(() => firebase.database().ref('ipReviews/' + id).set(bearipFirebaseSafe(toWrite)));
+  });
   return Object.assign({ id }, record);
 }
 
@@ -735,8 +875,9 @@ function bearipLoadPublicIPs() {
 function bearipSetIpPublic(ip, isPublic) {
   if (!bearipFirebaseReady() || !ip || !ip.id) return;
   const ref = firebase.database().ref('publicIPs/' + ip.id);
-  if (isPublic) _bearipFirebaseWrite(() => ref.set(bearipFirebaseSafe(ip)));
-  else ref.remove();
+  if (isPublic) {
+    bearipHydrateIpForRemote(ip).then((hydrated) => _bearipFirebaseWrite(() => ref.set(bearipFirebaseSafe(hydrated))));
+  } else ref.remove();
 }
 
 // ---- GM-only: every IP regardless of publish status — a 제작요청/전문가검토
@@ -748,7 +889,9 @@ function bearipSetIpPublic(ip, isPublic) {
 // client subscribes to this feed at all (see bearipInitFirebaseWatchers).
 function bearipSyncIpForGm(ip) {
   if (!bearipFirebaseReady() || !ip || !ip.id) return;
-  _bearipFirebaseWrite(() => firebase.database().ref('allIPs/' + ip.id).set(bearipFirebaseSafe(ip)));
+  bearipHydrateIpForRemote(ip).then((hydrated) =>
+    _bearipFirebaseWrite(() => firebase.database().ref('allIPs/' + ip.id).set(bearipFirebaseSafe(hydrated)))
+  );
 }
 
 function bearipLoadAllIPsForGm() {
