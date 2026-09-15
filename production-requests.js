@@ -66,11 +66,11 @@ function prRenderList() {
       (r) => `
     <div class="pr-card">
       <div class="pr-card-top">
-        <div class="pr-card-ip">${bearipEscapeHtml(r.ipTitle || '제목 없는 IP')}</div>
+        <div class="pr-card-ip">${bearipEscapeHtml(r.ipTitle || '제목 없는 IP')}${r.isFollowup ? ' · 추가문의' : ''}</div>
         <span class="pr-status ${r.status}">${PR_STATUS_LABEL[r.status] || r.status}</span>
       </div>
       <div class="pr-card-label">${bearipEscapeHtml(r.label)}</div>
-      <div class="pr-card-meta"><span>${r.price}C</span><span>${prFormatRelativeTime(r.requestedAt)}</span></div>
+      <div class="pr-card-meta"><span>${r.isFollowup ? '추가문의' : r.price + 'C'}</span><span>${prFormatRelativeTime(r.requestedAt)}</span></div>
       ${r.detail ? `<div class="pr-card-detail">"${bearipEscapeHtml(r.detail)}"</div>` : ''}
       ${r.resultNote ? `<div class="pr-card-result"><span>완료 메모</span>${bearipEscapeHtml(r.resultNote)}</div>` : ''}
       ${bearipRenderResultFileHtml(r, 'pr-result')}
@@ -153,6 +153,7 @@ function prOpenAction(id, kind) {
     const uploadEl = overlay.querySelector('#prResultUpload');
     const fileInput = overlay.querySelector('#prResultFileInput');
     uploadEl.addEventListener('click', () => fileInput.click());
+    if (typeof bearipEnableFileDrop === 'function') bearipEnableFileDrop(uploadEl, fileInput);
     fileInput.addEventListener('change', async () => {
       const file = fileInput.files[0];
       if (!file) return;

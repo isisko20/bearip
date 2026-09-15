@@ -278,6 +278,7 @@ function irOpenReviewModal(id) {
   const uploadEl = overlay.querySelector('#irResultUpload');
   const fileInput = overlay.querySelector('#irResultFileInput');
   uploadEl.addEventListener('click', () => fileInput.click());
+  if (typeof bearipEnableFileDrop === 'function') bearipEnableFileDrop(uploadEl, fileInput);
   fileInput.addEventListener('change', async () => {
     const file = fileInput.files[0];
     if (!file) return;

@@ -596,6 +596,7 @@
 .md-step-material-upload.has-file .t, .md-step-material-upload.has-file .d { position: relative; z-index: 1; color: #fff; }
 .md-step-material-upload.error { border-color: #d64545; }
 .md-step-material-upload.error .d { color: #d64545; }
+.md-step-material-upload.drag-over { border-color: var(--dr-purple); background-color: var(--dr-active-bg); }
 .md-step-material-note {
   width: 100%; min-height: 64px; padding: 10px 12px; border-radius: 10px;
   border: 1px solid var(--dr-border); background: var(--dr-bg-soft); color: var(--dr-ink);
@@ -658,7 +659,7 @@
 .md-production-result-audio { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .md-production-result-audio audio { width: 100%; height: 36px; }
 
-.md-production-list-actions { margin-top: 10px; }
+.md-production-list-actions { margin-top: 10px; display: flex; gap: 8px; }
 .md-production-list-delete {
   padding: 7px 14px; border-radius: 999px; font-size: 11.5px; font-weight: 700;
   border: 1px solid var(--dr-border); background: var(--dr-panel); color: var(--dr-ink-soft);
@@ -671,6 +672,18 @@
   cursor: pointer; font-family: inherit;
 }
 .md-production-list-cancel:hover { background: rgba(214,69,69,0.16); }
+.md-production-list-followup {
+  padding: 7px 14px; border-radius: 999px; font-size: 11.5px; font-weight: 700;
+  border: 1px solid var(--dr-border); background: var(--dr-panel); color: var(--dr-ink-soft);
+  cursor: pointer; font-family: inherit;
+}
+.md-production-list-followup:hover { border-color: var(--dr-purple); color: var(--dr-purple); }
+.md-production-list-confirm {
+  padding: 7px 14px; border-radius: 999px; font-size: 11.5px; font-weight: 700;
+  border: 1px solid transparent; background: var(--dr-purple); color: #fff;
+  cursor: pointer; font-family: inherit;
+}
+.md-production-list-confirm:hover { opacity: 0.9; }
 
 /* ---- Needs ---- */
 .md-needs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
@@ -788,6 +801,7 @@
 .md-asset-file-label svg { width: 14px; height: 14px; flex-shrink: 0; }
 .md-asset-file-label .fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .md-asset-file-label.has-file { border-style: solid; border-color: var(--dr-purple); color: var(--dr-ink); }
+.md-asset-file-label.drag-over { border-style: solid; border-color: var(--dr-purple); background: var(--dr-active-bg); }
 .md-asset-thumb.has-image { background-size: cover; background-position: center; }
 
 .md-asset-preview-overlay {

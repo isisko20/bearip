@@ -220,6 +220,8 @@ coverRemoveBtn.addEventListener('click', (e) => {
   clearCover();
 });
 
+if (typeof bearipEnableFileDrop === 'function') bearipEnableFileDrop(coverUpload, coverInput);
+
 coverInput.addEventListener('change', async () => {
   const file = coverInput.files[0];
   if (!file) return;
@@ -342,6 +344,10 @@ roadItemsList.addEventListener('click', (e) => {
   const upload = e.target.closest('.ni-road-upload');
   if (upload) upload.querySelector('input[type="file"]').click();
 });
+
+if (typeof bearipEnableFileDropDelegated === 'function') {
+  bearipEnableFileDropDelegated(roadItemsList, '.ni-road-upload');
+}
 
 roadItemsList.addEventListener('change', async (e) => {
   const input = e.target.closest('input[type="file"]');

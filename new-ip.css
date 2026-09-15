@@ -159,6 +159,7 @@
 .ni-upload.has-file .t, .ni-upload.has-file .d { position: relative; z-index: 1; color: #fff; }
 .ni-upload.error { border-color: #d64545; }
 .ni-upload.error .d { color: #d64545; }
+.ni-upload.drag-over { border-color: var(--ni-purple); background-color: var(--ni-active-bg); }
 .ni-upload-remove {
   position: relative; z-index: 1; margin-top: 10px; padding: 6px 14px;
   border-radius: 999px; border: 1px solid rgba(255,255,255,0.6); background: rgba(0,0,0,0.3);
@@ -222,6 +223,7 @@
 .ni-road-upload.has-file .t, .ni-road-upload.has-file .d { position: relative; z-index: 1; color: #fff; }
 .ni-road-upload.error { border-color: #d64545; }
 .ni-road-upload.error .d { color: #d64545; }
+.ni-road-upload.drag-over { border-color: var(--ni-purple); background-color: var(--ni-active-bg); }
 .ni-road-item-note {
   width: 100%; min-height: 52px; padding: 9px 12px; border-radius: 10px;
   border: 1.5px solid var(--ni-border); background: var(--ni-bg); font-size: 12px; color: var(--ni-ink);

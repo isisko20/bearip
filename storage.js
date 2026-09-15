@@ -1108,6 +1108,56 @@ function bearipMarkNotificationRead(id) {
   _bearipFirebaseWrite(() => firebase.database().ref(bearipNotificationsPath() + '/' + id + '/read').set(true));
 }
 
+// Lets a "click to upload" zone (a container with its own file input +
+// existing click/change handlers) also accept drag-and-drop — dropping a
+// file just puts it on the SAME input and re-fires its 'change' event, so
+// every zone's own validation/handling runs exactly as it already does for
+// a normal click-to-browse upload, with nothing duplicated here.
+function bearipEnableFileDrop(zoneEl, inputEl) {
+  if (!zoneEl || !inputEl) return;
+  zoneEl.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    zoneEl.classList.add('drag-over');
+  });
+  zoneEl.addEventListener('dragleave', () => zoneEl.classList.remove('drag-over'));
+  zoneEl.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zoneEl.classList.remove('drag-over');
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if (!files || !files.length) return;
+    inputEl.files = files;
+    inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+}
+
+// Delegated variant for a list whose upload zones are re-created on every
+// render (roadmap material entries) — bound once on the stable parent, same
+// pattern already used there for click/change.
+function bearipEnableFileDropDelegated(containerEl, zoneSelector) {
+  if (!containerEl) return;
+  containerEl.addEventListener('dragover', (e) => {
+    const zone = e.target.closest(zoneSelector);
+    if (!zone) return;
+    e.preventDefault();
+    zone.classList.add('drag-over');
+  });
+  containerEl.addEventListener('dragleave', (e) => {
+    const zone = e.target.closest(zoneSelector);
+    if (zone) zone.classList.remove('drag-over');
+  });
+  containerEl.addEventListener('drop', (e) => {
+    const zone = e.target.closest(zoneSelector);
+    if (!zone) return;
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const files = e.dataTransfer && e.dataTransfer.files;
+    const input = zone.querySelector('input[type="file"]');
+    if (!files || !files.length || !input) return;
+    input.files = files;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+}
+
 // ---- Uploaded asset files (IndexedDB — localStorage's ~5-10MB origin quota
 // can't hold real files, IndexedDB gives us realistic headroom for documents
 // and short video clips). Only non-image files go through here; images are

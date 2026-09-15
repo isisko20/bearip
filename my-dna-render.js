@@ -704,11 +704,14 @@ function mdReconcileRemoteStatus() {
 // Switching back to 자체제작 refunds the credit — nothing was actually
 // delivered, so there's nothing to keep the payment for.
 function mdCancelProductionRequest(scope, key) {
-  const price = scope === 'dna' ? BEARIP_DNA_PRODUCTION_PRICE[key] || 0 : BEARIP_ROADMAP_STEP_PRICE[key] || 0;
-  bearipAddCredits(price);
   const pending = bearipLoadProductionRequests().find(
     (r) => r.ipId === currentIP.id && r.scope === scope && r.key === key && r.status === 'pending'
   );
+  // Refund whatever THIS pending request actually charged, not the step's
+  // list price — a 추가문의 follow-up (mdSendProductionFollowup) is free, so
+  // canceling one must not hand back the original paid round's price again.
+  const price = pending ? pending.price || 0 : scope === 'dna' ? BEARIP_DNA_PRODUCTION_PRICE[key] || 0 : BEARIP_ROADMAP_STEP_PRICE[key] || 0;
+  bearipAddCredits(price);
   if (pending) bearipUpdateProductionRequest(pending.id, { status: 'cancelled' });
   if (scope === 'dna') {
     mdSetDnaProductionMode(key, 'self');
@@ -891,7 +894,7 @@ function renderProductionRequestsList() {
           <span class="md-production-list-status ${r.status}">${MD_PRODUCTION_STATUS_LABEL[r.status] || r.status}</span>
         </div>
         <div class="md-production-list-meta">
-          <span>${r.price}C</span>
+          <span>${r.isFollowup ? '추가문의' : r.price + 'C'}</span>
           <span>${mdFormatRelativeTime(r.requestedAt)}</span>
         </div>
         ${r.detail ? `<div class="md-production-list-detail">"${bearipEscapeHtml(r.detail)}"</div>` : ''}
@@ -900,7 +903,12 @@ function renderProductionRequestsList() {
         ${
           r.status === 'pending'
             ? `<div class="md-production-list-actions"><button type="button" class="md-production-list-cancel" data-scope="${r.scope}" data-key="${r.key}">요청 취소</button></div>`
-            : `<div class="md-production-list-actions"><button type="button" class="md-production-list-delete" data-id="${r.id}">삭제</button></div>`
+            : r.status === 'done' && !r.requesterAck
+              ? `<div class="md-production-list-actions">
+                   <button type="button" class="md-production-list-followup" data-id="${r.id}">추가문의</button>
+                   <button type="button" class="md-production-list-confirm" data-id="${r.id}">완료</button>
+                 </div>`
+              : `<div class="md-production-list-actions"><button type="button" class="md-production-list-delete" data-id="${r.id}">삭제</button></div>`
         }
       </div>
     `)
@@ -920,6 +928,111 @@ function renderProductionRequestsList() {
       if (typeof mdCancelProductionRequest === 'function') mdCancelProductionRequest(btn.dataset.scope, btn.dataset.key);
     });
   });
+  wrap.querySelectorAll('.md-production-list-confirm').forEach((btn) => {
+    btn.addEventListener('click', () => mdConfirmProductionDone(btn.dataset.id));
+  });
+  wrap.querySelectorAll('.md-production-list-followup').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const request = bearipLoadProductionRequests().find((r) => r.id === btn.dataset.id);
+      if (request) openProductionFollowup(request);
+    });
+  });
+}
+
+// GM이 결과물/피드백을 보내면 그걸로 완전히 끝나는 게 아니라, 요청자가 "완료"
+// (만족 — 더 조치 없음) 또는 "추가문의"(같은 항목으로 다시 요청) 중 고를 수
+// 있어야 한다 — 실제 작업은 파일 한 번 주고받고 끝나는 경우보다 여러 차례
+// 왔다갔다하며 다듬어지는 경우가 많다.
+function mdConfirmProductionDone(id) {
+  if (typeof bearipUpdateProductionRequest === 'function') bearipUpdateProductionRequest(id, { requesterAck: true });
+  if (typeof renderProductionRequestsList === 'function') renderProductionRequestsList();
+  bearipShowToast('확인했어요');
+}
+
+let productionFollowupPendingRequest = null;
+
+function ensureProductionFollowupOverlay() {
+  let overlay = document.getElementById('productionFollowupOverlay');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.className = 'md-road-edit-overlay';
+  overlay.id = 'productionFollowupOverlay';
+  overlay.style.display = 'none';
+  overlay.innerHTML = `
+    <div class="md-road-edit-box md-production-request-box">
+      <div class="md-road-edit-head">
+        <span>추가문의</span>
+        <button type="button" class="md-road-edit-close" id="productionFollowupClose" aria-label="닫기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <p class="md-production-request-desc">전달받은 결과물에 대한 수정·보완 요청을 담당 IP 매니저에게 다시 전달해요. 추가 크레딧은 들지 않아요.</p>
+      <label class="md-production-request-detail-label" for="productionFollowupDetail">요청 내용</label>
+      <textarea id="productionFollowupDetail" class="md-production-request-detail" placeholder="예: 이 부분을 이렇게 바꿔주세요" maxlength="300"></textarea>
+      <button type="button" class="md-production-request-pay" id="productionFollowupSubmit">보내기</button>
+    </div>
+  `;
+  (document.querySelector('.dna-app') || document.body).appendChild(overlay);
+
+  function close() {
+    overlay.style.display = 'none';
+    productionFollowupPendingRequest = null;
+  }
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('#productionFollowupClose')) close();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.style.display !== 'none') close();
+  });
+  document.getElementById('productionFollowupSubmit').addEventListener('click', () => {
+    if (!productionFollowupPendingRequest) return;
+    const detailInput = document.getElementById('productionFollowupDetail');
+    const detail = detailInput ? detailInput.value.trim() : '';
+    const request = productionFollowupPendingRequest;
+    close();
+    mdSendProductionFollowup(request, detail);
+  });
+  return overlay;
+}
+
+function openProductionFollowup(request) {
+  const overlay = ensureProductionFollowupOverlay();
+  productionFollowupPendingRequest = request;
+  const detailInput = document.getElementById('productionFollowupDetail');
+  if (detailInput) detailInput.value = '';
+  overlay.style.display = 'flex';
+}
+
+function mdSendProductionFollowup(r, detail) {
+  bearipAddProductionRequest({
+    id: 'preq_' + Date.now(),
+    ipId: currentIP.id,
+    ipTitle: currentIP.title || '제목 없는 IP',
+    requesterNickname: bearipScopeSuffix(),
+    scope: r.scope,
+    key: r.key,
+    label: r.label,
+    price: 0,
+    detail,
+    isFollowup: true,
+    status: 'pending',
+    requestedAt: new Date().toISOString(),
+  });
+  // The original 'done' round is now superseded by this new round — mark
+  // it acknowledged so it settles into history instead of still offering
+  // 완료/추가문의 next to the fresh pending one.
+  if (typeof bearipUpdateProductionRequest === 'function') bearipUpdateProductionRequest(r.id, { requesterAck: true });
+  if (r.scope === 'dna') {
+    mdSetDnaProductionMode(r.key, 'requested');
+    renderDnaReportTiles();
+  } else {
+    mdSetRoadmapProductionMode(r.key, 'requested');
+    recomputeProductionProgress();
+    renderRoadmap();
+    renderStatus();
+  }
+  if (typeof renderProductionRequestsList === 'function') renderProductionRequestsList();
+  bearipShowToast('추가 요청을 보냈어요');
 }
 
 function mdDnaProductionMode(key) {
@@ -1217,6 +1330,10 @@ function ensureStepMaterialOverlay() {
     const upload = e.target.closest('.md-step-material-upload');
     if (upload) upload.querySelector('input[type="file"]').click();
   });
+
+  if (typeof bearipEnableFileDropDelegated === 'function') {
+    bearipEnableFileDropDelegated(entriesWrap, '.md-step-material-upload');
+  }
 
   entriesWrap.addEventListener('change', async (e) => {
     const input = e.target.closest('input[type="file"]');
@@ -2327,6 +2444,7 @@ function bindAssetAddTile() {
       const typeSelect = document.getElementById('assetTypeSelect');
       if (file.type.startsWith('image/')) typeSelect.value = 'art';
     });
+    if (typeof bearipEnableFileDrop === 'function') bearipEnableFileDrop(fileLabel, fileInput);
     document.getElementById('assetConfirmBtn').addEventListener('click', (e) => {
       e.stopPropagation();
       submitAsset();

@@ -119,6 +119,7 @@
 .pr-result-upload.has-file { border-style: solid; border-color: var(--dr-purple); }
 .pr-result-upload.error { border-color: #d64545; }
 .pr-result-upload.error .d { color: #d64545; }
+.pr-result-upload.drag-over { border-style: solid; border-color: var(--dr-purple); background-color: var(--dr-active-bg); }
 
 @media (max-width: 560px) {
   .pr-card-actions { flex-direction: column; }
