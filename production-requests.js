@@ -48,6 +48,14 @@ function prRenderList() {
     list.innerHTML = '';
     list.style.display = 'none';
     empty.style.display = 'flex';
+    // Firebase's first sync can still be in flight — say so instead of
+    // flatly claiming there's nothing, or a request that landed a moment
+    // ago looks like it never arrived.
+    const stillLoading = typeof bearipIsDataLoaded === 'function' && !bearipIsDataLoaded('productionRequests');
+    const t = empty.querySelector('.t');
+    const s = empty.querySelector('.s');
+    if (t) t.textContent = stillLoading ? '불러오는 중이에요...' : '해당하는 제작요청이 없어요';
+    if (s) s.textContent = stillLoading ? '' : 'MY DNA에서 누군가 제작을 요청하면 여기에 표시돼요.';
     return;
   }
   list.style.display = 'flex';

@@ -659,6 +659,18 @@ function bearipSafePathSegment(str) {
 
 const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {} };
 const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [] };
+// Firebase's first 'value' callback for a watched path can take a real
+// moment to arrive (network round-trip, larger the more attachments have
+// piled up) — until then _bearipDataCache[kind] is just its empty starting
+// {}, indistinguishable from "genuinely no requests yet". A page that reads
+// bearipLoadProductionRequests()/bearipLoadIpReviews() etc. before this
+// flips true and shows a flat "없어요" empty state ends up lying to GM —
+// looking permanently broken instead of just still loading.
+const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false };
+
+function bearipIsDataLoaded(kind) {
+  return !!_bearipDataLoaded[kind];
+}
 
 function bearipOnDataChange(kind, fn) {
   if (_bearipDataListeners[kind]) _bearipDataListeners[kind].push(fn);
@@ -681,6 +693,7 @@ function _bearipWatchPath(kind, path) {
     .ref(path)
     .on('value', (snap) => {
       _bearipDataCache[kind] = snap.val() || {};
+      _bearipDataLoaded[kind] = true;
       _bearipNotifyListeners(kind);
     });
 }
