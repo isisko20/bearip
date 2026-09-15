@@ -118,9 +118,11 @@ const BEARIP_ROADMAP_TEMPLATES = {
   video: [
     { key: 'story', label: '시나리오' },
     { key: 'character', label: '캐릭터/<br>컨셉 디자인' },
+    { key: 'visual', label: '톤앤매너/<br>비주얼 가이드' },
     { key: 'storyboard', label: '스토리보드' },
     { key: 'art', label: '촬영/제작' },
     { key: 'lettering', label: '편집/<br>사운드' },
+    { key: 'cover', label: '썸네일/<br>포스터' },
     { key: 'upload', label: '업로드/<br>공개' },
   ],
   multi: [
@@ -131,6 +133,7 @@ const BEARIP_ROADMAP_TEMPLATES = {
     { key: 'storyboard', label: '포맷별<br>기획' },
     { key: 'art', label: '웹툰/영상<br>제작' },
     { key: 'lettering', label: '현지화/<br>검수' },
+    { key: 'cover', label: '표지/<br>썸네일 디자인' },
     { key: 'upload', label: '멀티<br>배포' },
   ],
 };

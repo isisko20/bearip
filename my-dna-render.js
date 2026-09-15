@@ -1275,10 +1275,12 @@ function ensureStepMaterialOverlay() {
     step.submissions = cleaned;
     const targetRaw = parseInt(document.getElementById('stepMaterialTarget').value, 10);
     step.targetCount = targetRaw > 0 ? targetRaw : 1;
-    if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { roadmap: currentIP.roadmap });
+    mdSyncStepAssetsFromSubmissions(step);
+    if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { roadmap: currentIP.roadmap, assets: currentIP.assets });
     recomputeWritingCompleteness();
     renderRoadmap();
     renderStatus();
+    renderAssets();
     closeStepMaterialEditor();
     bearipShowToast('자료를 등록했어요');
   });
@@ -1717,6 +1719,24 @@ async function openAssetPreview(index) {
     return;
   }
 
+  // fileData — a 개요 탭 submission mirrored in via mdSyncStepAssetsFromSubmissions
+  // (문서/음향, read inline as a data URL there, not IndexedDB-backed like
+  // this tab's own uploads) — so there's no bearipGetAssetFile blob to fetch.
+  if (asset.fileData) {
+    if (asset.mime && asset.mime.startsWith('audio/')) {
+      body.innerHTML = `<audio src="${asset.fileData}" controls autoplay></audio>`;
+    } else if (asset.mime === 'application/pdf') {
+      body.innerHTML = `<iframe src="${asset.fileData}" class="md-asset-preview-pdf"></iframe>`;
+    } else {
+      body.innerHTML = `
+        <div class="md-asset-preview-empty">미리보기를 지원하지 않는 파일 형식이에요</div>
+        <a class="md-asset-preview-download" href="${asset.fileData}" download="${bearipEscapeHtml(asset.fileName || asset.name)}">다운로드</a>
+      `;
+    }
+    meta.textContent = asset.fileSize ? `${asset.date} · ${mdFormatFileSize(asset.fileSize)}` : asset.date;
+    return;
+  }
+
   if (!asset.blobStored) {
     body.innerHTML = '<div class="md-asset-preview-empty">미리보기를 지원하지 않는 자산이에요</div>';
     return;
@@ -1943,6 +1963,76 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const ASSET_TYPE_ICONS = { character: 'user', world: 'doc', story: 'file', art: 'image' };
 const ASSET_THUMB_CYCLE = ['thumb-1', 'thumb-2', 'thumb-3', 'thumb-4', 'thumb-5', 'thumb-6', 'thumb-7', 'thumb-8'];
+
+// Maps a roadmap step's key to one of the ASSETS tab's 4 broad categories,
+// so registering material on 개요 (e.g. 스토리 자료 등록) also files it under
+// the matching tag in ASSETS instead of the two tabs tracking the same
+// material separately. 'upload' has no mapping — it's a release milestone,
+// not a creative asset category.
+const ROADMAP_KEY_TO_ASSET_TYPE = {
+  story: 'story',
+  character: 'character',
+  visual: 'world',
+  background: 'world',
+  storyboard: 'art',
+  art: 'art',
+  lettering: 'art',
+  cover: 'art',
+};
+
+// Keeps each step's registered submissions mirrored into currentIP.assets,
+// tagged by ROADMAP_KEY_TO_ASSET_TYPE — sourceSubmissionId links an asset
+// back to the submission it came from, so re-saving the material editor
+// updates the same asset instead of duplicating it, and removing a
+// submission there removes its mirrored asset too. Mutates currentIP.assets
+// in place; caller still owns persisting it (bearipUpdateIP) and re-rendering.
+function mdSyncStepAssetsFromSubmissions(step) {
+  const assetType = ROADMAP_KEY_TO_ASSET_TYPE[step.key];
+  const stepLabel = (step.label || '').replace(/<br>/g, ' ');
+  const submissions = step.submissions || [];
+  const submissionIds = new Set(submissions.map((s) => s.id));
+
+  let assets = (currentIP.assets || []).filter(
+    (a) => a.sourceStepKey !== step.key || submissionIds.has(a.sourceSubmissionId)
+  );
+  if (!assetType) {
+    currentIP.assets = assets;
+    return;
+  }
+
+  submissions.forEach((sub) => {
+    if (!sub.imageData && !sub.fileData && !sub.fileName) return; // note-only entry — nothing to file as an asset
+    const existingIdx = assets.findIndex((a) => a.sourceSubmissionId === sub.id);
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+    const isVideo = !!sub.mime && sub.mime.startsWith('video/');
+    const asset = {
+      id: existingIdx !== -1 ? assets[existingIdx].id : 'asset_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      name: sub.label ? `${stepLabel} · ${sub.label}` : stepLabel,
+      ver: 'v1.0',
+      date: existingIdx !== -1 ? assets[existingIdx].date : dateStr,
+      thumb: existingIdx !== -1 ? assets[existingIdx].thumb : ASSET_THUMB_CYCLE[assets.length % ASSET_THUMB_CYCLE.length],
+      icon: isVideo ? 'video' : ASSET_TYPE_ICONS[assetType] || 'file',
+      type: assetType,
+      sourceStepKey: step.key,
+      sourceSubmissionId: sub.id,
+    };
+    if (existingIdx !== -1 && assets[existingIdx].folderId) asset.folderId = assets[existingIdx].folderId;
+    if (sub.imageData) asset.imageData = sub.imageData;
+    if (sub.fileData) asset.fileData = sub.fileData;
+    if (sub.fileName) {
+      asset.fileName = sub.fileName;
+      asset.fileSize = sub.fileSize;
+      asset.mime = sub.mime;
+    }
+    if (sub.note) asset.note = sub.note;
+
+    if (existingIdx !== -1) assets[existingIdx] = asset;
+    else assets.push(asset);
+  });
+
+  currentIP.assets = assets;
+}
 
 async function addAssetFromUpload(title, type, file, folderId) {
   if (file && file.size > BEARIP_MAX_ASSET_FILE_BYTES) {
