@@ -138,6 +138,27 @@ const BEARIP_ROADMAP_TEMPLATES = {
   ],
 };
 
+// Example placeholder copy for the material-registration entry's 제목/메모
+// fields — shown as ordinary greyed-out placeholder text (never a real
+// value), so a creator sees what's actually useful to write for THIS kind of
+// step instead of one generic hint for every step. Same key set as
+// BEARIP_ROADMAP_STEP_PRICE below.
+const BEARIP_STEP_MATERIAL_HINTS = {
+  story: { label: '예: 1화, 시놉시스', note: '예: 주요 줄거리, 등장인물 관계, 핵심 사건을 적어주세요' },
+  character: { label: '예: 주인공 이름', note: '예: 외형 특징, 성격, 말투, 다른 캐릭터와의 관계를 적어주세요' },
+  visual: { label: '예: 톤앤매너 가이드', note: '예: 색감, 분위기, 참고하고 싶은 작품이나 레퍼런스를 적어주세요' },
+  background: { label: '예: 학교 옥상, 밤거리', note: '예: 등장하는 시간대, 분위기, 등장 빈도를 적어주세요' },
+  storyboard: { label: '예: 1화 콘티', note: '예: 컷 구성, 연출 의도, 강조하고 싶은 장면을 적어주세요' },
+  art: { label: '예: 1화 원고', note: '예: 작업 진행 상태, 톤, 참고하고 싶은 작화 스타일을 적어주세요' },
+  lettering: { label: '예: 1화 대사', note: '예: 폰트, 말풍선 스타일, 교정이 필요한 부분을 적어주세요' },
+  cover: { label: '예: 메인 표지 시안', note: '예: 원하는 분위기, 인물 배치, 로고/타이틀 유무를 적어주세요' },
+  upload: { label: '예: 업로드 완료 화면', note: '예: 업로드 플랫폼, 공개 일정을 적어주세요' },
+};
+
+function bearipStepMaterialHint(stepKey) {
+  return BEARIP_STEP_MATERIAL_HINTS[stepKey] || { label: '예: 1화, 설정 자료', note: '간단한 설명이나 메모 (선택)' };
+}
+
 // Credit cost to have each roadmap step made by 제작요청 instead of
 // self-producing it — one price per step key, shared across every goal's
 // template since the same key means the same kind of work either way.

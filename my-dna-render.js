@@ -1104,10 +1104,14 @@ function stepMaterialEntryHtml(entry) {
   const uploadStyle = entry.imageData ? ` style="background-image:url('${entry.imageData}')"` : '';
   const uploadText = hasFile ? entry.fileName || '파일 첨부됨' : '클릭해서 파일 업로드';
   const uploadHint = hasFile ? '다른 파일을 선택하려면 클릭하세요' : '이미지, PDF, 워드(doc/docx), 텍스트, 음향(mp3/wav) — 문서·음향은 최대 5MB';
+  // Which kind of material this is (스토리/캐릭터/작화 etc.) changes what's
+  // actually worth writing — a generic "메모 (선택)" hint didn't say what.
+  const stepKey = currentIP.roadmap[stepMaterialIndex] ? currentIP.roadmap[stepMaterialIndex].key : null;
+  const hint = typeof bearipStepMaterialHint === 'function' ? bearipStepMaterialHint(stepKey) : { label: '예: 1화, 설정 자료', note: '간단한 설명이나 메모 (선택)' };
   return `
     <div class="md-step-material-entry" data-entry-id="${entry.id}">
       <div class="md-step-material-entry-head">
-        <input type="text" class="md-step-material-entry-label" placeholder="예: 1화, 설정 자료" maxlength="30" value="${bearipEscapeHtml(entry.label || '')}">
+        <input type="text" class="md-step-material-entry-label" placeholder="${bearipEscapeHtml(hint.label)}" maxlength="30" value="${bearipEscapeHtml(entry.label || '')}">
         <button type="button" class="md-step-material-entry-remove" aria-label="이 자료 삭제">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
@@ -1118,7 +1122,7 @@ function stepMaterialEntryHtml(entry) {
         <div class="t">${bearipEscapeHtml(uploadText)}</div>
         <div class="d">${bearipEscapeHtml(uploadHint)}</div>
       </div>
-      <textarea class="md-step-material-note" placeholder="간단한 설명이나 메모 (선택)" maxlength="200">${bearipEscapeHtml(entry.note || '')}</textarea>
+      <textarea class="md-step-material-note" placeholder="${bearipEscapeHtml(hint.note)}" maxlength="200">${bearipEscapeHtml(entry.note || '')}</textarea>
     </div>
   `;
 }
@@ -1391,7 +1395,7 @@ function ensureExpertHelpOverlay() {
       closeExpertHelpModal();
       openProductionRequest('roadmap', step.key, step.label.replace(/<br>/g, ' '), BEARIP_ROADMAP_STEP_PRICE[step.key] || 0);
     } else {
-      mdSpendAndRequestReview(index);
+      openExpertReviewRequestConfirm(index);
     }
   });
   document.getElementById('expertHelpTopup').addEventListener('click', (e) => {
@@ -1416,7 +1420,9 @@ function openExpertHelpModal() {
   overlay.style.display = 'flex';
 }
 
-function mdSpendAndRequestReview(index) {
+// message: 요청자가 담당자에게 남기는 한마디 — openExpertReviewRequestConfirm의
+// 확인 모달에서 입력받아 전달된다 (선택 사항, 비어 있어도 됨).
+function mdSpendAndRequestReview(index, message) {
   const step = currentIP.roadmap[index];
   if (!step) return;
   if (!bearipSpendCredits(BEARIP_EXPERT_REVIEW_PRICE)) {
@@ -1429,6 +1435,7 @@ function mdSpendAndRequestReview(index) {
     ipId: currentIP.id,
     ipTitle: currentIP.title,
     requesterNickname: bearipScopeSuffix(),
+    requesterNote: message || '',
     stepKey: step.key,
     stepLabel: step.label.replace(/<br>/g, ' '),
     submissions: step.submissions,
@@ -1450,6 +1457,78 @@ function mdSpendAndRequestReview(index) {
   renderExpertHelpList();
   renderRoadmap();
   bearipShowToast(`전문가 검토를 요청했어요. ${BEARIP_EXPERT_REVIEW_PRICE}C가 결제됐어요.`);
+}
+
+let expertReviewRequestPendingIndex = null;
+
+// 검토 요청 전에 요청자가 담당자에게 남길 말을 적을 수 있는 확인 모달 — 제작요청의
+// 요청 세부사항(productionRequestDetail)과 같은 역할을 전문가 검토 쪽에도 둔 것.
+function ensureExpertReviewRequestOverlay() {
+  let overlay = document.getElementById('expertReviewRequestOverlay');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.className = 'md-road-edit-overlay';
+  overlay.id = 'expertReviewRequestOverlay';
+  overlay.style.display = 'none';
+  overlay.innerHTML = `
+    <div class="md-road-edit-box md-production-request-box">
+      <div class="md-road-edit-head">
+        <span>전문가 검토 요청</span>
+        <button type="button" class="md-road-edit-close" id="expertReviewRequestClose" aria-label="닫기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <p class="md-production-request-desc" id="expertReviewRequestDesc"></p>
+      <label class="md-production-request-detail-label" for="expertReviewRequestDetail">담당자에게 하고 싶은 말 (선택)</label>
+      <textarea id="expertReviewRequestDetail" class="md-production-request-detail" placeholder="특히 봐줬으면 하는 부분, 고민되는 지점 등을 자유롭게 적어주세요."></textarea>
+      <div class="md-production-request-price">
+        <span class="lbl">결제 크레딧</span>
+        <span class="val">${BEARIP_EXPERT_REVIEW_PRICE}C</span>
+      </div>
+      <div class="md-production-request-balance">보유 크레딧 <span id="expertReviewRequestBalance" class="bearip-credit-balance-display">0C</span></div>
+      <button type="button" class="md-production-request-pay" id="expertReviewRequestPayBtn">결제하고 요청하기</button>
+      <a href="#" class="md-production-request-topup" id="expertReviewRequestTopup" style="display:none">크레딧 충전하러 가기 →</a>
+    </div>
+  `;
+  (document.querySelector('.dna-app') || document.body).appendChild(overlay);
+  const close = () => {
+    overlay.style.display = 'none';
+    expertReviewRequestPendingIndex = null;
+  };
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('#expertReviewRequestClose')) close();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.style.display !== 'none') close();
+  });
+  document.getElementById('expertReviewRequestTopup').addEventListener('click', (e) => {
+    e.preventDefault();
+    close();
+    if (typeof bearipOpenCreditTopup === 'function') bearipOpenCreditTopup();
+  });
+  document.getElementById('expertReviewRequestPayBtn').addEventListener('click', () => {
+    if (expertReviewRequestPendingIndex === null) return;
+    const detailInput = document.getElementById('expertReviewRequestDetail');
+    const message = detailInput ? detailInput.value.trim() : '';
+    const index = expertReviewRequestPendingIndex;
+    close();
+    mdSpendAndRequestReview(index, message);
+  });
+  return overlay;
+}
+
+function openExpertReviewRequestConfirm(index) {
+  const step = currentIP.roadmap[index];
+  if (!step) return;
+  const overlay = ensureExpertReviewRequestOverlay();
+  expertReviewRequestPendingIndex = index;
+  document.getElementById('expertReviewRequestDesc').textContent = `'${step.label.replace(/<br>/g, ' ')}' 항목을 담당 IP 매니저에게 검토 요청할까요?`;
+  document.getElementById('expertReviewRequestDetail').value = '';
+  const balance = bearipGetCredits();
+  document.getElementById('expertReviewRequestBalance').textContent = balance + 'C';
+  const topupLink = document.getElementById('expertReviewRequestTopup');
+  if (topupLink) topupLink.style.display = balance >= BEARIP_EXPERT_REVIEW_PRICE ? 'none' : 'block';
+  overlay.style.display = 'flex';
 }
 
 // ---- Asset folders — a free-form, user-created grouping on top of the

@@ -179,6 +179,7 @@ function irRenderList() {
             <span class="pr-status ${r.status === 'reviewed' ? 'done' : 'pending'}">${IR_STATUS_LABEL[r.status] || r.status}</span>
           </div>
           <div class="pr-card-meta"><span>${irFormatRelativeTime(r.requestedAt)}</span></div>
+          ${r.requesterNote ? `<div class="ir-requester-note"><span class="lbl">요청자 메모</span>"${bearipEscapeHtml(r.requesterNote)}"</div>` : ''}
           ${irSubmissionHtml(r.submissions || r.submission)}
           ${
             r.status === 'reviewed'
@@ -228,6 +229,7 @@ function irOpenReviewModal(id) {
     <div class="pr-confirm-box">
       <div class="pr-confirm-title">'${bearipEscapeHtml(req.ipTitle)}'의 '${bearipEscapeHtml(req.stepLabel)}' 검토</div>
       <div class="pr-confirm-desc">이 항목의 전문가 준비도를 0~100% 사이로 매기고, 그 이유를 한 줄로 남겨주세요. 요청자에게 알림으로 전달돼요.</div>
+      ${req.requesterNote ? `<div class="ir-requester-note"><span class="lbl">요청자 메모</span>"${bearipEscapeHtml(req.requesterNote)}"</div>` : ''}
       <label class="pr-confirm-label" for="irReviewProgress">전문가 준비도 (%)</label>
       <input type="number" id="irReviewProgress" class="ir-confirm-number" min="0" max="100" step="1" value="${req.adminProgress != null ? req.adminProgress : ''}" placeholder="예: 70">
       <label class="ir-confirm-checkbox-row">

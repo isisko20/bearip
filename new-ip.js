@@ -256,16 +256,17 @@ function niMakeEntryId() {
   return 'entry_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
 }
 
-function roadEntryHtml(entry) {
+function roadEntryHtml(entry, stepKey) {
   const hasFile = !!(entry.imageData || entry.fileName);
   const uploadClass = hasFile ? 'ni-road-upload has-file' : 'ni-road-upload';
   const uploadStyle = entry.imageData ? ` style="background-image:url('${entry.imageData}')"` : '';
   const uploadText = hasFile ? entry.fileName || '파일 첨부됨' : '클릭해서 파일 업로드';
   const uploadHint = hasFile ? '다른 파일을 선택하려면 클릭하세요' : '이미지, PDF, 워드(doc/docx), 텍스트, 음향(mp3/wav) — 문서·음향은 최대 5MB';
+  const hint = typeof bearipStepMaterialHint === 'function' ? bearipStepMaterialHint(stepKey) : { label: '예: 1화, 설정 자료', note: '간단한 설명이나 메모 (선택)' };
   return `
     <div class="ni-road-entry" data-entry-id="${entry.id}">
       <div class="ni-road-entry-head">
-        <input type="text" class="ni-road-entry-label" placeholder="예: 1화, 설정 자료" maxlength="30" value="${niEscapeHtml(entry.label || '')}">
+        <input type="text" class="ni-road-entry-label" placeholder="${niEscapeHtml(hint.label)}" maxlength="30" value="${niEscapeHtml(entry.label || '')}">
         <button type="button" class="ni-road-entry-remove" aria-label="이 자료 삭제">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
@@ -276,7 +277,7 @@ function roadEntryHtml(entry) {
         <div class="t">${niEscapeHtml(uploadText)}</div>
         <div class="d">${niEscapeHtml(uploadHint)}</div>
       </div>
-      <textarea class="ni-road-item-note" placeholder="간단한 설명이나 메모 (선택)" maxlength="200">${niEscapeHtml(entry.note || '')}</textarea>
+      <textarea class="ni-road-item-note" placeholder="${niEscapeHtml(hint.note)}" maxlength="200">${niEscapeHtml(entry.note || '')}</textarea>
     </div>
   `;
 }
@@ -286,7 +287,7 @@ function roadItemBlockHtml(step) {
   const label = step.label.replace(/<br>/g, ' ');
   const target = roadmapTargets[step.key] || 1;
   const entriesHtml = entries.length
-    ? entries.map(roadEntryHtml).join('')
+    ? entries.map((en) => roadEntryHtml(en, step.key)).join('')
     : '<div class="ni-road-item-empty">아직 등록된 자료가 없어요.</div>';
   return `
     <div class="ni-road-item" data-key="${step.key}">
