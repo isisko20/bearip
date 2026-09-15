@@ -261,7 +261,7 @@ function roadEntryHtml(entry) {
   const uploadClass = hasFile ? 'ni-road-upload has-file' : 'ni-road-upload';
   const uploadStyle = entry.imageData ? ` style="background-image:url('${entry.imageData}')"` : '';
   const uploadText = hasFile ? entry.fileName || '파일 첨부됨' : '클릭해서 파일 업로드';
-  const uploadHint = hasFile ? '다른 파일을 선택하려면 클릭하세요' : '이미지, PDF, 워드(doc/docx), 텍스트 — 문서는 최대 5MB';
+  const uploadHint = hasFile ? '다른 파일을 선택하려면 클릭하세요' : '이미지, PDF, 워드(doc/docx), 텍스트, 음향(mp3/wav) — 문서·음향은 최대 5MB';
   return `
     <div class="ni-road-entry" data-entry-id="${entry.id}">
       <div class="ni-road-entry-head">
@@ -271,7 +271,7 @@ function roadEntryHtml(entry) {
         </button>
       </div>
       <div class="${uploadClass}"${uploadStyle}>
-        <input type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt" style="display:none">
+        <input type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.mp3,.wav" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 15l5-5 4 4 4-4 5 5"/><circle cx="8" cy="9" r="1.4"/></svg>
         <div class="t">${niEscapeHtml(uploadText)}</div>
         <div class="d">${niEscapeHtml(uploadHint)}</div>
@@ -373,10 +373,10 @@ roadItemsList.addEventListener('change', async (e) => {
       uploadEl.querySelector('.d').textContent = err.message || '이미지를 불러오지 못했어요';
       return;
     }
-  } else if (bearipIsInlineDocFile(file)) {
-    if (file.size > BEARIP_MAX_INLINE_DOC_BYTES) {
+  } else if (bearipIsInlineAttachmentFile(file)) {
+    if (file.size > BEARIP_MAX_INLINE_FILE_BYTES) {
       uploadEl.classList.add('error');
-      uploadEl.querySelector('.d').textContent = '문서 파일은 최대 5MB까지 등록할 수 있어요';
+      uploadEl.querySelector('.d').textContent = '문서·음향 파일은 최대 5MB까지 등록할 수 있어요';
       return;
     }
     try {

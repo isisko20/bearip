@@ -224,10 +224,13 @@ function ipdRenderGmMaterials(ip) {
                 ? `<div class="ipd-gm-sub-thumb" style="background-image:url('${sub.imageData}')" data-full="${sub.imageData}" title="눌러서 크게 보기"></div>`
                 : '';
               const fileSize = sub.fileSize ? ` · ${Math.max(1, Math.round(sub.fileSize / 1024))}KB` : '';
+              const isAudio = !sub.imageData && sub.fileData && typeof bearipIsAudioSubmission === 'function' && bearipIsAudioSubmission(sub);
               const file = !sub.imageData && sub.fileName
-                ? sub.fileData
-                  ? `<a class="ipd-gm-sub-file" href="${sub.fileData}" download="${esc(sub.fileName)}" target="_blank" rel="noopener">${esc(sub.fileName)}${fileSize}</a>`
-                  : `<div class="ipd-gm-sub-file plain">${esc(sub.fileName)}${fileSize}</div>`
+                ? isAudio
+                  ? `<div class="ipd-gm-sub-audio"><div class="ipd-gm-sub-file plain">${esc(sub.fileName)}${fileSize}</div><audio controls preload="metadata" src="${sub.fileData}"></audio></div>`
+                  : sub.fileData
+                    ? `<a class="ipd-gm-sub-file" href="${sub.fileData}" download="${esc(sub.fileName)}" target="_blank" rel="noopener">${esc(sub.fileName)}${fileSize}</a>`
+                    : `<div class="ipd-gm-sub-file plain">${esc(sub.fileName)}${fileSize}</div>`
                 : '';
               const note = sub.note ? `<div class="ipd-gm-sub-note">"${esc(sub.note)}"</div>` : '';
               return `<div class="ipd-gm-sub">${subLabel}${thumb}${file}${note}</div>`;
@@ -313,6 +316,8 @@ function ipdInjectGmMaterialsStyles() {
     .ipd-gm-sub-thumb { width: 140px; height: 140px; border-radius: 8px; background-size: cover; background-position: center; margin-bottom: 6px; cursor: zoom-in; }
     .ipd-gm-sub-file { color: var(--od-purple); text-decoration: underline; display: block; margin-bottom: 4px; word-break: break-all; }
     .ipd-gm-sub-file.plain { color: var(--od-ink-soft); text-decoration: none; }
+    .ipd-gm-sub-audio { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+    .ipd-gm-sub-audio audio { width: 100%; height: 36px; }
     .ipd-gm-sub-note { color: var(--od-ink-soft); font-style: italic; }
     .ipd-gm-lightbox-overlay {
       position: fixed; inset: 0; z-index: 1200; background: rgba(10,8,16,0.82);

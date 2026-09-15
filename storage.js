@@ -910,28 +910,39 @@ function bearipResizeImageToDataUrl(file, maxDim, quality) {
   });
 }
 
-// A registered roadmap-step document (시나리오 등의 워드/PDF/텍스트 파일) needs to
-// actually be openable later — including by GM on a different device, once
-// it's synced through Firebase with the rest of the IP — so it's read inline
-// as a data URL here, the same way an image becomes its thumbnail above.
-// Kept well under BEARIP_MAX_ASSET_FILE_BYTES (the IndexedDB-backed ASSETS
-// tab's 50MB limit): this instead lands in the IP's own JSON (localStorage +
-// Firebase), which has nowhere near that much headroom.
-const BEARIP_MAX_INLINE_DOC_BYTES = 5 * 1024 * 1024; // 5MB — localStorage's own
+// A registered roadmap-step document or audio clip (시나리오 워드/PDF/텍스트,
+// 음향 mp3/wav 등) needs to actually be openable/playable later — including by
+// GM on a different device, once it's synced through Firebase with the rest
+// of the IP — so it's read inline as a data URL here, the same way an image
+// becomes its thumbnail above. Kept well under BEARIP_MAX_ASSET_FILE_BYTES
+// (the IndexedDB-backed ASSETS tab's 50MB limit): this instead lands in the
+// IP's own JSON (localStorage + Firebase), which has nowhere near that much
+// headroom — a short mp3 fits fine, a raw WAV of more than a few seconds may
+// not.
+const BEARIP_MAX_INLINE_FILE_BYTES = 5 * 1024 * 1024; // 5MB — localStorage's own
 // per-origin quota (separate from, and much smaller than, what navigator.
 // storage.estimate() reports) is typically only ~5-10MB total, shared with
 // every other IP/submission already saved there.
 
-const BEARIP_INLINE_DOC_TYPES = [
+const BEARIP_INLINE_FILE_TYPES = [
   'application/pdf',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'text/plain',
 ];
 
-function bearipIsInlineDocFile(file) {
-  if (BEARIP_INLINE_DOC_TYPES.includes(file.type)) return true;
-  return /\.(pdf|docx?|txt)$/i.test(file.name || '');
+function bearipIsInlineAttachmentFile(file) {
+  if (BEARIP_INLINE_FILE_TYPES.includes(file.type)) return true;
+  if (file.type.startsWith('audio/')) return true;
+  return /\.(pdf|docx?|txt|mp3|wav)$/i.test(file.name || '');
+}
+
+// Rough "is this an audio submission" check for rendering (<audio controls>
+// vs a plain download link) — mime first, filename extension as a fallback
+// for browsers that report an empty/generic type for less common formats.
+function bearipIsAudioSubmission(sub) {
+  if (sub.mime && sub.mime.startsWith('audio/')) return true;
+  return /\.(mp3|wav)$/i.test(sub.fileName || '');
 }
 
 function bearipReadFileAsDataUrl(file) {

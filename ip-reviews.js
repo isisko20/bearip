@@ -59,13 +59,17 @@ function irSubmissionEntryHtml(sub) {
   const thumb = sub.imageData
     ? `<div class="ir-submission-thumb" style="background-image:url('${sub.imageData}')" data-full="${sub.imageData}" title="눌러서 크게 보기"></div>`
     : '';
-  // fileData (워드/PDF/텍스트) is an actual openable file, not just a name —
-  // link it so GM can open/save it, not just see that something was uploaded.
+  // fileData (워드/PDF/텍스트/음향) is an actual openable file, not just a
+  // name — audio plays inline, everything else links out to open/save it,
+  // rather than just naming that something was uploaded.
   const fileMeta = sub.fileSize ? ` · ${irFormatFileSize(sub.fileSize)}` : '';
+  const isAudio = !sub.imageData && sub.fileData && typeof bearipIsAudioSubmission === 'function' && bearipIsAudioSubmission(sub);
   const file = !sub.imageData && sub.fileName
-    ? sub.fileData
-      ? `<a class="ir-submission-file" href="${sub.fileData}" download="${bearipEscapeHtml(sub.fileName)}" target="_blank" rel="noopener">${bearipEscapeHtml(sub.fileName)}${fileMeta}</a>`
-      : `<div class="ir-submission-file">${bearipEscapeHtml(sub.fileName)}${fileMeta}</div>`
+    ? isAudio
+      ? `<div class="ir-submission-audio"><div class="ir-submission-file plain">${bearipEscapeHtml(sub.fileName)}${fileMeta}</div><audio controls preload="metadata" src="${sub.fileData}"></audio></div>`
+      : sub.fileData
+        ? `<a class="ir-submission-file" href="${sub.fileData}" download="${bearipEscapeHtml(sub.fileName)}" target="_blank" rel="noopener">${bearipEscapeHtml(sub.fileName)}${fileMeta}</a>`
+        : `<div class="ir-submission-file">${bearipEscapeHtml(sub.fileName)}${fileMeta}</div>`
     : '';
   const note = sub.note ? `<div class="ir-submission-note">"${bearipEscapeHtml(sub.note)}"</div>` : '';
   return `<div class="ir-submission">${label}${thumb}${file}${note}</div>`;
