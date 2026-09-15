@@ -861,6 +861,13 @@ function bearipUpdateIpReview(id, patch) {
   return Object.assign({ id }, (_bearipDataCache.ipReviews || {})[id], patch);
 }
 
+// GM's own permanent delete (from 휴지통) — distinct from a soft "trashed"
+// patch via bearipUpdateIpReview, which is what 휴지통으로 이동/복구 use.
+function bearipDeleteIpReview(id) {
+  if (!bearipFirebaseReady()) return;
+  firebase.database().ref('ipReviews/' + id).remove();
+}
+
 // ---- 종합 코멘트 — one IP-wide comment GM can leave (ip-reviews.js), shown
 // back on MY DNA (my-dna-render.js). Was stored on the IP object itself,
 // which only worked while every account shared one localStorage bucket.

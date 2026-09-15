@@ -69,6 +69,14 @@
 .pr-complete-btn { background: var(--dr-purple); color: #fff; border-color: transparent; }
 .pr-reject-btn { background: var(--dr-panel); color: #d64545; }
 .pr-reject-btn:hover { background: rgba(214,69,69,0.1); border-color: #d64545; }
+.pr-trash-btn, .pr-restore-btn, .pr-purge-btn {
+  flex: 1; padding: 10px; border-radius: 10px; font-size: 12.5px; font-weight: 700;
+  cursor: pointer; border: 1px solid var(--dr-border); background: var(--dr-panel);
+  color: var(--dr-ink-soft); font-family: inherit;
+}
+.pr-trash-btn:hover, .pr-restore-btn:hover { border-color: var(--dr-purple); color: var(--dr-purple); }
+.pr-purge-btn { color: #d64545; }
+.pr-purge-btn:hover { background: rgba(214,69,69,0.1); border-color: #d64545; }
 
 .pr-empty {
   display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px;

@@ -42,7 +42,12 @@ function prRenderList() {
   if (!list || !empty) return;
 
   const all = typeof bearipLoadProductionRequests === 'function' ? bearipLoadProductionRequests() : [];
-  const filtered = prActiveFilter === 'all' ? all : all.filter((r) => r.status === prActiveFilter);
+  const filtered =
+    prActiveFilter === 'trash'
+      ? all.filter((r) => r.trashed)
+      : prActiveFilter === 'all'
+        ? all.filter((r) => !r.trashed)
+        : all.filter((r) => !r.trashed && r.status === prActiveFilter);
 
   if (!filtered.length) {
     list.innerHTML = '';
@@ -80,7 +85,14 @@ function prRenderList() {
                <button type="button" class="pr-complete-btn" data-id="${r.id}">완료 처리</button>
                <button type="button" class="pr-reject-btn" data-id="${r.id}">거절</button>
              </div>`
-          : ''
+          : r.trashed
+            ? `<div class="pr-card-actions">
+                 <button type="button" class="pr-restore-btn" data-id="${r.id}">복구</button>
+                 <button type="button" class="pr-purge-btn" data-id="${r.id}">영구 삭제</button>
+               </div>`
+            : `<div class="pr-card-actions">
+                 <button type="button" class="pr-trash-btn" data-id="${r.id}">휴지통으로</button>
+               </div>`
       }
     </div>
   `
@@ -92,6 +104,55 @@ function prRenderList() {
   });
   list.querySelectorAll('.pr-reject-btn').forEach((btn) => {
     btn.addEventListener('click', () => prOpenAction(btn.dataset.id, 'rejected'));
+  });
+  list.querySelectorAll('.pr-trash-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (typeof bearipUpdateProductionRequest === 'function') {
+        bearipUpdateProductionRequest(btn.dataset.id, { trashed: true, trashedAt: new Date().toISOString() });
+      }
+      prRenderList();
+    });
+  });
+  list.querySelectorAll('.pr-restore-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (typeof bearipUpdateProductionRequest === 'function') {
+        bearipUpdateProductionRequest(btn.dataset.id, { trashed: false, trashedAt: null });
+      }
+      prRenderList();
+    });
+  });
+  list.querySelectorAll('.pr-purge-btn').forEach((btn) => {
+    btn.addEventListener('click', () => prConfirmPurge(btn.dataset.id));
+  });
+}
+
+// A native confirm() can be blocked outright in some embedded/sandboxed
+// contexts this prototype gets viewed in — same reasoning as my-dna-render.js
+// avoiding prompt() for the asset-add tile — so this reuses the same
+// pr-confirm-overlay pattern prOpenAction already uses on this page instead.
+function prConfirmPurge(id) {
+  const overlay = document.createElement('div');
+  overlay.className = 'pr-confirm-overlay';
+  overlay.innerHTML = `
+    <div class="pr-confirm-box">
+      <div class="pr-confirm-title">완전히 삭제할까요?</div>
+      <div class="pr-confirm-desc">휴지통에서 영구 삭제돼요. 되돌릴 수 없어요.</div>
+      <div class="pr-confirm-actions">
+        <button type="button" class="pr-confirm-cancel">취소</button>
+        <button type="button" class="pr-confirm-submit reject">영구 삭제</button>
+      </div>
+    </div>
+  `;
+  (document.querySelector('.dna-app') || document.body).appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close();
+  });
+  overlay.querySelector('.pr-confirm-cancel').addEventListener('click', close);
+  overlay.querySelector('.pr-confirm-submit').addEventListener('click', () => {
+    close();
+    if (typeof bearipDeleteProductionRequest === 'function') bearipDeleteProductionRequest(id);
+    prRenderList();
   });
 }
 

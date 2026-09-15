@@ -152,7 +152,12 @@ function irRenderList() {
   if (!list || !empty) return;
 
   const all = typeof bearipLoadIpReviews === 'function' ? bearipLoadIpReviews() : [];
-  const filtered = irActiveFilter === 'all' ? all : all.filter((r) => r.status === irActiveFilter);
+  const filtered =
+    irActiveFilter === 'trash'
+      ? all.filter((r) => r.trashed)
+      : irActiveFilter === 'all'
+        ? all.filter((r) => !r.trashed)
+        : all.filter((r) => !r.trashed && r.status === irActiveFilter);
 
   if (!filtered.length) {
     list.innerHTML = '';
@@ -195,9 +200,17 @@ function irRenderList() {
               : ''
           }
           ${typeof bearipRenderResultFileHtml === 'function' ? bearipRenderResultFileHtml(r, 'pr-result') : ''}
-          <div class="pr-card-actions">
-            <button type="button" class="ir-review-btn" data-id="${r.id}">${r.status === 'reviewed' ? '다시 검토하기' : '검토하기'}</button>
-          </div>
+          ${
+            r.trashed
+              ? `<div class="pr-card-actions">
+                   <button type="button" class="ir-restore-btn" data-id="${r.id}">복구</button>
+                   <button type="button" class="ir-purge-btn" data-id="${r.id}">영구 삭제</button>
+                 </div>`
+              : `<div class="pr-card-actions">
+                   <button type="button" class="ir-review-btn" data-id="${r.id}">${r.status === 'reviewed' ? '다시 검토하기' : '검토하기'}</button>
+                   ${r.status === 'reviewed' ? `<button type="button" class="ir-trash-btn" data-id="${r.id}">휴지통으로</button>` : ''}
+                 </div>`
+          }
         </div>
       `
         )
@@ -218,6 +231,54 @@ function irRenderList() {
       const textarea = list.querySelector(`.ir-overall-textarea[data-ip-id="${btn.dataset.ipId}"]`);
       irSaveOverallComment(btn.dataset.ipId, textarea ? textarea.value.trim() : '');
     });
+  });
+  list.querySelectorAll('.ir-trash-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (typeof bearipUpdateIpReview === 'function') {
+        bearipUpdateIpReview(btn.dataset.id, { trashed: true, trashedAt: new Date().toISOString() });
+      }
+      irRenderList();
+    });
+  });
+  list.querySelectorAll('.ir-restore-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (typeof bearipUpdateIpReview === 'function') {
+        bearipUpdateIpReview(btn.dataset.id, { trashed: false, trashedAt: null });
+      }
+      irRenderList();
+    });
+  });
+  list.querySelectorAll('.ir-purge-btn').forEach((btn) => {
+    btn.addEventListener('click', () => irConfirmPurge(btn.dataset.id));
+  });
+}
+
+// Reuses the same pr-confirm-overlay pattern production-requests.js's own
+// purge confirm uses, instead of a native confirm() that some embedded/
+// sandboxed contexts this prototype runs in can block outright.
+function irConfirmPurge(id) {
+  const overlay = document.createElement('div');
+  overlay.className = 'pr-confirm-overlay';
+  overlay.innerHTML = `
+    <div class="pr-confirm-box">
+      <div class="pr-confirm-title">완전히 삭제할까요?</div>
+      <div class="pr-confirm-desc">휴지통에서 영구 삭제돼요. 되돌릴 수 없어요.</div>
+      <div class="pr-confirm-actions">
+        <button type="button" class="pr-confirm-cancel">취소</button>
+        <button type="button" class="pr-confirm-submit reject">영구 삭제</button>
+      </div>
+    </div>
+  `;
+  (document.querySelector('.dna-app') || document.body).appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close();
+  });
+  overlay.querySelector('.pr-confirm-cancel').addEventListener('click', close);
+  overlay.querySelector('.pr-confirm-submit').addEventListener('click', () => {
+    close();
+    if (typeof bearipDeleteIpReview === 'function') bearipDeleteIpReview(id);
+    irRenderList();
   });
 }
 
