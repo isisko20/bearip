@@ -587,6 +587,7 @@ function openAdminReviewView(stepKey) {
       ? `
         <div class="md-admin-review-score">전문가 준비도 <b>${step.adminProgress}%</b>${step.needsRevision ? ' <span class="md-admin-review-flag">보완 필요</span>' : ''}</div>
         ${step.adminComment ? `<p class="md-admin-review-comment">"${bearipEscapeHtml(step.adminComment)}"</p>` : ''}
+        ${typeof bearipRenderResultFileHtml === 'function' ? bearipRenderResultFileHtml(step, 'md-production-result') : ''}
       `
       : `<div class="md-admin-review-waiting">담당 IP 매니저가 아직 확인 전이에요.</div>`;
 
@@ -652,6 +653,11 @@ function mdReconcileRemoteStatus() {
             adminComment: rev.adminComment,
             needsRevision: rev.needsRevision,
             adminReviewedAt: rev.reviewedAt,
+            resultImageData: rev.resultImageData || null,
+            resultFileData: rev.resultFileData || null,
+            resultFileName: rev.resultFileName || null,
+            resultFileSize: rev.resultFileSize || null,
+            resultMime: rev.resultMime || null,
           });
           changed = true;
         }
@@ -892,9 +898,9 @@ function renderProductionRequestsList() {
         ${r.resultNote ? `<div class="md-production-list-result"><span>완료 메모</span>${bearipEscapeHtml(r.resultNote)}</div>` : ''}
         ${typeof bearipRenderResultFileHtml === 'function' ? bearipRenderResultFileHtml(r, 'md-production-result') : ''}
         ${
-          r.status !== 'pending'
-            ? `<div class="md-production-list-actions"><button type="button" class="md-production-list-delete" data-id="${r.id}">삭제</button></div>`
-            : ''
+          r.status === 'pending'
+            ? `<div class="md-production-list-actions"><button type="button" class="md-production-list-cancel" data-scope="${r.scope}" data-key="${r.key}">요청 취소</button></div>`
+            : `<div class="md-production-list-actions"><button type="button" class="md-production-list-delete" data-id="${r.id}">삭제</button></div>`
         }
       </div>
     `)
@@ -904,6 +910,14 @@ function renderProductionRequestsList() {
     btn.addEventListener('click', () => {
       if (typeof bearipDeleteProductionRequest === 'function') bearipDeleteProductionRequest(btn.dataset.id);
       renderProductionRequestsList();
+    });
+  });
+  // GM이 아직 확인하기 전(검토 대기)이면 취소할 수 있어야 한다 — mdCancelProductionRequest는
+  // 이미 개발 맵 카드의 "자체제작으로 전환" 버튼에서 쓰던 것과 동일한 함수(환불 +
+  // 상태를 취소됨으로 + 로컬 모드 원복까지 처리)라 여기서도 그대로 재사용한다.
+  wrap.querySelectorAll('.md-production-list-cancel').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (typeof mdCancelProductionRequest === 'function') mdCancelProductionRequest(btn.dataset.scope, btn.dataset.key);
     });
   });
 }

@@ -186,6 +186,7 @@ function irRenderList() {
               ? `<div class="pr-card-result"><span>전문가 준비도 ${r.adminProgress}%${r.needsRevision ? ' · 보완 필요' : ''}</span>${r.adminComment ? bearipEscapeHtml(r.adminComment) : ''}</div>`
               : ''
           }
+          ${typeof bearipRenderResultFileHtml === 'function' ? bearipRenderResultFileHtml(r, 'pr-result') : ''}
           <div class="pr-card-actions">
             <button type="button" class="ir-review-btn" data-id="${r.id}">${r.status === 'reviewed' ? '다시 검토하기' : '검토하기'}</button>
           </div>
@@ -217,11 +218,18 @@ function irSaveOverallComment(ipId, comment) {
   bearipShowToast('종합 코멘트를 저장했어요');
 }
 
+// The result file picked in the modal below, staged until 전문가 진단 완료로
+// 저장 actually submits — same pattern as production-requests.js's own
+// prResultPending.
+let irResultPending = null;
+
 // Built and appended fresh, removed on close — same pattern as
-// production-requests.js's own confirm modal.
+// production-requests.js's own confirm modal. Reuses its .pr-result-upload
+// styling (production-requests.css is already loaded here for .pr-card etc.)
 function irOpenReviewModal(id) {
   const req = (typeof bearipLoadIpReviews === 'function' ? bearipLoadIpReviews() : []).find((r) => r.id === id);
   if (!req) return;
+  irResultPending = null;
 
   const overlay = document.createElement('div');
   overlay.className = 'pr-confirm-overlay';
@@ -238,6 +246,13 @@ function irOpenReviewModal(id) {
       </label>
       <label class="pr-confirm-label" for="irReviewComment">코멘트</label>
       <textarea id="irReviewComment" class="pr-confirm-textarea" placeholder="이 점수를 준 이유를 한 줄로 적어주세요.">${req.adminComment ? bearipEscapeHtml(req.adminComment) : ''}</textarea>
+      <label class="pr-confirm-label" for="irResultFileInput">참고 파일 (선택)</label>
+      <div class="pr-result-upload" id="irResultUpload">
+        <input type="file" id="irResultFileInput" accept="image/*,audio/*,.pdf,.doc,.docx,.txt,.mp3,.wav" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 15l5-5 4 4 4-4 5 5"/><circle cx="8" cy="9" r="1.4"/></svg>
+        <div class="t">클릭해서 참고 파일 업로드</div>
+        <div class="d">수정 예시, 참고 이미지 등 — 이미지, PDF, 워드, 텍스트, 음향(mp3/wav) 최대 5MB</div>
+      </div>
       <div class="pr-confirm-actions">
         <button type="button" class="pr-confirm-cancel">취소</button>
         <button type="button" class="pr-confirm-submit done">전문가 진단 완료로 저장</button>
@@ -251,19 +266,67 @@ function irOpenReviewModal(id) {
     if (e.target === overlay) close();
   });
   overlay.querySelector('.pr-confirm-cancel').addEventListener('click', close);
+
+  const uploadEl = overlay.querySelector('#irResultUpload');
+  const fileInput = overlay.querySelector('#irResultFileInput');
+  uploadEl.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    uploadEl.classList.remove('error');
+    const setError = (msg) => {
+      uploadEl.classList.add('error');
+      uploadEl.querySelector('.d').textContent = msg;
+    };
+    if (file.type.startsWith('image/')) {
+      try {
+        const imageData = await bearipResizeImageToDataUrl(file, 720, 0.85);
+        irResultPending = { imageData, fileData: null, fileName: file.name, fileSize: file.size, mime: file.type };
+        uploadEl.classList.add('has-file');
+        uploadEl.style.backgroundImage = `url('${imageData}')`;
+        uploadEl.querySelector('.t').textContent = file.name;
+      } catch (e) {
+        setError(e.message || '이미지를 불러오지 못했어요');
+      }
+    } else if (typeof bearipIsInlineAttachmentFile === 'function' && bearipIsInlineAttachmentFile(file)) {
+      if (file.size > BEARIP_MAX_INLINE_FILE_BYTES) {
+        setError('파일은 최대 5MB까지 첨부할 수 있어요');
+        return;
+      }
+      try {
+        const fileData = await bearipReadFileAsDataUrl(file);
+        irResultPending = { imageData: null, fileData, fileName: file.name, fileSize: file.size, mime: file.type };
+        uploadEl.classList.add('has-file');
+        uploadEl.querySelector('.t').textContent = file.name;
+      } catch (e) {
+        setError(e.message || '파일을 불러오지 못했어요');
+      }
+    } else {
+      setError('지원하지 않는 파일 형식이에요');
+    }
+  });
+
   overlay.querySelector('.pr-confirm-submit').addEventListener('click', () => {
     const raw = document.getElementById('irReviewProgress').value;
     const progress = Math.max(0, Math.min(100, parseInt(raw, 10) || 0));
     const needsRevision = document.getElementById('irReviewNeedsRevision').checked;
     const comment = document.getElementById('irReviewComment').value.trim();
-    irApplyReview(req, progress, needsRevision, comment);
+    irApplyReview(req, progress, needsRevision, comment, irResultPending);
     close();
   });
 }
 
-function irApplyReview(req, progress, needsRevision, comment) {
+function irApplyReview(req, progress, needsRevision, comment, resultFile) {
   const reviewedAt = new Date().toISOString();
-  bearipUpdateIpReview(req.id, { status: 'reviewed', adminProgress: progress, adminComment: comment, needsRevision, reviewedAt });
+  const patch = { status: 'reviewed', adminProgress: progress, adminComment: comment, needsRevision, reviewedAt };
+  if (resultFile) {
+    patch.resultImageData = resultFile.imageData || null;
+    patch.resultFileData = resultFile.fileData || null;
+    patch.resultFileName = resultFile.fileName || null;
+    patch.resultFileSize = resultFile.fileSize || null;
+    patch.resultMime = resultFile.mime || null;
+  }
+  bearipUpdateIpReview(req.id, patch);
   // GM is on its own device/account now, with no access to the requester's
   // local IP data — the requester's own MY DNA pulls this result in itself
   // (see mdReconcileRemoteStatus in my-dna-render.js) once the update above
@@ -273,7 +336,7 @@ function irApplyReview(req, progress, needsRevision, comment) {
     {
       type: 'ip',
       title: '전문가 검토 결과가 도착했어요',
-      message: `'${req.ipTitle}'의 '${req.stepLabel}' 항목이 ${progress}%로 진단됐어요.${needsRevision ? ' 보완이 필요해요.' : ''}${comment ? ` "${comment}"` : ''}`,
+      message: `'${req.ipTitle}'의 '${req.stepLabel}' 항목이 ${progress}%로 진단됐어요.${needsRevision ? ' 보완이 필요해요.' : ''}${resultFile ? ' 참고 파일을 확인해보세요.' : ''}${comment ? ` "${comment}"` : ''}`,
       link: 'my-dna.html',
     },
     req.requesterNickname
