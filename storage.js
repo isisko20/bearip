@@ -112,6 +112,7 @@ const BEARIP_ROADMAP_TEMPLATES = {
     { key: 'storyboard', label: '콘티' },
     { key: 'art', label: '작화' },
     { key: 'lettering', label: '레터링/<br>검수' },
+    { key: 'cover', label: '표지<br>디자인' },
     { key: 'upload', label: '업로드/<br>연재' },
   ],
   video: [
@@ -145,6 +146,7 @@ const BEARIP_ROADMAP_STEP_PRICE = {
   storyboard: 55,
   lettering: 35,
   art: 90,
+  cover: 45,
   upload: 20,
 };
 
