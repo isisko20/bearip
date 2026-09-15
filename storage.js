@@ -598,16 +598,26 @@ function _bearipMapToArray(map, sortField) {
 // Firebase rejects any value containing `undefined` outright — its .set()/
 // .update() throw *synchronously*, not just an async rejection — and IP/
 // request objects built elsewhere routinely carry optional fields left as
-// `undefined` (e.g. no cover image chosen). Round-tripping through JSON
-// drops those keys instead of erroring, so one missing optional field can't
-// crash whatever local flow (creating an IP, sending a request) triggered
-// this background sync.
+// `undefined` (e.g. no cover image chosen). Drops those keys instead of
+// erroring, so one missing optional field can't crash whatever local flow
+// (creating an IP, sending a request) triggered this background sync.
+//
+// Walks the object graph directly rather than JSON.stringify + JSON.parse —
+// an IP can carry several MB of inline base64 (a registered 음향/문서 file),
+// and round-tripping that much text through the JSON parser on every save
+// was slow enough on modest hardware to look like the page had frozen.
+// Recursing like this touches every key but only *references* string/number/
+// boolean values instead of re-serializing them character by character.
 function bearipFirebaseSafe(value) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch (e) {
-    return value;
-  }
+  if (value === undefined) return null;
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map((v) => bearipFirebaseSafe(v));
+  const out = {};
+  Object.keys(value).forEach((k) => {
+    if (value[k] === undefined) return;
+    out[k] = bearipFirebaseSafe(value[k]);
+  });
+  return out;
 }
 
 // Wraps a Firebase .set()/.update() call so it can never throw into the
