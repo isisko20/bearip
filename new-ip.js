@@ -24,7 +24,12 @@ const TOTAL_STEPS = 4;
 let currentStep = 1;
 let selectedGoal = 'webnovel';
 let selectedGenres = [];
-let selectedVis = 'public';
+// Defaults to private — an IP made here is a draft until its owner
+// deliberately publishes it (MY DNA's own 공개하기 toggle already worked this
+// way); publishing now actually broadcasts it to OPEN DNA and GM (see
+// bearipSetIpPublic in storage.js), so defaulting to public would expose a
+// brand-new draft the moment anything about it gets saved.
+let selectedVis = 'private';
 let coverFile = null;
 let coverImageData = null;
 // keyed by roadmap step key -> array of entries, each a separate registered
@@ -637,7 +642,7 @@ function applyDraft(draft) {
   document.getElementById('ipTitle').value = draft.title || '';
   document.getElementById('ipLogline').value = draft.logline || '';
 
-  selectedVis = draft.selectedVis === 'private' ? 'private' : 'public';
+  selectedVis = draft.selectedVis === 'public' ? 'public' : 'private';
   document.querySelectorAll('.ni-vis-option').forEach((o) => o.classList.toggle('active', o.dataset.vis === selectedVis));
 
   coverImageData = draft.coverImageData || null;
