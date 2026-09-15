@@ -506,9 +506,13 @@ function createIP() {
   return ip;
 }
 
+// Returns whether it actually requested anything — a fresh IP with no
+// material registered in step 3 has nothing to send for review, and the
+// caller uses this to fall back to something else instead of the button
+// silently doing nothing.
 function requestExpertReviewForIp(ip) {
   const steps = ip.roadmap.filter((s) => s.submissions && s.submissions.length && !s.reviewStatus);
-  if (!steps.length) return;
+  if (!steps.length) return false;
   const requestedAt = new Date().toISOString();
   steps.forEach((step) => {
     step.reviewStatus = 'requested';
@@ -535,6 +539,7 @@ function requestExpertReviewForIp(ip) {
     message: `'${ip.title}'의 ${steps.length}개 항목을 담당 IP 매니저에게 전달했어요.`,
     link: 'my-dna.html',
   });
+  return true;
 }
 
 nextBtn.addEventListener('click', () => {
@@ -551,7 +556,12 @@ document.getElementById('finishGoToDnaBtn').addEventListener('click', () => {
 
 document.getElementById('finishRequestReviewBtn').addEventListener('click', () => {
   const ip = createIP();
-  requestExpertReviewForIp(ip);
+  const requested = requestExpertReviewForIp(ip);
+  // Nothing was registered in step 3 to actually send for review — rather
+  // than the button silently doing nothing beyond creating the IP, open the
+  // same 전문가 의뢰 modal MY DNA's own 개요 탭 uses, so 검토/제작 요청 is still
+  // one click away (my-dna-render.js checks for this flag on load).
+  if (!requested) sessionStorage.setItem('bearip_open_expert_help', '1');
   location.href = 'my-dna.html';
 });
 

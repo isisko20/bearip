@@ -595,6 +595,32 @@ function _bearipMapToArray(map, sortField) {
     .sort((a, b) => new Date(b[sortField] || 0) - new Date(a[sortField] || 0));
 }
 
+// Firebase rejects any value containing `undefined` outright — its .set()/
+// .update() throw *synchronously*, not just an async rejection — and IP/
+// request objects built elsewhere routinely carry optional fields left as
+// `undefined` (e.g. no cover image chosen). Round-tripping through JSON
+// drops those keys instead of erroring, so one missing optional field can't
+// crash whatever local flow (creating an IP, sending a request) triggered
+// this background sync.
+function bearipFirebaseSafe(value) {
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (e) {
+    return value;
+  }
+}
+
+// Wraps a Firebase .set()/.update() call so it can never throw into the
+// caller — this is always a best-effort background sync, never something
+// worth breaking a local save over.
+function _bearipFirebaseWrite(fn) {
+  try {
+    fn();
+  } catch (e) {
+    /* best-effort background sync */
+  }
+}
+
 // ---- 제작요청 — a global queue (every creator's requests, one place) so
 // whoever fulfills them (GM) can see and close them out from any device, and
 // so the requester sees the result back on theirs. Kept separate from the
@@ -610,13 +636,13 @@ function bearipAddProductionRequest(req) {
   const id = req.id || 'preq_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
   const record = Object.assign({}, req);
   delete record.id; // id is the RTDB key itself, not a field inside the record
-  firebase.database().ref('productionRequests/' + id).set(record);
+  _bearipFirebaseWrite(() => firebase.database().ref('productionRequests/' + id).set(bearipFirebaseSafe(record)));
   return Object.assign({ id }, record);
 }
 
 function bearipUpdateProductionRequest(id, patch) {
   if (!bearipFirebaseReady()) return null;
-  firebase.database().ref('productionRequests/' + id).update(patch);
+  _bearipFirebaseWrite(() => firebase.database().ref('productionRequests/' + id).update(bearipFirebaseSafe(patch)));
   return Object.assign({ id }, (_bearipDataCache.productionRequests || {})[id], patch);
 }
 
@@ -632,13 +658,13 @@ function bearipAddIpReview(review) {
   const id = review.id || 'ipreview_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
   const record = Object.assign({}, review);
   delete record.id;
-  firebase.database().ref('ipReviews/' + id).set(record);
+  _bearipFirebaseWrite(() => firebase.database().ref('ipReviews/' + id).set(bearipFirebaseSafe(record)));
   return Object.assign({ id }, record);
 }
 
 function bearipUpdateIpReview(id, patch) {
   if (!bearipFirebaseReady()) return null;
-  firebase.database().ref('ipReviews/' + id).update(patch);
+  _bearipFirebaseWrite(() => firebase.database().ref('ipReviews/' + id).update(bearipFirebaseSafe(patch)));
   return Object.assign({ id }, (_bearipDataCache.ipReviews || {})[id], patch);
 }
 
@@ -669,7 +695,7 @@ function bearipLoadPublicIPs() {
 function bearipSetIpPublic(ip, isPublic) {
   if (!bearipFirebaseReady() || !ip || !ip.id) return;
   const ref = firebase.database().ref('publicIPs/' + ip.id);
-  if (isPublic) ref.set(ip);
+  if (isPublic) _bearipFirebaseWrite(() => ref.set(bearipFirebaseSafe(ip)));
   else ref.remove();
 }
 
@@ -682,7 +708,7 @@ function bearipSetIpPublic(ip, isPublic) {
 // client subscribes to this feed at all (see bearipInitFirebaseWatchers).
 function bearipSyncIpForGm(ip) {
   if (!bearipFirebaseReady() || !ip || !ip.id) return;
-  firebase.database().ref('allIPs/' + ip.id).set(ip);
+  _bearipFirebaseWrite(() => firebase.database().ref('allIPs/' + ip.id).set(bearipFirebaseSafe(ip)));
 }
 
 function bearipLoadAllIPsForGm() {
@@ -865,7 +891,7 @@ function bearipAddNotification(notif, targetNickname) {
   if (!bearipFirebaseReady()) return;
   const id = 'ntf_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
   const record = Object.assign({ read: false, createdAt: new Date().toISOString() }, notif);
-  firebase.database().ref(bearipNotificationsPath(targetNickname) + '/' + id).set(record);
+  _bearipFirebaseWrite(() => firebase.database().ref(bearipNotificationsPath(targetNickname) + '/' + id).set(bearipFirebaseSafe(record)));
 }
 
 function bearipGetUnreadCount() {
@@ -878,12 +904,12 @@ function bearipMarkAllNotificationsRead() {
   bearipLoadNotifications().forEach((n) => {
     if (!n.read) updates[n.id + '/read'] = true;
   });
-  if (Object.keys(updates).length) firebase.database().ref(bearipNotificationsPath()).update(updates);
+  if (Object.keys(updates).length) _bearipFirebaseWrite(() => firebase.database().ref(bearipNotificationsPath()).update(updates));
 }
 
 function bearipMarkNotificationRead(id) {
   if (!bearipFirebaseReady()) return;
-  firebase.database().ref(bearipNotificationsPath() + '/' + id + '/read').set(true);
+  _bearipFirebaseWrite(() => firebase.database().ref(bearipNotificationsPath() + '/' + id + '/read').set(true));
 }
 
 // ---- Uploaded asset files (IndexedDB — localStorage's ~5-10MB origin quota

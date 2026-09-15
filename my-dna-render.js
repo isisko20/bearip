@@ -1910,6 +1910,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!loadCurrentIP()) return;
   renderAll();
 
+  // Set by new-ip.js's "전문가 도움받기" when the just-created IP had nothing
+  // registered yet to actually send for review — open the same 전문가 의뢰
+  // modal 개요 탭 uses instead of leaving that button's promise unfulfilled.
+  if (sessionStorage.getItem('bearip_open_expert_help')) {
+    sessionStorage.removeItem('bearip_open_expert_help');
+    openExpertHelpModal();
+  }
+
   if (typeof bearipOnDataChange === 'function') {
     bearipOnDataChange('productionRequests', mdReconcileRemoteStatus);
     bearipOnDataChange('ipReviews', mdReconcileRemoteStatus);
