@@ -1303,11 +1303,32 @@ function ensureStepMaterialOverlay() {
         mime: en.mime || null,
         note: en.note ? en.note.trim() : '',
       }));
+    // Registered materials (특히 음향/문서, inline as base64) land in
+    // localStorage along with the rest of the IP — unlike the Firebase
+    // writes elsewhere in this file, localStorage has a real, easy-to-hit
+    // per-origin quota (~5-10MB total). Keep a rollback point so a failed
+    // save (addAssetFromUpload already guards the same failure this same
+    // way) doesn't silently leave the editor thinking it saved when nothing
+    // actually persisted.
+    const prevSubmissions = step.submissions;
+    const prevTargetCount = step.targetCount;
+    const prevAssets = currentIP.assets;
+
     step.submissions = cleaned;
     const targetRaw = parseInt(document.getElementById('stepMaterialTarget').value, 10);
     step.targetCount = targetRaw > 0 ? targetRaw : 1;
     mdSyncStepAssetsFromSubmissions(step);
-    if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { roadmap: currentIP.roadmap, assets: currentIP.assets });
+    if (currentIP.id !== 'demo') {
+      try {
+        bearipUpdateIP(currentIP.id, { roadmap: currentIP.roadmap, assets: currentIP.assets });
+      } catch (e) {
+        step.submissions = prevSubmissions;
+        step.targetCount = prevTargetCount;
+        currentIP.assets = prevAssets;
+        bearipShowToast('저장 공간이 부족해요. 파일 용량을 줄이거나 다른 자료를 정리한 뒤 다시 시도해주세요.');
+        return;
+      }
+    }
     recomputeWritingCompleteness();
     renderRoadmap();
     renderStatus();
