@@ -48,6 +48,19 @@
 }
 .pr-card-result span { display: block; font-size: 10.5px; font-weight: 700; color: var(--dr-ink-soft); margin-bottom: 3px; }
 
+/* ---- 완료 처리 시 첨부한 결과물 파일 (카드에 렌더링) ---- */
+.pr-result-thumb {
+  display: block; width: 140px; height: 140px; border-radius: 10px; margin-top: 10px;
+  background-color: var(--dr-bg-soft); background-size: cover; background-position: center;
+}
+.pr-result-file {
+  display: block; margin-top: 10px; padding: 9px 12px; border-radius: 10px; background: var(--dr-bg-soft);
+  font-size: 12px; font-weight: 700; color: var(--dr-purple); text-decoration: underline; word-break: break-all;
+}
+.pr-result-file.plain { color: var(--dr-ink-soft); text-decoration: none; }
+.pr-result-audio { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.pr-result-audio audio { width: 100%; height: 36px; }
+
 .pr-card-actions { display: flex; gap: 8px; margin-top: 14px; }
 .pr-complete-btn, .pr-reject-btn {
   flex: 1; padding: 10px; border-radius: 10px; font-size: 12.5px; font-weight: 700;
@@ -93,6 +106,19 @@
 .pr-confirm-cancel { background: var(--dr-bg); color: var(--dr-ink); }
 .pr-confirm-submit.done { background: var(--dr-purple); color: #fff; border-color: transparent; }
 .pr-confirm-submit.reject { background: #d64545; color: #fff; border-color: transparent; }
+
+.pr-result-upload {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  padding: 16px 12px; margin-bottom: 12px; border-radius: 12px; border: 1.5px dashed var(--dr-border);
+  background: var(--dr-bg-soft); color: var(--dr-ink-soft); cursor: pointer; text-align: center;
+  background-size: cover; background-position: center;
+}
+.pr-result-upload svg { width: 20px; height: 20px; }
+.pr-result-upload .t { font-size: 12px; font-weight: 700; color: var(--dr-ink); }
+.pr-result-upload .d { font-size: 10.5px; }
+.pr-result-upload.has-file { border-style: solid; border-color: var(--dr-purple); }
+.pr-result-upload.error { border-color: #d64545; }
+.pr-result-upload.error .d { color: #d64545; }
 
 @media (max-width: 560px) {
   .pr-card-actions { flex-direction: column; }

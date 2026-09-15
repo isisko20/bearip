@@ -645,6 +645,27 @@
 .md-production-list-result { font-size: 12px; color: var(--dr-ink); margin-top: 8px; line-height: 1.5; padding: 10px 12px; border-radius: 10px; background: var(--dr-bg-soft); }
 .md-production-list-result span { display: block; font-size: 10.5px; font-weight: 700; color: var(--dr-ink-soft); margin-bottom: 3px; }
 
+/* ---- GM이 완료 처리 시 첨부한 결과물 파일 ---- */
+.md-production-result-thumb {
+  display: block; width: 140px; height: 140px; border-radius: 10px; margin-top: 8px;
+  background-color: var(--dr-bg-soft); background-size: cover; background-position: center;
+}
+.md-production-result-file {
+  display: block; margin-top: 8px; padding: 9px 12px; border-radius: 10px; background: var(--dr-bg-soft);
+  font-size: 12px; font-weight: 700; color: var(--dr-purple); text-decoration: underline; word-break: break-all;
+}
+.md-production-result-file.plain { color: var(--dr-ink-soft); text-decoration: none; }
+.md-production-result-audio { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.md-production-result-audio audio { width: 100%; height: 36px; }
+
+.md-production-list-actions { margin-top: 10px; }
+.md-production-list-delete {
+  padding: 7px 14px; border-radius: 999px; font-size: 11.5px; font-weight: 700;
+  border: 1px solid var(--dr-border); background: var(--dr-panel); color: var(--dr-ink-soft);
+  cursor: pointer; font-family: inherit;
+}
+.md-production-list-delete:hover { color: #d64545; border-color: #d64545; background: rgba(214,69,69,0.08); }
+
 /* ---- Needs ---- */
 .md-needs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .md-need-card { border: 1px solid var(--dr-border); border-radius: 16px; padding: 16px; }

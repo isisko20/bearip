@@ -646,6 +646,36 @@ function bearipUpdateProductionRequest(id, patch) {
   return Object.assign({ id }, (_bearipDataCache.productionRequests || {})[id], patch);
 }
 
+// Lets the requester clear a request out of their own 제작요청 history once
+// they're done with it (완료/거절 건 확인 후 정리 등) — there's no separate
+// per-viewer visibility flag, so this removes the shared record outright.
+function bearipDeleteProductionRequest(id) {
+  if (!bearipFirebaseReady()) return;
+  firebase.database().ref('productionRequests/' + id).remove();
+}
+
+// Shared by production-requests.js (GM's own list) and my-dna-render.js (the
+// requester's 제작요청 tab) so a result file GM uploads on 완료 처리 renders the
+// same way in both places: an image opens full-size in a new tab, audio
+// plays inline, anything else downloads. classPrefix lets each page supply
+// its own CSS (e.g. 'pr-result' vs 'md-production-result').
+function bearipRenderResultFileHtml(r, classPrefix) {
+  if (!r.resultImageData && !r.resultFileData && !r.resultFileName) return '';
+  const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
+  const fileMeta = r.resultFileSize ? ` · ${Math.max(1, Math.round(r.resultFileSize / 1024))}KB` : '';
+  if (r.resultImageData) {
+    return `<a class="${classPrefix}-thumb" href="${r.resultImageData}" target="_blank" rel="noopener" style="background-image:url('${r.resultImageData}')" title="눌러서 크게 보기"></a>`;
+  }
+  const isAudio = r.resultMime && r.resultMime.startsWith('audio/');
+  if (r.resultFileData && isAudio) {
+    return `<div class="${classPrefix}-audio"><div class="${classPrefix}-file plain">${esc(r.resultFileName)}${fileMeta}</div><audio controls preload="metadata" src="${r.resultFileData}"></audio></div>`;
+  }
+  if (r.resultFileData) {
+    return `<a class="${classPrefix}-file" href="${r.resultFileData}" download="${esc(r.resultFileName)}" target="_blank" rel="noopener">${esc(r.resultFileName)}${fileMeta}</a>`;
+  }
+  return `<div class="${classPrefix}-file plain">${esc(r.resultFileName)}${fileMeta}</div>`;
+}
+
 // ---- IP 심사(전문가 검토) 요청 — same reasoning as 제작요청 above: a global
 // queue GM works through from any device, with the outcome pulled back onto
 // the requester's own local IP by mdReconcileRemoteStatus.

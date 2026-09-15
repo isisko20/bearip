@@ -890,9 +890,22 @@ function renderProductionRequestsList() {
         </div>
         ${r.detail ? `<div class="md-production-list-detail">"${bearipEscapeHtml(r.detail)}"</div>` : ''}
         ${r.resultNote ? `<div class="md-production-list-result"><span>완료 메모</span>${bearipEscapeHtml(r.resultNote)}</div>` : ''}
+        ${typeof bearipRenderResultFileHtml === 'function' ? bearipRenderResultFileHtml(r, 'md-production-result') : ''}
+        ${
+          r.status !== 'pending'
+            ? `<div class="md-production-list-actions"><button type="button" class="md-production-list-delete" data-id="${r.id}">삭제</button></div>`
+            : ''
+        }
       </div>
     `)
     .join('');
+
+  wrap.querySelectorAll('.md-production-list-delete').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (typeof bearipDeleteProductionRequest === 'function') bearipDeleteProductionRequest(btn.dataset.id);
+      renderProductionRequestsList();
+    });
+  });
 }
 
 function mdDnaProductionMode(key) {
@@ -1920,6 +1933,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (typeof bearipOnDataChange === 'function') {
     bearipOnDataChange('productionRequests', mdReconcileRemoteStatus);
+    bearipOnDataChange('productionRequests', renderProductionRequestsList);
     bearipOnDataChange('ipReviews', mdReconcileRemoteStatus);
     bearipOnDataChange('ipOverallComments', () => {
       if (typeof renderStatus === 'function') renderStatus();

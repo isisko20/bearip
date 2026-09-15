@@ -65,6 +65,7 @@ function prRenderList() {
       <div class="pr-card-meta"><span>${r.price}C</span><span>${prFormatRelativeTime(r.requestedAt)}</span></div>
       ${r.detail ? `<div class="pr-card-detail">"${bearipEscapeHtml(r.detail)}"</div>` : ''}
       ${r.resultNote ? `<div class="pr-card-result"><span>완료 메모</span>${bearipEscapeHtml(r.resultNote)}</div>` : ''}
+      ${bearipRenderResultFileHtml(r, 'pr-result')}
       ${
         r.status === 'pending'
           ? `<div class="pr-card-actions">
@@ -86,6 +87,11 @@ function prRenderList() {
   });
 }
 
+// The result file picked in prOpenAction's modal, staged here until 완료
+//처리하기 actually submits — mirrors stepMaterialWorkingEntries' pattern in
+// my-dna-render.js, just for a single file instead of a list.
+let prResultPending = null;
+
 // Built and appended fresh, removed on close — same as my-projects.js's
 // delete-confirm modal, avoiding a persistent overlay's display/hidden footgun.
 function prOpenAction(id, kind) {
@@ -95,6 +101,7 @@ function prOpenAction(id, kind) {
   if (!req) return;
 
   const isDone = kind === 'done';
+  prResultPending = null;
   const overlay = document.createElement('div');
   overlay.className = 'pr-confirm-overlay';
   overlay.innerHTML = `
@@ -105,9 +112,20 @@ function prOpenAction(id, kind) {
           ? '요청자에게 완료 알림이 전달돼요.'
           : `요청자에게 거절 알림이 전달되고, 결제했던 ${req.price}C가 환불돼요.`
       }</div>
+      ${
+        isDone
+          ? `<label class="pr-confirm-label" for="prResultFileInput">결과물 파일 (선택)</label>
+             <div class="pr-result-upload" id="prResultUpload">
+               <input type="file" id="prResultFileInput" accept="image/*,audio/*,.pdf,.doc,.docx,.txt,.mp3,.wav" style="display:none">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 15l5-5 4 4 4-4 5 5"/><circle cx="8" cy="9" r="1.4"/></svg>
+               <div class="t">클릭해서 결과물 파일 업로드</div>
+               <div class="d">이미지, PDF, 워드, 텍스트, 음향(mp3/wav) — 최대 5MB</div>
+             </div>`
+          : ''
+      }
       <label class="pr-confirm-label" for="prActionNote">${isDone ? '완료 메모 (선택)' : '거절 사유 (선택)'}</label>
       <textarea id="prActionNote" class="pr-confirm-textarea" placeholder="${
-        isDone ? '전달할 결과물 링크나 요약을 적어주세요.' : '거절 사유를 적어주세요.'
+        isDone ? '전달할 결과물에 대한 설명을 적어주세요.' : '거절 사유를 적어주세요.'
       }"></textarea>
       <div class="pr-confirm-actions">
         <button type="button" class="pr-confirm-cancel">취소</button>
@@ -122,16 +140,67 @@ function prOpenAction(id, kind) {
     if (e.target === overlay) close();
   });
   overlay.querySelector('.pr-confirm-cancel').addEventListener('click', close);
+
+  if (isDone) {
+    const uploadEl = overlay.querySelector('#prResultUpload');
+    const fileInput = overlay.querySelector('#prResultFileInput');
+    uploadEl.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      uploadEl.classList.remove('error');
+      const setError = (msg) => {
+        uploadEl.classList.add('error');
+        uploadEl.querySelector('.d').textContent = msg;
+      };
+      if (file.type.startsWith('image/')) {
+        try {
+          const imageData = await bearipResizeImageToDataUrl(file, 720, 0.85);
+          prResultPending = { imageData, fileData: null, fileName: file.name, fileSize: file.size, mime: file.type };
+          uploadEl.classList.add('has-file');
+          uploadEl.style.backgroundImage = `url('${imageData}')`;
+          uploadEl.querySelector('.t').textContent = file.name;
+        } catch (e) {
+          setError(e.message || '이미지를 불러오지 못했어요');
+        }
+      } else if (typeof bearipIsInlineAttachmentFile === 'function' && bearipIsInlineAttachmentFile(file)) {
+        if (file.size > BEARIP_MAX_INLINE_FILE_BYTES) {
+          setError('파일은 최대 5MB까지 첨부할 수 있어요');
+          return;
+        }
+        try {
+          const fileData = await bearipReadFileAsDataUrl(file);
+          prResultPending = { imageData: null, fileData, fileName: file.name, fileSize: file.size, mime: file.type };
+          uploadEl.classList.add('has-file');
+          uploadEl.querySelector('.t').textContent = file.name;
+        } catch (e) {
+          setError(e.message || '파일을 불러오지 못했어요');
+        }
+      } else {
+        setError('지원하지 않는 파일 형식이에요');
+      }
+    });
+  }
+
   overlay.querySelector('.pr-confirm-submit').addEventListener('click', () => {
     const note = document.getElementById('prActionNote').value.trim();
-    prApplyAction(req, kind, note);
+    prApplyAction(req, kind, note, prResultPending);
     close();
   });
 }
 
-function prApplyAction(req, kind, note) {
+function prApplyAction(req, kind, note, resultFile) {
   const patch = { status: kind };
-  if (kind === 'done') patch.resultNote = note;
+  if (kind === 'done') {
+    patch.resultNote = note;
+    if (resultFile) {
+      patch.resultImageData = resultFile.imageData || null;
+      patch.resultFileData = resultFile.fileData || null;
+      patch.resultFileName = resultFile.fileName || null;
+      patch.resultFileSize = resultFile.fileSize || null;
+      patch.resultMime = resultFile.mime || null;
+    }
+  }
   bearipUpdateProductionRequest(req.id, patch);
   // GM is on its own device/account now, with no access to the requester's
   // local IP data — the requester's own MY DNA pulls this result (and, on a
@@ -144,7 +213,7 @@ function prApplyAction(req, kind, note) {
       title: kind === 'done' ? '제작이 완료됐어요' : '제작요청이 거절됐어요',
       message:
         kind === 'done'
-          ? `'${req.ipTitle}'의 '${req.label}' 제작이 완료됐어요.${note ? ` ${note}` : ''}`
+          ? `'${req.ipTitle}'의 '${req.label}' 제작이 완료됐어요.${resultFile ? ' 결과물 파일을 확인해보세요.' : ''}${note ? ` ${note}` : ''}`
           : `'${req.ipTitle}'의 '${req.label}' 제작요청이 거절됐어요. ${req.price}C를 환불했어요.${note ? ` 사유: ${note}` : ''}`,
       link: 'my-dna.html',
     },
