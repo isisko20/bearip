@@ -402,8 +402,12 @@
   display: flex; align-items: center; justify-content: center;
 }
 .md-road-ic svg { width: 21px; height: 21px; color: var(--dr-ink-soft); }
-.md-road-step.done .md-road-ic { background: #efeaff; }
-.md-road-step.done .md-road-ic svg { color: var(--dr-purple); }
+/* 'done' here is production_done (a professional actually delivered) — its
+   whole card (icon, badge, status text, button below) commits to green
+   throughout, distinct from 'ready' (still purple, still self-registered),
+   so the two states read as visually different, not just differently-worded. */
+.md-road-step.done .md-road-ic { background: rgba(62,207,125,0.14); }
+.md-road-step.done .md-road-ic svg { color: #2fae6b; }
 
 .md-road-ic-wrap.ring {
   border-radius: 50%;
@@ -416,7 +420,7 @@
 .md-road-check {
   position: absolute; bottom: -2px; right: -2px;
   width: 18px; height: 18px; border-radius: 50%;
-  background: var(--dr-purple); color: #fff;
+  background: #2fae6b; color: #fff;
   display: flex; align-items: center; justify-content: center;
   border: 2px solid var(--dr-panel);
 }
@@ -435,10 +439,14 @@
 .md-road-edit-material-btn svg { width: 9px; height: 9px; }
 .md-road-edit-material-btn:hover { background: var(--dr-purple); color: #fff; border-color: var(--dr-purple); }
 
-.md-road-name { font-size: 12px; font-weight: 700; }
+/* Fixed 2-line height so a step whose label happens to fit on one line
+   doesn't leave its status/percent/button sitting higher than a neighboring
+   step whose label wraps to two — the whole row now stays level regardless
+   of label length. */
+.md-road-name { font-size: 12px; font-weight: 700; min-height: 32px; display: flex; align-items: center; justify-content: center; line-height: 1.35; }
 .md-road-status { font-size: 11px; color: var(--dr-ink-soft); }
 .md-road-percent { font-size: 13px; font-weight: 800; color: var(--dr-purple); }
-.md-road-step.done .md-road-status { color: var(--dr-purple); font-weight: 700; }
+.md-road-step.done .md-road-status { color: #2fae6b; font-weight: 700; }
 
 /* ---- 제작요청 / 자체제작 중 — shared by IP DNA 현황 tiles and roadmap steps ---- */
 .md-production-row { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 2px; }
@@ -497,8 +505,7 @@
 .md-road-action-btn.production { background: rgba(143,107,255,0.16); color: var(--dr-purple); }
 .md-road-action-btn.done { background: rgba(62,207,125,0.16); color: #2fae6b; }
 .md-road-step.needs-revision .md-road-status { color: #d68a1c; font-weight: 700; }
-.md-road-step.ready .md-road-status,
-.md-road-step.done .md-road-status { color: var(--dr-purple); font-weight: 700; }
+.md-road-step.ready .md-road-status { color: var(--dr-purple); font-weight: 700; }
 
 /* ---- 전문가 의뢰 button — roadmap section header. Bigger/always-visible
    now (used to be a small button that only appeared once something was

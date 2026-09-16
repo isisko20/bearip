@@ -1194,14 +1194,22 @@ function renderRoadmap() {
     stepEl.className = 'md-road-step ' + meta.cls;
     stepEl.dataset.index = i;
 
-    const isDoneLike = statusKey === 'ready' || statusKey === 'production_done';
-    const checkHtml = isDoneLike ? `<span class="md-road-check">${CHECK_SVG}</span>` : '';
+    // The checkmark badge means "genuinely finished, nothing more to do" —
+    // only true once a professional has actually delivered (production_done).
+    // 'ready' used to show the same badge as 'production_done', which made a
+    // self-registered-and-done step look identical to one GM had actually
+    // produced; real completion needs its own unambiguous signal.
+    const checkHtml = statusKey === 'production_done' ? `<span class="md-road-check">${CHECK_SVG}</span>` : '';
 
     // Registered entries ÷ targetCount (e.g. 4/10화 = 40%) — real content,
     // not the coarser "has this step started at all" the status label alone
-    // gives; only shown once there's actually a target/entries worth ratio.
+    // gives. Only meaningful while the creator's own registration is what's
+    // being measured — once it moves into 제작 의뢰/제작 완료, "100%" next to
+    // a binary "requested"/"done" state reads as unexplained clutter rather
+    // than useful information, so it's hidden there.
     const pct = bearipStepCompletionPercent(step);
-    const pctHtml = statusKey === 'unregistered' ? '' : `<div class="md-road-percent">${pct}%</div>`;
+    const showsPercent = statusKey === 'writing' || statusKey === 'reviewing' || statusKey === 'needs_revision' || statusKey === 'ready';
+    const pctHtml = showsPercent ? `<div class="md-road-percent">${pct}%</div>` : '';
 
     stepEl.innerHTML = `
       <div class="md-road-ic-wrap">
