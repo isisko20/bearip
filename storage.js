@@ -492,6 +492,11 @@ function bearipEnsureRoadmapSubmissions(ip) {
 // its target count (e.g. 4/10화 = 40%), capped at 100 so extra entries past
 // the target don't overflow the bar/number.
 function bearipStepCompletionPercent(step) {
+  // 제작 요청은 아무 자료도 등록하지 않은 '미등록' 상태에서 바로 전문가에게
+  // 통째로 맡길 수도 있다 — 그렇게 완성된 단계(제작 완료/직접 완료)까지 등록한
+  // 자료 개수로만 % 를 매기면, 실제로는 다 끝난 단계가 0%로 보여서 "완성됐다"는
+  // 신호와 어긋난다. 어떻게 완성됐든 완성은 완성이니 100%로 취급한다.
+  if (step.mode === 'done' || step.mode === 'self_done') return 100;
   const target = step.targetCount || 1;
   const count = (step.submissions || []).length;
   return Math.max(0, Math.min(100, Math.round((count / target) * 100)));

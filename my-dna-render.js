@@ -307,7 +307,13 @@ function renderStatus() {
   document.getElementById('dnaScoreValue').textContent = currentIP.dnaScore + '%';
   document.getElementById('dnaScoreBar').style.width = currentIP.dnaScore + '%';
   const steps = currentIP.roadmap || [];
-  const registeredCount = steps.filter((s) => s.submissions && s.submissions.length > 0).length;
+  // A step commissioned straight from GM (제작 요청 on an unregistered step)
+  // never gets a self-registered draft, but it still ends up genuinely done —
+  // counting only s.submissions here made a fully-produced IP look like
+  // nothing had been registered for it at all.
+  const registeredCount = steps.filter(
+    (s) => (s.submissions && s.submissions.length > 0) || s.mode === 'done' || s.mode === 'self_done'
+  ).length;
   document.getElementById('dnaScoreDesc').textContent = steps.length
     ? `개발 항목 ${registeredCount}/${steps.length}개 등록 · 눌러서 자세히 보기`
     : '눌러서 자세히 보기';
@@ -407,11 +413,16 @@ function openWritingCompletenessView() {
       const pct = bearipStepCompletionPercent(s);
       const count = (s.submissions || []).length;
       const target = s.targetCount || 1;
+      // A step commissioned from scratch (제작 요청, no self-registered draft)
+      // and now done has nothing meaningful to count out of — "0/1" next to
+      // 100% reads as a contradiction, so this names what actually happened
+      // instead of a count that was never really the point for this step.
+      const countLabel = s.mode === 'done' || s.mode === 'self_done' ? '완료' : `${count}/${target}`;
       return `
         <div class="md-wc-row">
           <span class="md-wc-label">${s.label.replace(/<br>/g, ' ')}</span>
           <span class="md-wc-right">
-            <span class="md-wc-count">${count}/${target}</span>
+            <span class="md-wc-count">${countLabel}</span>
             <span class="md-wc-flag${pct >= 100 ? ' done' : ''}">${pct}%</span>
           </span>
         </div>
