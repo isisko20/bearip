@@ -779,18 +779,29 @@ function bearipDeleteProductionRequest(id) {
 // plays inline, anything else downloads. classPrefix lets each page supply
 // its own CSS (e.g. 'pr-result' vs 'md-production-result').
 function bearipRenderResultFileHtml(r, classPrefix) {
-  if (!r.resultImageData && !r.resultFileData && !r.resultFileName) return '';
+  if (!r.resultImageData && !r.resultFileData && !r.resultFileName && !r.resultLink) return '';
   const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
   const fileMeta = r.resultFileSize ? ` · ${Math.max(1, Math.round(r.resultFileSize / 1024))}KB` : '';
   if (r.resultImageData) {
     return `<a class="${classPrefix}-thumb" href="${r.resultImageData}" target="_blank" rel="noopener" style="background-image:url('${r.resultImageData}')" title="눌러서 크게 보기"></a>`;
   }
   const isAudio = r.resultMime && r.resultMime.startsWith('audio/');
+  const isVideo = r.resultMime && r.resultMime.startsWith('video/');
   if (r.resultFileData && isAudio) {
     return `<div class="${classPrefix}-audio"><div class="${classPrefix}-file plain">${esc(r.resultFileName)}${fileMeta}</div><audio controls preload="metadata" src="${r.resultFileData}"></audio></div>`;
   }
+  if (r.resultFileData && isVideo) {
+    return `<div class="${classPrefix}-audio"><div class="${classPrefix}-file plain">${esc(r.resultFileName)}${fileMeta}</div><video controls preload="metadata" src="${r.resultFileData}"></video></div>`;
+  }
   if (r.resultFileData) {
     return `<a class="${classPrefix}-file" href="${r.resultFileData}" download="${esc(r.resultFileName)}" target="_blank" rel="noopener">${esc(r.resultFileName)}${fileMeta}</a>`;
+  }
+  // 영상처럼 5MB 인라인 한도를 넘는 결과물은 파일 대신 링크(구글드라이브 등)로
+  // 전달된다 — Firebase RTDB/브라우저 로컬 저장 어느 쪽에도 큰 바이너리를
+  // 통째로 넣을 방법이 없어, 실제 호스팅은 외부에 맡기고 이 앱은 링크만 들고
+  // 있는 것.
+  if (r.resultLink) {
+    return `<a class="${classPrefix}-file" href="${esc(r.resultLink)}" target="_blank" rel="noopener">결과물 링크 열기 →</a>`;
   }
   return `<div class="${classPrefix}-file plain">${esc(r.resultFileName)}${fileMeta}</div>`;
 }
@@ -1239,7 +1250,12 @@ const BEARIP_INLINE_FILE_TYPES = [
 function bearipIsInlineAttachmentFile(file) {
   if (BEARIP_INLINE_FILE_TYPES.includes(file.type)) return true;
   if (file.type.startsWith('audio/')) return true;
-  return /\.(pdf|docx?|txt|mp3|wav)$/i.test(file.name || '');
+  // Video is allowed inline too, but BEARIP_MAX_INLINE_FILE_BYTES (5MB) still
+  // applies — a real produced clip almost always needs the 결과물 링크 field
+  // instead (see bearipRenderResultFileHtml's resultLink branch below); this
+  // only lets a short/small clip go inline like any other attachment.
+  if (file.type.startsWith('video/')) return true;
+  return /\.(pdf|docx?|txt|mp3|wav|mp4|mov|webm)$/i.test(file.name || '');
 }
 
 // Rough "is this an audio submission" check for rendering (<audio controls>

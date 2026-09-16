@@ -317,11 +317,13 @@ function irOpenReviewModal(id) {
       <textarea id="irReviewComment" class="pr-confirm-textarea" placeholder="이 점수를 준 이유를 한 줄로 적어주세요.">${req.adminComment ? bearipEscapeHtml(req.adminComment) : ''}</textarea>
       <label class="pr-confirm-label" for="irResultFileInput">참고 파일 (선택)</label>
       <div class="pr-result-upload" id="irResultUpload">
-        <input type="file" id="irResultFileInput" accept="image/*,audio/*,.pdf,.doc,.docx,.txt,.mp3,.wav" style="display:none">
+        <input type="file" id="irResultFileInput" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.mp3,.wav,.mp4,.mov,.webm" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 15l5-5 4 4 4-4 5 5"/><circle cx="8" cy="9" r="1.4"/></svg>
         <div class="t">클릭해서 참고 파일 업로드</div>
-        <div class="d">수정 예시, 참고 이미지 등 — 이미지, PDF, 워드, 텍스트, 음향(mp3/wav) 최대 5MB</div>
+        <div class="d">수정 예시, 참고 이미지·영상 등 — 최대 5MB</div>
       </div>
+      <label class="pr-confirm-label" for="irResultLink">참고 링크 (선택 — 영상처럼 5MB 넘는 파일은 구글드라이브 등에 올린 뒤 링크로 전달해주세요)</label>
+      <input type="text" id="irResultLink" class="ir-confirm-number" placeholder="https://...">
       <div class="pr-confirm-actions">
         <button type="button" class="pr-confirm-cancel">취소</button>
         <button type="button" class="pr-confirm-submit done">전문가 진단 완료로 저장</button>
@@ -381,12 +383,14 @@ function irOpenReviewModal(id) {
     const progress = Math.max(0, Math.min(100, parseInt(raw, 10) || 0));
     const needsRevision = document.getElementById('irReviewNeedsRevision').checked;
     const comment = document.getElementById('irReviewComment').value.trim();
-    irApplyReview(req, progress, needsRevision, comment, irResultPending);
+    const linkInput = document.getElementById('irResultLink');
+    const link = linkInput ? linkInput.value.trim() : '';
+    irApplyReview(req, progress, needsRevision, comment, irResultPending, link);
     close();
   });
 }
 
-function irApplyReview(req, progress, needsRevision, comment, resultFile) {
+function irApplyReview(req, progress, needsRevision, comment, resultFile, resultLink) {
   const reviewedAt = new Date().toISOString();
   const patch = { status: 'reviewed', adminProgress: progress, adminComment: comment, needsRevision, reviewedAt };
   if (resultFile) {
@@ -395,6 +399,9 @@ function irApplyReview(req, progress, needsRevision, comment, resultFile) {
     patch.resultFileName = resultFile.fileName || null;
     patch.resultFileSize = resultFile.fileSize || null;
     patch.resultMime = resultFile.mime || null;
+  }
+  if (resultLink) {
+    patch.resultLink = resultLink;
   }
   bearipUpdateIpReview(req.id, patch);
   // GM is on its own device/account now, with no access to the requester's
@@ -406,7 +413,7 @@ function irApplyReview(req, progress, needsRevision, comment, resultFile) {
     {
       type: 'ip',
       title: '전문가 검토 결과가 도착했어요',
-      message: `'${req.ipTitle}'의 '${req.stepLabel}' 항목이 ${progress}%로 진단됐어요.${needsRevision ? ' 보완이 필요해요.' : ''}${resultFile ? ' 참고 파일을 확인해보세요.' : ''}${comment ? ` "${comment}"` : ''}`,
+      message: `'${req.ipTitle}'의 '${req.stepLabel}' 항목이 ${progress}%로 진단됐어요.${needsRevision ? ' 보완이 필요해요.' : ''}${resultFile || resultLink ? ' 참고 자료를 확인해보세요.' : ''}${comment ? ` "${comment}"` : ''}`,
       link: 'my-dna.html',
     },
     req.requesterNickname

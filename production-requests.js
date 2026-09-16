@@ -185,11 +185,13 @@ function prOpenAction(id, kind) {
         isDone
           ? `<label class="pr-confirm-label" for="prResultFileInput">결과물 파일 (선택)</label>
              <div class="pr-result-upload" id="prResultUpload">
-               <input type="file" id="prResultFileInput" accept="image/*,audio/*,.pdf,.doc,.docx,.txt,.mp3,.wav" style="display:none">
+               <input type="file" id="prResultFileInput" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.mp3,.wav,.mp4,.mov,.webm" style="display:none">
                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 15l5-5 4 4 4-4 5 5"/><circle cx="8" cy="9" r="1.4"/></svg>
                <div class="t">클릭해서 결과물 파일 업로드</div>
-               <div class="d">이미지, PDF, 워드, 텍스트, 음향(mp3/wav) — 최대 5MB</div>
-             </div>`
+               <div class="d">이미지, 영상, PDF, 워드, 텍스트, 음향 — 최대 5MB</div>
+             </div>
+             <label class="pr-confirm-label" for="prResultLink">결과물 링크 (선택 — 영상처럼 5MB 넘는 파일은 구글드라이브 등에 올린 뒤 링크로 전달해주세요)</label>
+             <input type="text" id="prResultLink" class="pr-confirm-input" placeholder="https://...">`
           : ''
       }
       <label class="pr-confirm-label" for="prActionNote">${isDone ? '완료 메모 (선택)' : '거절 사유 (선택)'}</label>
@@ -254,12 +256,14 @@ function prOpenAction(id, kind) {
 
   overlay.querySelector('.pr-confirm-submit').addEventListener('click', () => {
     const note = document.getElementById('prActionNote').value.trim();
-    prApplyAction(req, kind, note, prResultPending);
+    const linkInput = document.getElementById('prResultLink');
+    const link = linkInput ? linkInput.value.trim() : '';
+    prApplyAction(req, kind, note, prResultPending, link);
     close();
   });
 }
 
-function prApplyAction(req, kind, note, resultFile) {
+function prApplyAction(req, kind, note, resultFile, resultLink) {
   const patch = { status: kind };
   if (kind === 'done') {
     patch.resultNote = note;
@@ -270,6 +274,7 @@ function prApplyAction(req, kind, note, resultFile) {
       patch.resultFileSize = resultFile.fileSize || null;
       patch.resultMime = resultFile.mime || null;
     }
+    if (resultLink) patch.resultLink = resultLink;
   }
   bearipUpdateProductionRequest(req.id, patch);
   // GM is on its own device/account now, with no access to the requester's
@@ -283,7 +288,7 @@ function prApplyAction(req, kind, note, resultFile) {
       title: kind === 'done' ? '제작이 완료됐어요' : '제작요청이 거절됐어요',
       message:
         kind === 'done'
-          ? `'${req.ipTitle}'의 '${req.label}' 제작이 완료됐어요.${resultFile ? ' 결과물 파일을 확인해보세요.' : ''}${note ? ` ${note}` : ''}`
+          ? `'${req.ipTitle}'의 '${req.label}' 제작이 완료됐어요.${resultFile || resultLink ? ' 결과물을 확인해보세요.' : ''}${note ? ` ${note}` : ''}`
           : `'${req.ipTitle}'의 '${req.label}' 제작요청이 거절됐어요. ${req.price}C를 환불했어요.${note ? ` 사유: ${note}` : ''}`,
       link: 'my-dna.html',
     },

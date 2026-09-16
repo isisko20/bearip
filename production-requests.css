@@ -60,6 +60,7 @@
 .pr-result-file.plain { color: var(--dr-ink-soft); text-decoration: none; }
 .pr-result-audio { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
 .pr-result-audio audio { width: 100%; height: 36px; }
+.pr-result-audio video { width: 100%; max-height: 240px; border-radius: 10px; background: #000; }
 
 .pr-card-actions { display: flex; gap: 8px; margin-top: 14px; }
 .pr-complete-btn, .pr-reject-btn {
@@ -106,6 +107,12 @@
   font-size: 12.5px; font-family: inherit; resize: vertical;
 }
 .pr-confirm-textarea:focus { outline: none; border-color: var(--dr-purple); }
+.pr-confirm-input {
+  width: 100%; padding: 10px 12px; border-radius: 12px; margin-bottom: 12px;
+  border: 1px solid var(--dr-border); background: var(--dr-bg-soft); color: var(--dr-ink);
+  font-size: 12.5px; font-family: inherit;
+}
+.pr-confirm-input:focus { outline: none; border-color: var(--dr-purple); }
 .pr-confirm-actions { display: flex; gap: 8px; margin-top: 16px; }
 .pr-confirm-cancel, .pr-confirm-submit {
   flex: 1; padding: 10px; border-radius: 10px; font-size: 12.5px; font-weight: 700;
