@@ -504,6 +504,16 @@
 .md-road-action-btn.ready { background: var(--dr-purple); color: #fff; }
 .md-road-action-btn.production { background: rgba(143,107,255,0.16); color: var(--dr-purple); }
 .md-road-action-btn.done { background: rgba(62,207,125,0.16); color: #2fae6b; }
+
+/* A quiet secondary option next to the main action button — 전문가 도움 없이
+   스스로 완료 처리하는 길이 하나 더 있다는 걸 알려주되, 위 버튼(제작 의뢰 등)
+   보다 시각적으로 강하면 안 되니 배경 없는 텍스트 버튼으로 둔다. */
+.md-road-self-done-btn {
+  margin-top: 4px; padding: 2px 4px; border: none; background: transparent; cursor: pointer;
+  font-size: 9.5px; font-weight: 600; font-family: inherit; color: var(--dr-ink-soft);
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.md-road-self-done-btn:hover { color: var(--dr-ink); }
 .md-road-step.needs-revision .md-road-status { color: #d68a1c; font-weight: 700; }
 .md-road-step.ready .md-road-status { color: var(--dr-purple); font-weight: 700; }
 

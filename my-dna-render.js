@@ -612,6 +612,30 @@ function mdSetRoadmapProductionMode(key, mode) {
   if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { roadmap: currentIP.roadmap });
 }
 
+// Lets a creator call a step finished on their own terms — no 전문가 검토, no
+// 제작 의뢰, no credits spent — for material they're already satisfied with.
+// Free and instant since nothing outside this IP is involved (no queue entry,
+// no GM notification), unlike 제작 의뢰/전문가 검토 which always are.
+function mdMarkStepSelfDone(index) {
+  const step = currentIP.roadmap[index];
+  if (!step) return;
+  mdSetRoadmapProductionMode(step.key, 'self_done');
+  recomputeProductionProgress();
+  renderRoadmap();
+  renderStatus();
+  bearipShowToast('직접 완료로 표시했어요');
+}
+
+function mdUndoStepSelfDone(index) {
+  const step = currentIP.roadmap[index];
+  if (!step) return;
+  mdSetRoadmapProductionMode(step.key, 'self');
+  recomputeProductionProgress();
+  renderRoadmap();
+  renderStatus();
+  bearipShowToast('완료 표시를 취소했어요');
+}
+
 // 제작요청/전문가검토 are now a cross-device queue (storage.js's Firebase-backed
 // bearipLoadProductionRequests/bearipLoadIpReviews) — whoever fulfills them
 // (GM) acts from a different browser and can no longer reach into this
@@ -1163,6 +1187,11 @@ function openScoreEdit(field) {
 // however far the creator's own 1차 등록 has gotten.
 function mdStepStatus(step) {
   if (step.mode === 'done') return 'production_done';
+  // A creator who's satisfied with their own work shouldn't need to pay for
+  // (or wait on) 전문가 검토/제작 의뢰 just to call a step finished — self_done
+  // is a separate, self-declared "done" that wins the same way production_done
+  // does, so it doesn't get overridden by review/registration state underneath.
+  if (step.mode === 'self_done') return 'self_done';
   if (step.mode === 'requested') return 'production_requested';
   if (step.reviewStatus === 'reviewed') return step.needsRevision ? 'needs_revision' : 'ready';
   if (step.reviewStatus === 'requested') return 'reviewing';
@@ -1178,7 +1207,15 @@ const STEP_STATUS_META = {
   ready: { label: '준비 완료', cls: 'ready', btn: '제작 의뢰' },
   production_requested: { label: '제작 의뢰 중', cls: 'production', btn: '진행 상황 확인' },
   production_done: { label: '제작 완료', cls: 'done', btn: '결과물 보기' },
+  // Same 'done' styling (초록, 체크 배지) as production_done — from a "is this
+  // step finished" standpoint they're equivalent; the label is the only thing
+  // that still says how it got there.
+  self_done: { label: '완료 (직접)', cls: 'done', btn: '완료 취소' },
 };
+
+// A step can be self-declared done once there's actually something
+// registered for it — no point "completing" an empty, unregistered step.
+const SELF_DONE_ELIGIBLE_STATUSES = ['writing', 'reviewing', 'needs_revision', 'ready'];
 
 function renderRoadmap() {
   document.getElementById('roadmapTitle').textContent = `${GOAL_LABELS[currentIP.goal]} 개발 맵`;
@@ -1199,7 +1236,8 @@ function renderRoadmap() {
     // 'ready' used to show the same badge as 'production_done', which made a
     // self-registered-and-done step look identical to one GM had actually
     // produced; real completion needs its own unambiguous signal.
-    const checkHtml = statusKey === 'production_done' ? `<span class="md-road-check">${CHECK_SVG}</span>` : '';
+    const checkHtml =
+      statusKey === 'production_done' || statusKey === 'self_done' ? `<span class="md-road-check">${CHECK_SVG}</span>` : '';
 
     // Registered entries ÷ targetCount (e.g. 4/10화 = 40%) — real content,
     // not the coarser "has this step started at all" the status label alone
@@ -1223,6 +1261,11 @@ function renderRoadmap() {
       <div class="md-road-status">${meta.label}</div>
       ${pctHtml}
       <button type="button" class="md-road-action-btn ${meta.cls}" data-index="${i}" data-status="${statusKey}">${meta.btn}</button>
+      ${
+        SELF_DONE_ELIGIBLE_STATUSES.includes(statusKey)
+          ? `<button type="button" class="md-road-self-done-btn" data-index="${i}">전문가 없이 직접 완료</button>`
+          : ''
+      }
     `;
     container.appendChild(stepEl);
     if (i < currentIP.roadmap.length - 1) {
@@ -1526,6 +1569,7 @@ function mdExpertHelpRowMeta(step) {
   if (status === 'ready') return { tag: `검토 완료 · ${step.adminProgress}%`, action: null };
   if (status === 'production_requested') return { tag: '제작 의뢰 중', action: null };
   if (status === 'production_done') return { tag: '제작 완료', action: null };
+  if (status === 'self_done') return { tag: '완료 (직접)', action: null };
   return { tag: null, action: null };
 }
 
@@ -2176,6 +2220,12 @@ document.addEventListener('DOMContentLoaded', () => {
       openStepMaterialEditor(parseInt(editBtn.dataset.index, 10));
       return;
     }
+    const selfDoneBtn = e.target.closest('.md-road-self-done-btn');
+    if (selfDoneBtn) {
+      e.stopPropagation();
+      mdMarkStepSelfDone(parseInt(selfDoneBtn.dataset.index, 10));
+      return;
+    }
     const btn = e.target.closest('.md-road-action-btn');
     if (!btn) return;
     e.stopPropagation();
@@ -2200,6 +2250,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tab) tab.click();
         break;
       }
+      case 'self_done':
+        mdUndoStepSelfDone(index);
+        break;
     }
   });
 
