@@ -82,8 +82,8 @@ function prRenderList() {
       ${
         r.status === 'pending'
           ? `<div class="pr-card-actions">
-               <button type="button" class="pr-complete-btn" data-id="${r.id}">완료 처리</button>
-               <button type="button" class="pr-reject-btn" data-id="${r.id}">거절</button>
+               <button type="button" class="pr-complete-btn" data-id="${r.id}">업로드</button>
+               <button type="button" class="pr-reject-btn" data-id="${r.id}">피드백</button>
              </div>`
           : r.trashed
             ? `<div class="pr-card-actions">
@@ -175,7 +175,7 @@ function prOpenAction(id, kind) {
   overlay.className = 'pr-confirm-overlay';
   overlay.innerHTML = `
     <div class="pr-confirm-box">
-      <div class="pr-confirm-title">'${bearipEscapeHtml(req.ipTitle)}'의 '${bearipEscapeHtml(req.label)}'을(를) ${isDone ? '완료 처리' : '거절'}할까요?</div>
+      <div class="pr-confirm-title">'${bearipEscapeHtml(req.ipTitle)}'의 '${bearipEscapeHtml(req.label)}'을(를) ${isDone ? '업로드' : '피드백'}할까요?</div>
       <div class="pr-confirm-desc">${
         isDone
           ? '요청자에게 완료 알림이 전달돼요.'
@@ -200,7 +200,7 @@ function prOpenAction(id, kind) {
       }"></textarea>
       <div class="pr-confirm-actions">
         <button type="button" class="pr-confirm-cancel">취소</button>
-        <button type="button" class="pr-confirm-submit ${isDone ? 'done' : 'reject'}">${isDone ? '완료 처리하기' : '거절하기'}</button>
+        <button type="button" class="pr-confirm-submit ${isDone ? 'done' : 'reject'}">${isDone ? '업로드하기' : '피드백 보내기'}</button>
       </div>
     </div>
   `;
