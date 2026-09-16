@@ -434,11 +434,21 @@ function openWritingCompletenessView() {
 
 // 전문가 준비도 — average of the page-admin's per-step adminProgress across
 // only the steps that have actually been reviewed (an un-reviewed step
-// doesn't drag the average toward 0). 0 with nothing reviewed yet.
+// doesn't drag the average toward 0). A step that skipped review entirely
+// and went straight to 제작 요청 (commissioned from scratch) or was 직접 완료
+// has nothing left to "get ready" for — it's already fully realized — so it
+// counts as 100 here too, same as bearipStepCompletionPercent treats it for
+// 작성 완성도. Steps touched by neither still don't drag the average down.
 function recomputeExpertReadiness() {
   if (currentIP.id === 'demo') return;
-  const reviewed = (currentIP.roadmap || []).filter((s) => s.reviewStatus === 'reviewed' && s.adminProgress != null);
-  currentIP.readinessScore = reviewed.length ? Math.round(reviewed.reduce((sum, s) => sum + s.adminProgress, 0) / reviewed.length) : 0;
+  const scored = (currentIP.roadmap || [])
+    .map((s) => {
+      if (s.mode === 'done' || s.mode === 'self_done') return 100;
+      if (s.reviewStatus === 'reviewed' && s.adminProgress != null) return s.adminProgress;
+      return null;
+    })
+    .filter((v) => v != null);
+  currentIP.readinessScore = scored.length ? Math.round(scored.reduce((sum, v) => sum + v, 0) / scored.length) : 0;
   bearipUpdateIP(currentIP.id, { readinessScore: currentIP.readinessScore });
 }
 
