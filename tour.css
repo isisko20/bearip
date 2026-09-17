@@ -1,0 +1,66 @@
+/* ================= 첫 방문 가이드 투어 ================= */
+.bearip-tour-overlay { position: fixed; inset: 0; z-index: 9000; pointer-events: none; }
+
+.bearip-tour-spotlight {
+  position: fixed; z-index: 9001; border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(13, 11, 20, 0.6);
+  border: 2px solid #fff;
+  pointer-events: none;
+  transition: left 0.2s ease, top 0.2s ease, width 0.2s ease, height 0.2s ease;
+}
+
+.bearip-tour-tooltip {
+  position: fixed; z-index: 9002; width: 280px;
+  background: var(--dr-panel); color: var(--dr-ink);
+  border-radius: 16px; padding: 16px 18px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+  pointer-events: auto;
+  transition: left 0.2s ease, top 0.2s ease;
+}
+.bearip-tour-step-count { font-size: 10.5px; font-weight: 700; color: var(--dr-purple); margin-bottom: 6px; }
+.bearip-tour-title { font-size: 14.5px; font-weight: 800; margin-bottom: 6px; }
+.bearip-tour-body { font-size: 12.5px; color: var(--dr-ink-soft); line-height: 1.55; }
+.bearip-tour-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
+.bearip-tour-skip {
+  border: none; background: transparent; color: var(--dr-ink-soft); font-size: 11.5px;
+  cursor: pointer; font-family: inherit; text-decoration: underline; padding: 4px 0;
+}
+.bearip-tour-skip:hover { color: var(--dr-ink); }
+.bearip-tour-nav { display: flex; gap: 6px; }
+.bearip-tour-prev, .bearip-tour-next {
+  border: none; border-radius: 999px; padding: 7px 14px; font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+.bearip-tour-prev { background: var(--dr-bg-soft); color: var(--dr-ink-soft); }
+.bearip-tour-prev:hover { background: var(--dr-border); }
+.bearip-tour-next { background: var(--dr-purple); color: #fff; }
+.bearip-tour-next:hover { opacity: 0.9; }
+
+/* ---- 시작 전 체험/건너뛰기 제안 ---- */
+.bearip-tour-offer-overlay {
+  position: fixed; inset: 0; z-index: 9100;
+  background: rgba(13, 11, 20, 0.55);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.bearip-tour-offer-box {
+  background: var(--dr-panel); color: var(--dr-ink); border-radius: 20px;
+  padding: 28px 26px; max-width: 340px; width: 100%;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.35); text-align: center;
+}
+.bearip-tour-offer-title { font-size: 17px; font-weight: 800; margin-bottom: 10px; }
+.bearip-tour-offer-desc { font-size: 12.5px; color: var(--dr-ink-soft); line-height: 1.6; margin-bottom: 20px; }
+.bearip-tour-offer-actions { display: flex; flex-direction: column; gap: 8px; }
+.bearip-tour-offer-start {
+  border: none; border-radius: 999px; padding: 12px; font-size: 13.5px; font-weight: 800;
+  cursor: pointer; font-family: inherit; background: var(--dr-purple); color: #fff;
+}
+.bearip-tour-offer-start:hover { opacity: 0.9; }
+.bearip-tour-offer-skip {
+  border: none; background: transparent; color: var(--dr-ink-soft); font-size: 12.5px;
+  cursor: pointer; font-family: inherit; padding: 8px;
+}
+.bearip-tour-offer-skip:hover { color: var(--dr-ink); }
+
+@media (max-width: 480px) {
+  .bearip-tour-tooltip { width: calc(100vw - 32px); }
+}

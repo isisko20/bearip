@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     errorEl.classList.remove('show');
     nicknameInput.classList.remove('error-field');
 
+    const isFirstSignup = !existing;
     const bio = document.getElementById('lgBio').value.trim();
     bearipSetUser({
       nickname,
@@ -30,6 +31,16 @@ document.addEventListener('DOMContentLoaded', () => {
     sessionStorage.removeItem('bearip_login_next');
     // Only allow relative same-site targets — never follow an absolute/external URL.
     const safeNext = next && !/^https?:\/\//i.test(next) ? next : 'profile.html';
-    location.href = safeNext;
+
+    // First-ever signup on this browser gets offered a quick guided tour
+    // (tour.js) instead of going straight where they were headed — the tour
+    // currently lives entirely on create.html, so that's where this sends
+    // them; a returning login (or a skip) goes to safeNext as before.
+    if (isFirstSignup) {
+      sessionStorage.setItem('bearip_tour_offer', '1');
+      location.href = 'create.html';
+    } else {
+      location.href = safeNext;
+    }
   });
 });
