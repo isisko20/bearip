@@ -292,7 +292,8 @@
 .md-status-card.blue .md-status-ic { background: rgba(79,176,255,0.16); color: var(--dr-blue); }
 .md-status-card.green .md-status-ic { background: rgba(61,220,132,0.16); color: #2fae66; }
 .md-status-label { font-size: 11px; font-weight: 800; letter-spacing: 0.3px; color: var(--dr-ink-soft); }
-.md-status-info { width: 15px; height: 15px; color: var(--dr-ink-soft); flex-shrink: 0; margin-top: 2px; }
+.md-status-info { width: 15px; height: 15px; color: var(--dr-ink-soft); flex-shrink: 0; margin-top: 2px; cursor: pointer; }
+.md-status-info:hover { color: var(--dr-ink); }
 .md-status-value { font-size: 26px; font-weight: 800; margin: 2px 0 2px; }
 .md-status-card.purple .md-status-value { color: var(--dr-purple); }
 .md-status-card.blue .md-status-value { color: var(--dr-blue); }

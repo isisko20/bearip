@@ -376,6 +376,60 @@ function recomputeWritingCompleteness() {
   bearipUpdateIP(currentIP.id, { dnaScore: currentIP.dnaScore });
 }
 
+// Plain-language explanation for each of the 3 "나의 IP 현황" numbers — what
+// actually moves them, since "왜 준비도가 안 오르지" has come up for real.
+const MD_METRIC_INFO = {
+  dna: {
+    title: '작성 완성도란?',
+    body: '개발맵 각 단계의 완성률을 평균낸 값이에요. 완성률은 등록한 자료 수 ÷ 목표 수량으로 계산하지만, 제작 완료됐거나 직접 완료 처리한 단계는 자료를 따로 안 올렸어도 100%로 쳐요 — 어떻게 완성됐든 완성은 완성이니까요.',
+  },
+  readiness: {
+    title: '전문가 준비도란?',
+    body: '전문가 검토를 받은 단계는 그때 받은 점수로, 제작 완료(또는 직접 완료)된 단계는 100점으로 쳐서 평균낸 값이에요. 아직 손대지 않은 단계는 평균에서 빠지기 때문에, 진행 안 한 단계가 남아있다고 점수가 깎이진 않아요.',
+  },
+  production: {
+    title: '제작 진행률이란?',
+    body: '제작을 의뢰한 단계들 중에서 실제로 완료된 비율이에요. 자료 등록만 하고 제작 의뢰를 한 적 없는 단계, 직접 완료 처리한 단계는 이 계산에 아예 포함되지 않아요 — 이 숫자는 오직 "GM에게 맡긴 것" 기준이에요.',
+  },
+};
+
+function ensureMetricInfoOverlay() {
+  let overlay = document.getElementById('metricInfoOverlay');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.className = 'md-road-edit-overlay';
+  overlay.id = 'metricInfoOverlay';
+  overlay.style.display = 'none';
+  overlay.innerHTML = `
+    <div class="md-road-edit-box">
+      <div class="md-road-edit-head">
+        <span id="metricInfoTitle"></span>
+        <button type="button" class="md-road-edit-close" id="metricInfoClose" aria-label="닫기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <p class="md-wc-note" id="metricInfoBody"></p>
+    </div>
+  `;
+  (document.querySelector('.dna-app') || document.body).appendChild(overlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('#metricInfoClose')) overlay.style.display = 'none';
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.style.display !== 'none') overlay.style.display = 'none';
+  });
+  return overlay;
+}
+
+function openMetricInfo(key) {
+  const info = MD_METRIC_INFO[key];
+  if (!info) return;
+  const overlay = ensureMetricInfoOverlay();
+  document.getElementById('metricInfoTitle').textContent = info.title;
+  document.getElementById('metricInfoBody').textContent = info.body;
+  overlay.style.display = 'flex';
+}
+
 function ensureWritingCompletenessOverlay() {
   let overlay = document.getElementById('writingCompletenessOverlay');
   if (overlay) return overlay;
@@ -2227,6 +2281,18 @@ document.addEventListener('DOMContentLoaded', () => {
   if (dnaCard) dnaCard.addEventListener('click', openWritingCompletenessView);
   const productionCard = document.querySelector('.md-status-card.green');
   if (productionCard) productionCard.addEventListener('click', jumpToRoadmap);
+
+  // The (i) icon on each of the 3 status cards was pure decoration until now
+  // — wired up to actually explain how that number is calculated, since
+  // "왜 이 점수가 안 오르지" is exactly the kind of question that came up
+  // more than once without this.
+  document.querySelectorAll('.md-status-info').forEach((icon, i) => {
+    const key = ['dna', 'readiness', 'production'][i];
+    icon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openMetricInfo(key);
+    });
+  });
 
   const expertHelpBtn = document.getElementById('mdExpertHelpBtn');
   if (expertHelpBtn) expertHelpBtn.addEventListener('click', openExpertHelpModal);
