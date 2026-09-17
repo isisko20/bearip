@@ -41,8 +41,33 @@
 .gd-faq-q svg { width: 15px; height: 15px; color: var(--dr-ink-soft); flex-shrink: 0; transition: transform 0.2s; }
 .gd-faq-item.open .gd-faq-q svg { transform: rotate(180deg); }
 .gd-faq-a { max-height: 0; overflow: hidden; transition: max-height 0.2s ease, padding 0.2s ease; padding: 0 16px; }
-.gd-faq-item.open .gd-faq-a { max-height: 200px; padding: 0 16px 16px; }
+.gd-faq-item.open .gd-faq-a { max-height: 500px; padding: 0 16px 16px; }
 .gd-faq-a p { font-size: 12.5px; color: var(--dr-ink-soft); line-height: 1.6; }
+
+/* 무엇이든 물어보세요 */
+.gd-ask-row { display: flex; gap: 8px; }
+.gd-ask-input {
+  flex: 1; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--dr-border);
+  background: var(--dr-bg-soft); color: var(--dr-ink); font-size: 13px; font-family: inherit;
+}
+.gd-ask-input:focus { outline: none; border-color: var(--dr-purple); }
+.gd-ask-btn {
+  padding: 0 20px; border-radius: 12px; border: none; background: var(--dr-purple); color: #fff;
+  font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap;
+}
+.gd-ask-btn:hover { opacity: 0.9; }
+.gd-ask-results { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.gd-ask-result {
+  display: block; width: 100%; text-align: left; border: 1px solid var(--dr-border); border-radius: 14px;
+  padding: 14px 16px; background: var(--dr-bg-soft); cursor: pointer; font-family: inherit;
+}
+.gd-ask-result:hover { border-color: var(--dr-purple); }
+.gd-ask-result-q { font-size: 13px; font-weight: 800; color: var(--dr-ink); margin-bottom: 4px; }
+.gd-ask-result-a { font-size: 12px; color: var(--dr-ink-soft); line-height: 1.55; }
+.gd-ask-empty {
+  font-size: 12.5px; color: var(--dr-ink-soft); line-height: 1.6;
+  padding: 14px 16px; border: 1px dashed var(--dr-border); border-radius: 14px;
+}
 
 @media (max-width: 860px) {
   .gd-steps { grid-template-columns: 1fr; }
