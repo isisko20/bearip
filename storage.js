@@ -370,8 +370,37 @@ function bearipDeleteIP(id) {
   if (bearipFirebaseReady()) {
     firebase.database().ref('allIPs/' + id).remove();
     firebase.database().ref('publicIPs/' + id).remove();
+    firebase.database().ref('ipOverallComments/' + id).remove();
+    // 제작요청/전문가검토 큐는 이 IP를 참조만 할 뿐 담고 있지는 않아서, IP가
+    // 삭제돼도 저절로 같이 사라지지 않는다 — 안 지우면 GM 쪽에 실체 없는
+    // 요청/검토 건이 유령처럼 계속 남는다 (실제로 겪은 문제라 여기서 막는다).
+    if (typeof bearipLoadProductionRequests === 'function' && typeof bearipDeleteProductionRequest === 'function') {
+      bearipLoadProductionRequests()
+        .filter((r) => r.ipId === id)
+        .forEach((r) => bearipDeleteProductionRequest(r.id));
+    }
+    if (typeof bearipLoadIpReviews === 'function' && typeof bearipDeleteIpReview === 'function') {
+      bearipLoadIpReviews()
+        .filter((r) => r.ipId === id)
+        .forEach((r) => bearipDeleteIpReview(r.id));
+    }
   }
   if (!ip) return;
+
+  // Any roadmap submission or ASSETS-tab file moved out to this browser's
+  // IndexedDB (bearipOffloadLocalSubmissionBlobs / addAssetFromUpload) has
+  // nothing left pointing at it once the IP itself is gone — clean those up
+  // too instead of leaving them as permanent local storage waste.
+  if (typeof bearipDeleteAssetFile === 'function') {
+    (ip.roadmap || []).forEach((step) => {
+      (step.submissions || []).forEach((sub) => {
+        if (sub.blobId) bearipDeleteAssetFile(sub.blobId);
+      });
+    });
+    (ip.assets || []).forEach((asset) => {
+      if (asset.blobStored) bearipDeleteAssetFile(asset.blobId || asset.id);
+    });
+  }
 
   // A CREW MATCH posting only exists to recruit for this IP, and an
   // applicant record only exists to apply to one of those postings — both
