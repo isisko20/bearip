@@ -13,6 +13,16 @@ document.addEventListener('DOMContentLoaded', () => {
   renderPositionsChips();
   renderPortfolio();
   renderCrew();
+  // True up bio/응원 drift for anyone already opted in (e.g. an IP picked up
+  // likes since the last time positions/portfolio were saved here) — a
+  // no-op (bearipSyncMyCreatorProfile removes instead) if no position is set.
+  if (typeof bearipSyncMyCreatorProfile === 'function') bearipSyncMyCreatorProfile();
+  // 받은 제안 counts notifications, which load from Firebase asynchronously —
+  // the very first renderStats() call above can easily land before that
+  // listener's first snapshot arrives, undercounting until something else
+  // happens to re-render. Re-run once real data shows up (same pattern as
+  // auth-ui.js's unread-badge refresh).
+  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('notifications', renderStats);
 
   // ---- Tabs ----
   document.querySelectorAll('#pfTabs .pf-tab').forEach((tab) => {
@@ -33,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const updated = bearipSetUser({ nickname, bio, joinedAt: current.joinedAt });
     renderHeader(updated);
     flashSaved('settingsSavedNote');
+    if (typeof bearipSyncMyCreatorProfile === 'function') bearipSyncMyCreatorProfile();
   });
 
   // ---- 가능한 포지션 저장 ----
@@ -42,6 +53,11 @@ document.addEventListener('DOMContentLoaded', () => {
     );
     bearipSetMyPositions(selected);
     flashSaved('positionsSavedNote');
+    // This is the save that actually makes "다른 IP 오너가 CREW MATCH에서 나를
+    // 더 쉽게 찾을 수 있어요" (see the panel copy above) true — publishes/
+    // clears this profile's public creator card depending on whether any
+    // position is selected.
+    if (typeof bearipSyncMyCreatorProfile === 'function') bearipSyncMyCreatorProfile();
   });
 
   // ---- 포트폴리오 추가 ----
@@ -63,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     titleInput.value = '';
     renderPortfolio();
+    if (typeof bearipSyncMyCreatorProfile === 'function') bearipSyncMyCreatorProfile();
   });
 
   // ---- 로그아웃 ----
@@ -88,6 +105,14 @@ function renderStats() {
   document.getElementById('pfStatIps').textContent = ips.length;
   const appliedEl = document.getElementById('pfStatApplied');
   if (appliedEl) appliedEl.textContent = bearipSetList('bearip_applied_positions').length;
+  // 받은 제안 — CREW MATCH's "매치 제안" delivers a real notification to the
+  // target creator (crew-match.js), tagged with this exact title; counting
+  // those is simpler than a dedicated proposals collection and stays correct
+  // for the same reason 지원한 포지션 above just counts a persisted set.
+  const proposalsEl = document.getElementById('pfStatProposals');
+  if (proposalsEl) {
+    proposalsEl.textContent = bearipLoadNotifications().filter((n) => n.title === '매치 제안을 받았어요').length;
+  }
   // 받은 응원 — the real sum of 좋아요 across every IP this user owns (same
   // count ip-detail.js's 응원 button and CONTENT ROOM both read/write).
   const cheersEl = document.getElementById('pfStatCheers');
@@ -128,6 +153,7 @@ function renderPortfolio() {
     card.querySelector('.pf-portfolio-delete').addEventListener('click', () => {
       bearipDeletePortfolioItem(item.id);
       renderPortfolio();
+      if (typeof bearipSyncMyCreatorProfile === 'function') bearipSyncMyCreatorProfile();
     });
     grid.appendChild(card);
   });

@@ -691,8 +691,8 @@ function bearipSafePathSegment(str) {
   return String(str || '').replace(/[.#$[\]/]/g, '_') || '_guest';
 }
 
-const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {} };
-const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [] };
+const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {} };
+const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [] };
 // Firebase's first 'value' callback for a watched path can take a real
 // moment to arrive (network round-trip, larger the more attachments have
 // piled up) — until then _bearipDataCache[kind] is just its empty starting
@@ -700,7 +700,7 @@ const _bearipDataListeners = { notifications: [], productionRequests: [], ipRevi
 // bearipLoadProductionRequests()/bearipLoadIpReviews() etc. before this
 // flips true and shows a flat "없어요" empty state ends up lying to GM —
 // looking permanently broken instead of just still loading.
-const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false };
+const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false };
 
 function bearipIsDataLoaded(kind) {
   return !!_bearipDataLoaded[kind];
@@ -1042,6 +1042,47 @@ function bearipSetMyPositions(list) {
   localStorage.setItem(bearipScopedKey(BEARIP_MY_POSITIONS_KEY), JSON.stringify(list));
 }
 
+// ---- CREW MATCH's "크리에이터 둘러보기" — profile.html's "가능한 포지션" tab
+// promises that filling it in makes you findable here; without this, that
+// promise was empty (positions/portfolio never left this browser's own
+// localStorage). Mirrors bearipSetIpPublic's snapshot-on-save pattern below:
+// a public record goes to publicCreators/<nickname> whenever the profile
+// owner has at least one position selected, and is removed the moment they
+// clear their positions — no positions selected means "not looking," same
+// as never having opted in.
+function bearipLoadPublicCreators() {
+  return Object.values(_bearipDataCache.publicCreators || {});
+}
+
+function bearipSyncMyCreatorProfile() {
+  if (!bearipFirebaseReady()) return;
+  const user = bearipGetUser();
+  if (!user || !user.nickname) return;
+  const positions = bearipGetMyPositions();
+  const ref = firebase.database().ref('publicCreators/' + bearipSafePathSegment(user.nickname));
+  if (!positions.length) {
+    ref.remove();
+    return;
+  }
+  const ips = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
+  // Only "항시 공개" portfolio pieces belong in a passive browse list — "지원
+  // 할 때 공개" items are meant to surface at the moment this person applies
+  // to something, not to every stranger scrolling CREW MATCH.
+  const portfolio = bearipLoadPortfolio()
+    .filter((p) => p.visibility === 'always')
+    .map((p) => ({ id: p.id, title: p.title, thumb: p.thumb }));
+  const snapshot = {
+    nickname: user.nickname,
+    bio: user.bio || '',
+    positions,
+    portfolio,
+    cheers: ips.reduce((sum, ip) => sum + (ip.likes || 0), 0),
+    joinedAt: user.joinedAt || null,
+    updatedAt: new Date().toISOString(),
+  };
+  _bearipFirebaseWrite(() => ref.set(bearipFirebaseSafe(snapshot)));
+}
+
 function bearipLoadPortfolio() {
   try {
     const raw = localStorage.getItem(bearipMigrateLegacyKey(BEARIP_PORTFOLIO_KEY));
@@ -1377,4 +1418,5 @@ function bearipDeleteAssetFile(id) {
   // gallery views only ever need (and only ever subscribe to) publicIPs.
   const _u = bearipGetUser();
   if (_u && _u.nickname === 'GM') _bearipWatchPath('allIPs', 'allIPs');
+  _bearipWatchPath('publicCreators', 'publicCreators');
 })();

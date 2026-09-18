@@ -1,0 +1,86 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "notifications": {
+      "$nickname": {
+        ".read": true,
+        ".write": true,
+        "$notifId": {
+          ".validate": "newData.hasChildren(['type', 'title', 'message', 'createdAt', 'read'])",
+          "type": { ".validate": "newData.isString()" },
+          "title": { ".validate": "newData.isString()" },
+          "message": { ".validate": "newData.isString()" },
+          "read": { ".validate": "newData.isBoolean()" },
+          "createdAt": { ".validate": "newData.isString()" }
+        }
+      }
+    },
+
+    "productionRequests": {
+      ".read": true,
+      ".indexOn": ["ipId"],
+      "$reqId": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['ipId', 'requesterNickname', 'status', 'requestedAt'])",
+        "ipId": { ".validate": "newData.isString()" },
+        "requesterNickname": { ".validate": "newData.isString()" },
+        "status": { ".validate": "newData.isString() && (newData.val() == 'pending' || newData.val() == 'done' || newData.val() == 'rejected' || newData.val() == 'cancelled')" },
+        "price": { ".validate": "newData.isNumber()" },
+        "requestedAt": { ".validate": "newData.isString()" }
+      }
+    },
+
+    "ipReviews": {
+      ".read": true,
+      ".indexOn": ["ipId"],
+      "$reviewId": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['ipId', 'requesterNickname', 'stepKey', 'status', 'requestedAt'])",
+        "ipId": { ".validate": "newData.isString()" },
+        "requesterNickname": { ".validate": "newData.isString()" },
+        "stepKey": { ".validate": "newData.isString()" },
+        "status": { ".validate": "newData.isString() && (newData.val() == 'pending' || newData.val() == 'reviewed')" },
+        "requestedAt": { ".validate": "newData.isString()" }
+      }
+    },
+
+    "ipOverallComments": {
+      ".read": true,
+      "$ipId": {
+        ".write": true,
+        ".validate": "newData.isString() || newData.val() == null"
+      }
+    },
+
+    "publicIPs": {
+      ".read": true,
+      "$ipId": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['id', 'title'])",
+        "id": { ".validate": "newData.isString()" },
+        "title": { ".validate": "newData.isString()" }
+      }
+    },
+
+    "allIPs": {
+      ".read": true,
+      "$ipId": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['id', 'title'])",
+        "id": { ".validate": "newData.isString()" },
+        "title": { ".validate": "newData.isString()" }
+      }
+    },
+
+    "publicCreators": {
+      ".read": true,
+      "$nickname": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['nickname', 'positions'])",
+        "nickname": { ".validate": "newData.isString()" }
+      }
+    }
+  }
+}
