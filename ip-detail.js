@@ -3,7 +3,6 @@
 
 const IPD_JOIN_KEY = 'bearip_joined_ips';
 const IPD_FOLLOW_KEY = 'bearip_followed_ips';
-const IPD_APPLY_KEY = 'bearip_applied_positions';
 
 function ipdSetJoinedUI(btn, joined) {
   btn.textContent = joined ? '참여 신청 완료' : '참여하기';
@@ -17,12 +16,41 @@ function ipdSetFollowUI(btn, following) {
   btn.classList.toggle('is-following', following);
 }
 
-function ipdSetApplyUI(btn, applied) {
-  btn.textContent = applied ? '지원 취소' : '지원하기';
-  btn.classList.toggle('is-done', applied);
-}
-
 const IPD_GOAL_LABELS = { webnovel: '웹소설', webtoon: '웹툰', video: '영상', multi: '멀티포맷' };
+
+// The IP this page is currently showing (set by ipdApplyDynamicIP) — kept so
+// the recruit list can redraw when postings/applications change elsewhere.
+let ipdCurrentIp = null;
+
+// "모집 중인 포지션" — this IP's real CREW MATCH postings (Firebase), each with
+// an apply button that reflects the user's actual application status. Rebuilt
+// wholesale on every change; clicks are handled by one delegated listener
+// (see DOMContentLoaded below), so re-rendering never loses button wiring.
+function ipdRenderRecruitPanel() {
+  const panel = document.getElementById('ipdRecruitPanel');
+  if (!panel || !ipdCurrentIp) return;
+  const ip = ipdCurrentIp;
+  const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
+
+  panel.querySelectorAll('.ipd-recruit-row, .ipd-recruit-empty').forEach((el) => el.remove());
+  const positions = (typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : []).filter((p) =>
+    p.ipId ? p.ipId === ip.id : p.ipTitle === ip.title
+  );
+  if (positions.length === 0) {
+    panel.insertAdjacentHTML('beforeend', '<div class="ipd-recruit-empty">아직 모집 중인 포지션이 없어요.</div>');
+    return;
+  }
+  positions.forEach((pos) => {
+    const state = bearipApplyButtonState(pos);
+    panel.insertAdjacentHTML(
+      'beforeend',
+      `<div class="ipd-recruit-row">
+        <div class="ipd-recruit-info"><div class="r">${esc(pos.role)}</div><div class="f">${pos.filled || 0}/${pos.count} 참여</div></div>
+        <button class="ipd-apply-btn${state.kind === 'pending' ? ' is-done' : ''}${state.kind === 'accepted' || state.kind === 'rejected' || state.kind === 'owner' ? ' is-final' : ''}"${state.disabled ? ' disabled' : ''} data-pos="${bearipEscapeAttr(pos.id)}">${esc(state.label)}</button>
+      </div>`
+    );
+  });
+}
 
 // Rewrites the static placeholder markup in place for a user-created IP, if
 // the visitor arrived here via a "IP 보기 / 참여하기" click from OPEN DNA
@@ -141,24 +169,8 @@ function ipdApplyDynamicIP() {
     }
   }
 
-  const recruitPanel = document.querySelector('.ipd-recruit-row') ? document.querySelector('.ipd-recruit-row').closest('.ipd-panel') : null;
-  if (recruitPanel) {
-    recruitPanel.querySelectorAll('.ipd-recruit-row').forEach((row) => row.remove());
-    const positions = (typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : []).filter((p) => p.ipTitle === ip.title);
-    if (positions.length === 0) {
-      recruitPanel.insertAdjacentHTML('beforeend', '<div class="ipd-recruit-empty">아직 모집 중인 포지션이 없어요.</div>');
-    } else {
-      positions.forEach((pos) => {
-        recruitPanel.insertAdjacentHTML(
-          'beforeend',
-          `<div class="ipd-recruit-row">
-            <div class="ipd-recruit-info"><div class="r">${esc(pos.role)}</div><div class="f">${pos.filled || 0}/${pos.count} 참여</div></div>
-            <button class="ipd-apply-btn" data-pos="${esc(pos.id)}" data-pos-title="${esc(pos.role)}" data-ip-title="${esc(ip.title)}">지원하기</button>
-          </div>`
-        );
-      });
-    }
-  }
+  ipdCurrentIp = ip;
+  ipdRenderRecruitPanel();
 
   const infoGenre = document.getElementById('ipdInfoGenre');
   if (infoGenre) infoGenre.textContent = (ip.genres && ip.genres[0]) || '미지정';
@@ -350,9 +362,10 @@ document.addEventListener('DOMContentLoaded', () => {
   ipdSetFollowUI(followBtn, isFollowing);
   followerCountEl.textContent = baseFollowerCount + (isFollowing ? 1 : 0);
 
-  document.querySelectorAll('.ipd-apply-btn').forEach((btn) => {
-    ipdSetApplyUI(btn, bearipSetHas(IPD_APPLY_KEY, btn.dataset.pos));
-  });
+  if (typeof bearipOnDataChange === 'function') {
+    bearipOnDataChange('positions', ipdRenderRecruitPanel);
+    bearipOnDataChange('positionApplicants', ipdRenderRecruitPanel);
+  }
 
   joinBtn.addEventListener('click', () => {
     if (joinBtn.disabled) return;
@@ -404,50 +417,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  document.querySelectorAll('.ipd-apply-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      if (!bearipRequireLogin('ip-detail.html')) return;
-      const posId = btn.dataset.pos;
+  // Delegated: the recruit list is rebuilt whenever postings/applications
+  // change, so buttons can't be wired one by one at load.
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.ipd-apply-btn');
+    if (!btn || btn.disabled) return;
+    if (!bearipRequireLogin('ip-detail.html')) return;
+    const pos = bearipLoadPositions().find((p) => p.id === btn.dataset.pos);
+    if (!pos) return;
+    const state = bearipApplyButtonState(pos);
 
-      if (bearipSetHas(IPD_APPLY_KEY, posId)) {
-        // Un-applying is immediate — nothing to confirm on the way out.
-        bearipSetToggle(IPD_APPLY_KEY, posId);
-        ipdSetApplyUI(btn, false);
-        const user = bearipGetUser();
-        if (user) bearipRemoveApplicantByName(posId, user.nickname);
-        bearipShowToast('지원을 취소했어요');
-        return;
-      }
+    if (state.kind === 'pending') {
+      // Un-applying is immediate — nothing to confirm on the way out.
+      const user = bearipGetUser();
+      if (user) bearipRemoveApplicantByName(pos.id, user.nickname);
+      bearipShowToast('지원을 취소했어요');
+      ipdRenderRecruitPanel();
+      return;
+    }
+    if (state.kind !== 'none') return;
 
-      odOpenApplyForm(`'${btn.dataset.ipTitle}' · ${btn.dataset.posTitle}`, (message) => {
-        bearipSetToggle(IPD_APPLY_KEY, posId);
-        ipdSetApplyUI(btn, true);
-        const user = bearipGetUser();
-        // Creates the same real applicant record CREW MATCH's own apply
-        // button does, so the IP owner actually sees this applicant in
-        // 지원자 확인 instead of the click only toggling local UI state.
-        if (user) {
-          const myPositions = typeof bearipGetMyPositions === 'function' ? bearipGetMyPositions() : [];
-          const myPortfolio = typeof bearipLoadPortfolio === 'function' ? bearipLoadPortfolio() : [];
-          const visibleCount = myPortfolio.filter((p) => p.visibility !== 'private').length;
-          bearipAddApplicant(posId, {
-            id: 'app_me_' + posId,
-            name: user.nickname,
-            role: myPositions[0] || '',
-            bio: user.bio || '',
-            portfolioCount: visibleCount,
-            message,
-            appliedAt: new Date().toISOString(),
-            status: 'pending',
-          });
-        }
-        bearipAddNotification({
-          type: 'crew',
-          title: '포지션에 지원했어요',
-          message: `${btn.dataset.ipTitle} · ${btn.dataset.posTitle}에 지원했어요. 결과를 기다려주세요.`,
-          link: 'profile.html',
-        });
-      });
+    odOpenApplyForm(`'${pos.ipTitle}' · ${pos.role}`, (message) => {
+      // Same real applicant record (and owner notification) CREW MATCH's own
+      // apply button creates, so the owner sees this in 지원자 확인.
+      bearipApplyToPosition(pos, message);
+      ipdRenderRecruitPanel();
     });
   });
 });

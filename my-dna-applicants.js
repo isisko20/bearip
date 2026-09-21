@@ -16,8 +16,11 @@ function mdRenderApplicantsAlert() {
   const listEl = document.getElementById('mdApplicantsList');
   if (!alertEl || !listEl || typeof currentIP === 'undefined' || !currentIP) return;
 
+  // Postings are shared now, so "this IP's postings" also has to mean YOURS —
+  // someone else's IP could happen to share a title.
+  const me = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
   const positions = (typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : []).filter(
-    (p) => p.ipTitle === currentIP.title
+    (p) => me && p.ownerNickname === me.nickname && (p.ipId ? p.ipId === currentIP.id : p.ipTitle === currentIP.title)
   );
   const rows = [];
   positions.forEach((pos) => {
@@ -37,14 +40,14 @@ function mdRenderApplicantsAlert() {
       ({ pos, applicant }) => `
       <div class="md-applicant-item">
         <div class="md-applicant-row">
-          <button type="button" class="md-applicant-name" data-info-id="${applicant.id}">${bearipEscapeHtml(applicant.name)}</button>
+          <button type="button" class="md-applicant-name">${bearipEscapeHtml(applicant.name)}</button>
           <span class="md-applicant-meta">${bearipEscapeHtml(pos.role)} 지원 · ${mdFormatApplicantTime(applicant.appliedAt)}</span>
           <span class="md-applicant-actions">
-            <button type="button" class="md-applicant-accept" data-pos-id="${pos.id}" data-app-id="${applicant.id}">승낙</button>
-            <button type="button" class="md-applicant-reject" data-pos-id="${pos.id}" data-app-id="${applicant.id}">거절</button>
+            <button type="button" class="md-applicant-accept" data-pos-id="${bearipEscapeAttr(pos.id)}" data-app-id="${bearipEscapeAttr(applicant.id)}">승낙</button>
+            <button type="button" class="md-applicant-reject" data-pos-id="${bearipEscapeAttr(pos.id)}" data-app-id="${bearipEscapeAttr(applicant.id)}">거절</button>
           </span>
         </div>
-        <div class="md-applicant-detail" id="md-applicant-detail-${applicant.id}" style="display:none">
+        <div class="md-applicant-detail" style="display:none">
           <div class="md-applicant-detail-role">${bearipEscapeHtml(applicant.role || '역할 미지정')}</div>
           <div class="md-applicant-detail-bio">${bearipEscapeHtml(applicant.bio || '아직 작성된 소개가 없어요.')}</div>
           ${applicant.portfolioCount ? `<div class="md-applicant-detail-portfolio">공개된 포트폴리오 ${applicant.portfolioCount}개</div>` : '<div class="md-applicant-detail-portfolio">공개된 포트폴리오가 없어요.</div>'}
@@ -57,7 +60,7 @@ function mdRenderApplicantsAlert() {
 
   listEl.querySelectorAll('.md-applicant-name').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const detail = document.getElementById(`md-applicant-detail-${btn.dataset.infoId}`);
+      const detail = btn.closest('.md-applicant-item').querySelector('.md-applicant-detail');
       if (!detail) return;
       detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
     });
@@ -67,16 +70,18 @@ function mdRenderApplicantsAlert() {
     btn.addEventListener('click', () => {
       const accepting = btn.classList.contains('md-applicant-accept');
       const posId = btn.dataset.posId;
-      const updated = bearipUpdateApplicantStatus(posId, btn.dataset.appId, accepting ? 'accepted' : 'rejected');
+      const updated = bearipDecideApplicant(posId, btn.dataset.appId, accepting);
       if (!updated) return;
-      if (accepting) {
-        const pos = bearipLoadPositions().find((p) => p.id === posId);
-        if (pos) bearipUpdatePosition(posId, { filled: Math.min((pos.filled || 0) + 1, pos.count) });
-      }
       bearipShowToast(accepting ? '지원자를 수락했어요' : '지원자를 거절했어요');
       mdRenderApplicantsAlert();
     });
   });
 }
 
-document.addEventListener('DOMContentLoaded', mdRenderApplicantsAlert);
+document.addEventListener('DOMContentLoaded', () => {
+  mdRenderApplicantsAlert();
+  if (typeof bearipOnDataChange === 'function') {
+    bearipOnDataChange('positions', mdRenderApplicantsAlert);
+    bearipOnDataChange('positionApplicants', mdRenderApplicantsAlert);
+  }
+});

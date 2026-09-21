@@ -1,11 +1,14 @@
 // Shared by crew-match-post.js's cmRenderPositionCard and
 // crew-match-status.js — kept here since this file loads first among the
-// four crew-match-*.js files (script tag order in crew-match.html).
-const CM_APPLY_KEY = 'bearip_applied_positions';
-
-function cmSetApplyUI(btn, applied) {
-  btn.textContent = applied ? '지원 취소' : '지원하기';
-  btn.classList.toggle('applied', applied);
+// four crew-match-*.js files (script tag order in crew-match.html). The
+// label/enabled state comes from the user's real application record (owner
+// accept/reject included), not a local "did I click it" flag.
+function cmSetApplyUI(btn, pos) {
+  const state = bearipApplyButtonState(pos);
+  btn.textContent = state.label;
+  btn.disabled = state.disabled;
+  btn.classList.toggle('applied', state.kind === 'pending');
+  btn.classList.toggle('is-final', state.kind === 'accepted' || state.kind === 'rejected' || state.kind === 'owner');
 }
 
 // "크리에이터 둘러보기" — real creator cards, sourced from Firebase's

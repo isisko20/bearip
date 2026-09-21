@@ -45,7 +45,9 @@ function odBuildPublishedCard(ip, index) {
     latestWorkHtml = `<div class="od-latest-label">Latest Work</div><div class="od-latest-row">${thumbs}${more}</div>`;
   }
 
-  const isRecruiting = (typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : []).some((p) => p.ipTitle === ip.title);
+  const isRecruiting = (typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : []).some((p) =>
+    p.ipId ? p.ipId === ip.id : p.ipTitle === ip.title
+  );
 
   const card = document.createElement('article');
   card.className = 'od-card';
@@ -123,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof bearipOnDataChange === 'function') {
     bearipOnDataChange('publicIPs', odRenderHeroStats);
     bearipOnDataChange('allIPs', odRenderHeroStats);
+    bearipOnDataChange('positions', odRenderHeroStats);
   }
 });
 document.addEventListener('DOMContentLoaded', odWireHeroPublishBtn);
@@ -166,5 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof bearipOnDataChange === 'function') {
     bearipOnDataChange('publicIPs', odRenderPublishedCards);
     bearipOnDataChange('allIPs', odRenderPublishedCards);
+    bearipOnDataChange('positions', odRenderPublishedCards);
   }
 });

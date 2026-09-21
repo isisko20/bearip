@@ -1,4 +1,8 @@
-// "모집글 올리기" — CREW MATCH recruiting post creation flow.
+// "모집글 올리기" — CREW MATCH recruiting post creation flow, plus the card
+// list every visitor browses. Postings/applicants live in Firebase (see
+// storage.js), so cards here can belong to other people: only the posting's
+// owner sees 지원자 확인 and accept/reject; everyone else just gets 지원하기.
+// Anything user-typed is escaped since it now reaches other people's pages.
 
 const CM_THUMBS = ['thumb-1', 'thumb-2', 'thumb-3', 'thumb-4', 'thumb-5', 'thumb-6', 'thumb-7', 'thumb-8'];
 
@@ -6,7 +10,7 @@ function cmPopulateIpSelect() {
   const select = document.getElementById('postIp');
   const savedIps = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
   select.innerHTML = savedIps.length
-    ? savedIps.map((ip) => `<option value="${ip.id}">${ip.title}</option>`).join('')
+    ? savedIps.map((ip) => `<option value="${bearipEscapeAttr(ip.id)}">${bearipEscapeHtml(ip.title)}</option>`).join('')
     : '<option value="">먼저 MY DNA에서 IP를 만들어주세요</option>';
 }
 
@@ -38,10 +42,12 @@ function cmFormatRelativeTime(iso) {
 }
 
 // Resolves the IP behind a project title (positions only store ipTitle, not
-// an id — same lookup convention as my-dna-applicants.js).
+// an id — same lookup convention as my-dna-applicants.js). Your own IPs first,
+// then published ones, since a posting on CREW MATCH is often someone else's.
 function cmResolveIpByTitle(ipTitle) {
-  const ips = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
-  const ip = ips.find((i) => i.title === ipTitle);
+  const own = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
+  const pub = typeof bearipLoadBrowsableIPs === 'function' ? bearipLoadBrowsableIPs() : [];
+  const ip = own.find((i) => i.title === ipTitle) || pub.find((i) => i.title === ipTitle);
   if (ip) {
     bearipEnsureDnaBreakdown(ip);
     return ip;
@@ -53,9 +59,8 @@ function cmResolveIpForPosition(pos) {
   return cmResolveIpByTitle(pos.ipTitle);
 }
 
-// One delegated listener covers every DNA badge on the browse list — any
-// user-posted card inserted by cmRenderPositionCard — without needing to
-// wire each card individually.
+// One delegated listener covers every DNA badge on the browse list without
+// needing to wire each card individually.
 const cmPositionsListEl = document.getElementById('positionsList');
 if (cmPositionsListEl) {
   cmPositionsListEl.addEventListener('click', (e) => {
@@ -96,17 +101,17 @@ function cmRenderApplicantsPanel(pos, panelEl, fracEl) {
     .map((a) => {
       const actions =
         a.status === 'pending'
-          ? `<button type="button" class="cm-applicant-accept" data-app-id="${a.id}">승낙</button>
-             <button type="button" class="cm-applicant-reject" data-app-id="${a.id}">거절</button>`
-          : `<span class="s ${a.status}">${CM_APPLICANT_STATUS_LABEL[a.status]}</span>`;
+          ? `<button type="button" class="cm-applicant-accept" data-app-id="${bearipEscapeAttr(a.id)}">승낙</button>
+             <button type="button" class="cm-applicant-reject" data-app-id="${bearipEscapeAttr(a.id)}">거절</button>`
+          : `<span class="s ${bearipEscapeAttr(a.status)}">${CM_APPLICANT_STATUS_LABEL[a.status] || bearipEscapeHtml(a.status)}</span>`;
       return `
         <div class="cm-applicant-item">
           <div class="cm-applicant-row">
-            <button type="button" class="cm-applicant-name" data-info-id="${a.id}">${bearipEscapeHtml(a.name)}</button>
+            <button type="button" class="cm-applicant-name">${bearipEscapeHtml(a.name)}</button>
             <span class="cm-applicant-time">${cmFormatRelativeTime(a.appliedAt)}</span>
             <span class="cm-applicant-actions">${actions}</span>
           </div>
-          <div class="cm-applicant-detail" id="applicant-detail-${a.id}" hidden>
+          <div class="cm-applicant-detail" hidden>
             <div class="cm-applicant-detail-role">${bearipEscapeHtml(a.role || '역할 미지정')}</div>
             <div class="cm-applicant-detail-bio">${bearipEscapeHtml(a.bio || '아직 작성된 소개가 없어요.')}</div>
             ${a.portfolioCount ? `<div class="cm-applicant-detail-portfolio">포트폴리오 ${a.portfolioCount}개</div>` : ''}
@@ -124,7 +129,7 @@ function cmRenderApplicantsPanel(pos, panelEl, fracEl) {
 
   panelEl.querySelectorAll('.cm-applicant-name').forEach((nameBtn) => {
     nameBtn.addEventListener('click', () => {
-      const detail = document.getElementById(`applicant-detail-${nameBtn.dataset.infoId}`);
+      const detail = nameBtn.closest('.cm-applicant-item').querySelector('.cm-applicant-detail');
       if (detail) detail.hidden = !detail.hidden;
     });
   });
@@ -132,23 +137,21 @@ function cmRenderApplicantsPanel(pos, panelEl, fracEl) {
   panelEl.querySelectorAll('.cm-applicant-accept, .cm-applicant-reject').forEach((btn) => {
     btn.addEventListener('click', () => {
       const accepting = btn.classList.contains('cm-applicant-accept');
-      const updated = bearipUpdateApplicantStatus(pos.id, btn.dataset.appId, accepting ? 'accepted' : 'rejected');
+      const updated = bearipDecideApplicant(pos.id, btn.dataset.appId, accepting);
       if (!updated) return;
-      if (accepting) {
-        const newFilled = Math.min((pos.filled || 0) + 1, pos.count);
-        const savedPos = bearipUpdatePosition(pos.id, { filled: newFilled });
-        if (savedPos) {
-          pos.filled = savedPos.filled;
-          if (fracEl) fracEl.textContent = `${pos.filled}/${pos.count}`;
-        }
-      }
+      const current = bearipLoadPositions().find((p) => p.id === pos.id) || pos;
+      if (fracEl) fracEl.textContent = `${current.filled || 0}/${current.count}`;
       bearipShowToast(accepting ? '지원자를 수락했어요' : '지원자를 거절했어요');
-      cmRenderApplicantsPanel(pos, panelEl, fracEl);
+      cmRenderApplicantsPanel(current, panelEl, fracEl);
     });
   });
 }
 
 function cmRenderPositionCard(pos) {
+  const esc = bearipEscapeHtml;
+  const me = bearipGetUser();
+  const isOwner = !!(me && pos.ownerNickname === me.nickname);
+
   const el = document.createElement('article');
   el.className = 'cm-position-card';
   el.dataset.role = cmGuessRole(pos.tags);
@@ -156,7 +159,7 @@ function cmRenderPositionCard(pos) {
   el.dataset.remaining = String(pos.count - (pos.filled || 0));
   el.dataset.posId = pos.id;
   el.dataset.ipTitle = pos.ipTitle;
-  const tagsHtml = (pos.tags || []).map((t) => `<span>${t}</span>`).join('');
+  const tagsHtml = (pos.tags || []).map((t) => `<span>${esc(t)}</span>`).join('');
   const filled = pos.filled || 0;
   const applicantCount = bearipGetApplicants(pos.id).length;
   const cardIp = cmResolveIpForPosition(pos);
@@ -165,101 +168,118 @@ function cmRenderPositionCard(pos) {
     : '';
   el.innerHTML = `
     <div class="cm-position-row">
-      <div class="cm-position-thumb ${pos.thumb}"></div>
+      <div class="cm-position-thumb ${bearipEscapeAttr(pos.thumb || 'thumb-1')}"></div>
       <div class="cm-position-info">
-        <div class="cm-position-ip">${pos.ipTitle}</div>
-        <div class="cm-position-role">${pos.role} 모집</div>
+        <div class="cm-position-ip">${esc(pos.ipTitle)}</div>
+        <div class="cm-position-role">${esc(pos.role)} 모집</div>
         <div class="cm-position-tags">${tagsHtml}</div>
         ${dnaBadgeHtml}
       </div>
-      <div class="cm-position-meta"><div class="frac">${filled}/${pos.count}</div><div class="deadline">${pos.deadlineText}</div></div>
+      <div class="cm-position-meta"><div class="frac">${filled}/${pos.count}</div><div class="deadline">${esc(pos.deadlineText || '')}</div></div>
       <button class="cm-apply-btn">지원하기</button>
     </div>
-    <button type="button" class="cm-applicants-toggle">지원자 확인 (${applicantCount})</button>
-    <div class="cm-applicants-panel"></div>
+    ${isOwner ? `<button type="button" class="cm-applicants-toggle">지원자 확인 (${applicantCount})</button>
+    <div class="cm-applicants-panel"></div>` : ''}
   `;
-  // Not the `hidden` attribute — .cm-applicants-panel sets display:flex at
-  // equal specificity to the UA [hidden] rule and would win, leaving the
-  // panel visibly open. style.display is set directly instead, below.
-  el.querySelector('.cm-applicants-panel').style.display = 'none';
-  // Reuses crew-match.js's persistence + "나의 매치 현황" refresh so a
-  // user-posted listing's apply button behaves exactly like a static one.
+
   const applyBtn = el.querySelector('.cm-apply-btn');
   const fracEl = el.querySelector('.cm-position-meta .frac');
-  cmSetApplyUI(applyBtn, bearipSetHas(CM_APPLY_KEY, pos.id));
+  cmSetApplyUI(applyBtn, pos);
   applyBtn.addEventListener('click', () => {
     if (!bearipRequireLogin('crew-match.html')) return;
+    const state = bearipApplyButtonState(pos);
 
-    if (bearipSetHas(CM_APPLY_KEY, pos.id)) {
+    if (state.kind === 'pending') {
       // Un-applying is immediate — nothing to confirm on the way out.
-      bearipSetToggle(CM_APPLY_KEY, pos.id);
-      cmSetApplyUI(applyBtn, false);
       const user = bearipGetUser();
       if (user) bearipRemoveApplicantByName(pos.id, user.nickname);
       bearipShowToast('지원을 취소했어요');
+      cmRefreshApplicantViews();
       if (typeof cmRenderMatchStatus === 'function') cmRenderMatchStatus();
       return;
     }
+    if (state.kind !== 'none') return;
 
     odOpenApplyForm(`'${pos.ipTitle}' · ${pos.role}`, (message) => {
-      bearipSetToggle(CM_APPLY_KEY, pos.id);
-      cmSetApplyUI(applyBtn, true);
-      const user = bearipGetUser();
-      if (user) {
-        const myPositions = typeof bearipGetMyPositions === 'function' ? bearipGetMyPositions() : [];
-        const myPortfolio = typeof bearipLoadPortfolio === 'function' ? bearipLoadPortfolio() : [];
-        // "비공개" portfolio items stay hidden even when applying; "지원할 때
-        // 공개" and "항시 공개" items are exactly what should surface here,
-        // since applying to a position is that visibility condition.
-        const visibleCount = myPortfolio.filter((p) => p.visibility !== 'private').length;
-        bearipAddApplicant(pos.id, {
-          id: 'app_me_' + pos.id,
-          name: user.nickname,
-          role: myPositions[0] || '',
-          bio: user.bio || '',
-          portfolioCount: visibleCount,
-          message,
-          appliedAt: new Date().toISOString(),
-          status: 'pending',
-        });
-      }
-      const toggleBtn = el.querySelector('.cm-applicants-toggle');
-      const panelEl = el.querySelector('.cm-applicants-panel');
-      toggleBtn.textContent = `지원자 확인 (${bearipGetApplicants(pos.id).length})`;
-      if (panelEl.style.display !== 'none') cmRenderApplicantsPanel(pos, panelEl, fracEl);
-      bearipAddNotification({
-        type: 'crew',
-        title: '포지션에 지원했어요',
-        message: `${pos.ipTitle} · ${pos.role}에 지원했어요. 결과를 기다려주세요.`,
-        link: 'profile.html',
-      });
+      bearipApplyToPosition(pos, message);
+      cmRefreshApplicantViews();
       if (typeof cmRenderMatchStatus === 'function') cmRenderMatchStatus();
     });
   });
 
+  // Not the `hidden` attribute — .cm-applicants-panel sets display:flex at
+  // equal specificity to the UA [hidden] rule and would win, leaving the
+  // panel visibly open. style.display is set directly instead.
   const applicantsToggle = el.querySelector('.cm-applicants-toggle');
   const applicantsPanel = el.querySelector('.cm-applicants-panel');
-  applicantsToggle.addEventListener('click', () => {
-    const opening = applicantsPanel.style.display === 'none';
-    if (opening) cmRenderApplicantsPanel(pos, applicantsPanel, fracEl);
-    applicantsPanel.style.display = opening ? 'flex' : 'none';
-  });
+  if (applicantsToggle) {
+    applicantsPanel.style.display = 'none';
+    applicantsToggle.addEventListener('click', () => {
+      const opening = applicantsPanel.style.display === 'none';
+      if (opening) cmRenderApplicantsPanel(pos, applicantsPanel, fracEl);
+      applicantsPanel.style.display = opening ? 'flex' : 'none';
+    });
+  }
 
   return el;
 }
 
+// Full rebuild of the browse list — runs on load and whenever the posting
+// list (or the published IPs a card's DNA badge is looked up from) changes.
+// Panels the owner had open stay open across the rebuild.
 function cmRenderSavedPositions() {
   const list = document.getElementById('positionsList');
-  const saved = typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : [];
-  saved
+  if (!list) return;
+
+  const openIds = [...list.querySelectorAll('.cm-position-card')]
+    .filter((c) => {
+      const panel = c.querySelector('.cm-applicants-panel');
+      return panel && panel.style.display !== 'none';
+    })
+    .map((c) => c.dataset.posId);
+  list.querySelectorAll('.cm-position-card').forEach((c) => c.remove());
+
+  bearipLoadPositions()
     .slice()
     .reverse()
     .forEach((pos) => list.insertBefore(cmRenderPositionCard(pos), list.firstChild));
+
+  openIds.forEach((id) => {
+    const toggle = list.querySelector(`.cm-position-card[data-pos-id="${CSS.escape(id)}"] .cm-applicants-toggle`);
+    if (toggle) toggle.click();
+  });
+  document.dispatchEvent(new CustomEvent('cm:positions-rendered'));
+}
+
+// In-place refresh when only applicant data changed (someone applied, the
+// owner decided) — keeps open panels/scroll position instead of rebuilding.
+function cmRefreshApplicantViews() {
+  const positions = bearipLoadPositions();
+  document.querySelectorAll('#positionsList .cm-position-card').forEach((card) => {
+    const pos = positions.find((p) => p.id === card.dataset.posId);
+    if (!pos) return;
+    const applyBtn = card.querySelector('.cm-apply-btn');
+    if (applyBtn) cmSetApplyUI(applyBtn, pos);
+    const frac = card.querySelector('.cm-position-meta .frac');
+    if (frac) frac.textContent = `${pos.filled || 0}/${pos.count}`;
+    card.dataset.remaining = String(pos.count - (pos.filled || 0));
+    const toggle = card.querySelector('.cm-applicants-toggle');
+    if (toggle) {
+      toggle.textContent = `지원자 확인 (${bearipGetApplicants(pos.id).length})`;
+      const panel = card.querySelector('.cm-applicants-panel');
+      if (panel && panel.style.display !== 'none') cmRenderApplicantsPanel(pos, panel, frac);
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   cmPopulateIpSelect();
   cmRenderSavedPositions();
+  if (typeof bearipOnDataChange === 'function') {
+    bearipOnDataChange('positions', cmRenderSavedPositions);
+    bearipOnDataChange('publicIPs', cmRenderSavedPositions);
+    bearipOnDataChange('positionApplicants', cmRefreshApplicantViews);
+  }
 
   // Page tabs (포지션 둘러보기 / 모집글 올리기) — posting requires login
   document.querySelectorAll('#cmPageTabs .od-tab').forEach((tab) => {
@@ -310,9 +330,13 @@ document.addEventListener('DOMContentLoaded', () => {
     roleInput.classList.remove('error');
 
     const ipSelect = document.getElementById('postIp');
-    const ipTitle = ipSelect.options[ipSelect.selectedIndex]
-      ? ipSelect.options[ipSelect.selectedIndex].text
-      : '내 IP';
+    // With no IP of your own the select only holds a "먼저 IP를 만들어주세요"
+    // placeholder — posting would publish that sentence as the project title.
+    if (!ipSelect.value) {
+      bearipShowToast('먼저 MY DNA에서 IP를 만들어주세요');
+      return;
+    }
+    const ipTitle = ipSelect.options[ipSelect.selectedIndex].text;
     const count = parseInt(document.getElementById('postCount').value, 10) || 1;
     const desc = document.getElementById('postDesc').value.trim();
     const deadlineRaw = document.getElementById('postDeadline').value;
@@ -323,6 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const position = {
       id: 'pos_' + Date.now(),
+      ipId: ipSelect.value,
       ipTitle,
       role,
       count,
@@ -341,8 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
       message: `'${position.ipTitle}'의 '${position.role}' 포지션 모집글이 등록됐어요.`,
       link: 'crew-match.html',
     });
-    const list = document.getElementById('positionsList');
-    list.insertBefore(cmRenderPositionCard(position), list.firstChild);
+    cmRenderSavedPositions();
 
     // reset form
     roleInput.value = '';

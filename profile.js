@@ -22,7 +22,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // listener's first snapshot arrives, undercounting until something else
   // happens to re-render. Re-run once real data shows up (same pattern as
   // auth-ui.js's unread-badge refresh).
-  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('notifications', renderStats);
+  if (typeof bearipOnDataChange === 'function') {
+    bearipOnDataChange('notifications', renderStats);
+    // 지원한 포지션 count and the 소속 크루 rows both come from shared
+    // posting/applicant data that loads (and changes) asynchronously.
+    ['positions', 'positionApplicants'].forEach((kind) => {
+      bearipOnDataChange(kind, renderStats);
+      bearipOnDataChange(kind, renderCrew);
+    });
+  }
 
   // ---- Tabs ----
   document.querySelectorAll('#pfTabs .pf-tab').forEach((tab) => {
@@ -104,7 +112,7 @@ function renderStats() {
   const ips = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
   document.getElementById('pfStatIps').textContent = ips.length;
   const appliedEl = document.getElementById('pfStatApplied');
-  if (appliedEl) appliedEl.textContent = bearipSetList('bearip_applied_positions').length;
+  if (appliedEl) appliedEl.textContent = bearipMyAppliedPositionIds().length;
   // 받은 제안 — CREW MATCH's "매치 제안" delivers a real notification to the
   // target creator (crew-match.js), tagged with this exact title; counting
   // those is simpler than a dedicated proposals collection and stays correct
@@ -211,7 +219,7 @@ function renderCrew() {
 
   // CREW MATCH positions this user applied to, with the real outcome —
   // same cross-reference crew-match-status.js's 나의 매치 현황 uses.
-  bearipSetList('bearip_applied_positions').forEach((posId) => {
+  bearipMyAppliedPositionIds().forEach((posId) => {
     const label = pfPositionLabel(posId);
     if (!label) return;
     const mine = user ? bearipGetApplicants(posId).find((a) => a.name === user.nickname) : null;

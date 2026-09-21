@@ -91,6 +91,8 @@
 .ipd-apply-btn { font-size: 11px; font-weight: 700; padding: 8px 13px; border-radius: 999px; border: none; background: var(--od-active-bg); color: var(--od-purple); cursor: pointer; white-space: nowrap; }
 .ipd-apply-btn.is-done { background: var(--od-bg); color: var(--od-ink-soft); }
 .ipd-apply-btn.is-done:hover { color: #d64545; }
+.ipd-apply-btn.is-final, .ipd-apply-btn:disabled { background: var(--od-bg); color: var(--od-ink-soft); cursor: default; }
+.ipd-apply-btn.is-final:hover, .ipd-apply-btn:disabled:hover { color: var(--od-ink-soft); }
 
 /* Sidebar: info list */
 .ipd-info-row { display: flex; justify-content: space-between; font-size: 12.5px; padding: 9px 0; border-bottom: 1px solid var(--od-border); }

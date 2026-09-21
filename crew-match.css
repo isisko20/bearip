@@ -106,6 +106,9 @@
   background: var(--od-bg); color: var(--od-ink-soft); border: 1px solid var(--od-border);
 }
 .cm-apply-btn.applied:hover { color: #d64545; border-color: #d64545; }
+.cm-apply-btn.is-final, .cm-apply-btn.is-final:disabled {
+  background: var(--od-bg); color: var(--od-ink-soft); border: 1px solid var(--od-border); cursor: default; opacity: 0.85;
+}
 
 /* Applicants (owner-side, on user-posted 모집글 cards only) */
 .cm-applicants-toggle {

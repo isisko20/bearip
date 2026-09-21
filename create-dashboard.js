@@ -153,11 +153,19 @@ function renderHeroLiveCards() {
     });
   }
 
+  renderHeroCrewCard();
+}
+
+// Separate so a posting arriving from Firebase can refresh just this card
+// without re-running the 연재중인 IP half (which wires click handlers).
+function renderHeroCrewCard() {
+  const crewBody = document.getElementById('drHeroCrewBody');
+  if (!crewBody) return;
   const positions = typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : [];
   if (positions.length) {
-    const pos = positions[0]; // bearipAddPosition unshifts
+    const pos = positions[0]; // newest first
     crewBody.innerHTML = `
-      <div class="dr-hero-live-thumb ${pos.thumb || 'thumb-3'}"></div>
+      <div class="dr-hero-live-thumb ${bearipEscapeAttr(pos.thumb || 'thumb-3')}"></div>
       <div class="dr-hero-live-info">
         <div class="t">${bearipEscapeHtml(pos.ipTitle)} · ${bearipEscapeHtml(pos.role)} 모집</div>
         <div class="s">${pos.filled || 0}/${pos.count}명 · ${bearipEscapeHtml(pos.deadlineText || '상시 모집')}</div>
@@ -168,7 +176,10 @@ function renderHeroLiveCards() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', renderHeroLiveCards);
+document.addEventListener('DOMContentLoaded', () => {
+  renderHeroLiveCards();
+  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('positions', renderHeroCrewCard);
+});
 
 // "IP DNA 현황" summary — shows the 6-category breakdown (shared with MY DNA
 // and OPEN DNA via storage.js) for the user's most recently created real IP.
@@ -286,7 +297,7 @@ function renderBottomStats() {
 
   const ips = bearipLoadIPs();
   const joined = typeof bearipSetList === 'function' ? bearipSetList('bearip_joined_ips') : [];
-  const applied = typeof bearipSetList === 'function' ? bearipSetList('bearip_applied_positions') : [];
+  const applied = typeof bearipMyAppliedPositionIds === 'function' ? bearipMyAppliedPositionIds() : [];
   const positions = typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : [];
   const likesTotal = ips.reduce((sum, ip) => sum + (ip.likes || 0), 0);
 
@@ -297,4 +308,10 @@ function renderBottomStats() {
   document.getElementById('bottomStatPositions').textContent = bearipFormatCount(positions.length);
 }
 
-document.addEventListener('DOMContentLoaded', renderBottomStats);
+document.addEventListener('DOMContentLoaded', () => {
+  renderBottomStats();
+  if (typeof bearipOnDataChange === 'function') {
+    bearipOnDataChange('positions', renderBottomStats);
+    bearipOnDataChange('positionApplicants', renderBottomStats);
+  }
+});

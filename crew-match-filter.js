@@ -66,6 +66,14 @@ document.addEventListener('DOMContentLoaded', () => {
   searchInput.addEventListener('input', applyFilter);
   sortSelect.addEventListener('change', applySort);
 
+  // Postings arrive asynchronously from Firebase and get rebuilt whenever
+  // anyone's list changes (crew-match-post.js) — re-apply the current
+  // sort/role/search to the fresh cards instead of showing them unfiltered.
+  document.addEventListener('cm:positions-rendered', () => {
+    applySort();
+    applyFilter();
+  });
+
   // Arriving from a "Creator 찾기" link elsewhere (e.g. MY DNA) pre-selects
   // the matching role tab.
   const incomingRole = sessionStorage.getItem('bearip_cm_role_filter');

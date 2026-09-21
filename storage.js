@@ -404,24 +404,13 @@ function bearipDeleteIP(id) {
 
   // A CREW MATCH posting only exists to recruit for this IP, and an
   // applicant record only exists to apply to one of those postings — both
-  // are meaningless (and confusing to see) once the IP itself is gone.
-  // Positions link back by title, not id (same convention used everywhere
-  // else — cmResolveIpByTitle, my-dna-applicants.js, ip-detail.js), so this
-  // assumes IP titles are unique, same as those do.
-  const positions = bearipLoadPositions();
-  const orphaned = positions.filter((p) => p.ipTitle === ip.title);
-  if (orphaned.length === 0) return;
-
-  bearipSavePositions(positions.filter((p) => p.ipTitle !== ip.title));
-  const applicantsMap = bearipLoadApplicantsMap();
-  const orphanedIds = orphaned.map((p) => p.id);
-  orphanedIds.forEach((posId) => delete applicantsMap[posId]);
-  bearipSaveApplicantsMap(applicantsMap);
-  // Also drop the deleted postings out of the current user's own "지원한
-  // 포지션" set, so 나의 매치 현황 doesn't show a dangling, unresolvable id.
-  const APPLIED_KEY = 'bearip_applied_positions';
-  const stillApplied = bearipSetList(APPLIED_KEY).filter((posId) => !orphanedIds.includes(posId));
-  localStorage.setItem(bearipScopedKey(APPLIED_KEY), JSON.stringify(stillApplied));
+  // are meaningless (and, now that postings are visible to everyone, publicly
+  // confusing) once the IP itself is gone. Postings made before ipId was
+  // recorded only know their IP by title, so fall back to that for those.
+  const me = bearipScopeSuffix();
+  bearipLoadPositions()
+    .filter((p) => p.ownerNickname === me && (p.ipId ? p.ipId === id : p.ipTitle === ip.title))
+    .forEach((p) => bearipDeletePosition(p.id));
 }
 
 // ---- Shared "IP DNA 현황" breakdown metadata ----
@@ -588,84 +577,182 @@ function bearipSetFeaturedId(id) {
   }
 }
 
-// ---- CREW MATCH recruiting posts ----
-const BEARIP_POSITIONS_KEY = 'bearip_positions';
-
-function bearipLoadPositions() {
-  try {
-    const raw = localStorage.getItem(BEARIP_POSITIONS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    return [];
-  }
+// ---- CREW MATCH recruiting posts + applicants ----
+// Firebase-backed (positions/<id>, positionApplicants/<positionId>/<nickname>)
+// like publicIPs/publicCreators — these used to be plain localStorage, so a
+// posting only ever existed in the poster's own browser and nobody else could
+// see it, apply to it, or have their application reach the poster. Reads stay
+// synchronous off the live cache (see _bearipWatchPath); callers that should
+// redraw when someone else's change arrives register with
+// bearipOnDataChange('positions' | 'positionApplicants', fn). Writes update
+// the cache immediately too, so a same-tick read after a write sees it even
+// before Firebase echoes it back.
+function bearipEscapeAttr(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-function bearipSavePositions(list) {
-  localStorage.setItem(BEARIP_POSITIONS_KEY, JSON.stringify(list));
+function bearipLoadPositions() {
+  return _bearipMapToArray(_bearipDataCache.positions, 'createdAt');
 }
 
 function bearipAddPosition(position) {
-  const list = bearipLoadPositions();
-  list.unshift(position);
-  bearipSavePositions(list);
+  if (!position.ownerNickname) position.ownerNickname = bearipScopeSuffix();
+  _bearipDataCache.positions[position.id] = position;
+  if (bearipFirebaseReady()) {
+    _bearipFirebaseWrite(() => firebase.database().ref('positions/' + position.id).set(bearipFirebaseSafe(position)));
+  }
   return position;
 }
 
 function bearipUpdatePosition(id, patch) {
-  const list = bearipLoadPositions();
-  const idx = list.findIndex((p) => p.id === id);
-  if (idx === -1) return null;
-  list[idx] = Object.assign({}, list[idx], patch);
-  bearipSavePositions(list);
-  return list[idx];
-}
-
-// ---- Applicants for postings the current user owns (CREW MATCH 모집글) ----
-const BEARIP_APPLICANTS_KEY = 'bearip_position_applicants';
-
-function bearipLoadApplicantsMap() {
-  try {
-    const raw = localStorage.getItem(BEARIP_APPLICANTS_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch (e) {
-    return {};
+  const current = _bearipDataCache.positions[id];
+  if (!current) return null;
+  const merged = Object.assign({}, current, patch);
+  _bearipDataCache.positions[id] = merged;
+  if (bearipFirebaseReady()) {
+    _bearipFirebaseWrite(() => firebase.database().ref('positions/' + id).update(bearipFirebaseSafe(patch)));
   }
+  return Object.assign({ id }, merged);
 }
 
-function bearipSaveApplicantsMap(map) {
-  localStorage.setItem(BEARIP_APPLICANTS_KEY, JSON.stringify(map));
+// Applicants are keyed by nickname (one application per person per posting,
+// same "one per name" rule the old local list enforced) — the key doubles as
+// the applicant's id everywhere they get rendered.
+function bearipApplicantKey(name) {
+  return bearipSafePathSegment(name);
 }
 
 function bearipGetApplicants(positionId) {
-  return bearipLoadApplicantsMap()[positionId] || [];
+  const map = _bearipDataCache.positionApplicants[positionId] || {};
+  return Object.keys(map)
+    .map((key) => Object.assign({}, map[key], { id: key }))
+    .sort((a, b) => new Date(a.appliedAt || 0) - new Date(b.appliedAt || 0));
 }
 
 function bearipAddApplicant(positionId, applicant) {
-  const map = bearipLoadApplicantsMap();
-  const list = map[positionId] || [];
-  const existingIdx = list.findIndex((a) => a.name === applicant.name);
-  if (existingIdx !== -1) list[existingIdx] = applicant;
-  else list.push(applicant);
-  map[positionId] = list;
-  bearipSaveApplicantsMap(map);
-  return applicant;
+  const key = bearipApplicantKey(applicant.name);
+  const record = Object.assign({}, applicant, { id: key });
+  const byPosition = (_bearipDataCache.positionApplicants[positionId] = _bearipDataCache.positionApplicants[positionId] || {});
+  byPosition[key] = record;
+  if (bearipFirebaseReady()) {
+    _bearipFirebaseWrite(() =>
+      firebase.database().ref('positionApplicants/' + positionId + '/' + key).set(bearipFirebaseSafe(record))
+    );
+  }
+  return record;
 }
 
 function bearipRemoveApplicantByName(positionId, name) {
-  const map = bearipLoadApplicantsMap();
-  map[positionId] = (map[positionId] || []).filter((a) => a.name !== name);
-  bearipSaveApplicantsMap(map);
+  const key = bearipApplicantKey(name);
+  if (_bearipDataCache.positionApplicants[positionId]) delete _bearipDataCache.positionApplicants[positionId][key];
+  if (bearipFirebaseReady()) firebase.database().ref('positionApplicants/' + positionId + '/' + key).remove();
 }
 
 function bearipUpdateApplicantStatus(positionId, applicantId, status) {
-  const map = bearipLoadApplicantsMap();
-  const list = map[positionId] || [];
-  const idx = list.findIndex((a) => a.id === applicantId);
-  if (idx === -1) return null;
-  list[idx] = Object.assign({}, list[idx], { status });
-  map[positionId] = list;
-  bearipSaveApplicantsMap(map);
-  return list[idx];
+  const byPosition = _bearipDataCache.positionApplicants[positionId] || {};
+  const current = byPosition[applicantId];
+  if (!current) return null;
+  byPosition[applicantId] = Object.assign({}, current, { status });
+  if (bearipFirebaseReady()) {
+    _bearipFirebaseWrite(() =>
+      firebase.database().ref('positionApplicants/' + positionId + '/' + applicantId + '/status').set(status)
+    );
+  }
+  return Object.assign({}, byPosition[applicantId], { id: applicantId });
+}
+
+// The current user's own application to a posting (null if none) — the source
+// of truth for what an apply button should say, instead of a local "did I
+// click it" flag that could never know about the owner's accept/reject.
+function bearipMyApplication(positionId) {
+  const user = bearipGetUser();
+  if (!user) return null;
+  return bearipGetApplicants(positionId).find((a) => a.name === user.nickname) || null;
+}
+
+function bearipMyAppliedPositionIds() {
+  const user = bearipGetUser();
+  if (!user) return [];
+  const key = bearipApplicantKey(user.nickname);
+  return Object.keys(_bearipDataCache.positionApplicants).filter(
+    (posId) => _bearipDataCache.positions[posId] && (_bearipDataCache.positionApplicants[posId] || {})[key]
+  );
+}
+
+// What an apply button should show/do for the current user on this posting.
+// One definition for CREW MATCH's card and IP detail's recruit list.
+function bearipApplyButtonState(pos) {
+  const user = bearipGetUser();
+  if (user && pos.ownerNickname === user.nickname) return { label: '내 모집글', disabled: true, kind: 'owner' };
+  const mine = bearipMyApplication(pos.id);
+  if (!mine) return { label: '지원하기', disabled: false, kind: 'none' };
+  if (mine.status === 'accepted') return { label: '참여 중', disabled: true, kind: 'accepted' };
+  if (mine.status === 'rejected') return { label: '거절됨', disabled: true, kind: 'rejected' };
+  return { label: '지원 취소', disabled: false, kind: 'pending' };
+}
+
+// Applying also tells the posting's owner — before, the "notification" only
+// ever went to the applicant themself, so the person who could act on it
+// never heard about it.
+function bearipApplyToPosition(pos, message) {
+  const user = bearipGetUser();
+  if (!user) return null;
+  const visiblePortfolio = bearipLoadPortfolio().filter((p) => p.visibility !== 'private').length;
+  const record = bearipAddApplicant(pos.id, {
+    name: user.nickname,
+    role: bearipGetMyPositions()[0] || '',
+    bio: user.bio || '',
+    portfolioCount: visiblePortfolio,
+    message: message || '',
+    appliedAt: new Date().toISOString(),
+    status: 'pending',
+  });
+  const label = `${pos.ipTitle} · ${pos.role}`;
+  bearipAddNotification({
+    type: 'crew',
+    title: '포지션에 지원했어요',
+    message: `${label}에 지원했어요. 결과를 기다려주세요.`,
+    link: 'profile.html',
+  });
+  if (pos.ownerNickname && pos.ownerNickname !== user.nickname) {
+    bearipAddNotification(
+      { type: 'crew', title: '새 지원자가 있어요', message: `${user.nickname}님이 '${label}'에 지원했어요.`, link: 'crew-applicants.html' },
+      pos.ownerNickname
+    );
+  }
+  return record;
+}
+
+// Accept/reject, shared by CREW MATCH's card panel, 지원자 관리, and MY DNA's
+// applicant alert — and now tells the applicant the outcome (the status
+// change alone was invisible to them until they happened to reopen the page).
+function bearipDecideApplicant(positionId, applicantId, accepting) {
+  const updated = bearipUpdateApplicantStatus(positionId, applicantId, accepting ? 'accepted' : 'rejected');
+  if (!updated) return null;
+  const pos = _bearipDataCache.positions[positionId];
+  if (accepting && pos) bearipUpdatePosition(positionId, { filled: Math.min((pos.filled || 0) + 1, pos.count || 1) });
+  const label = pos ? `${pos.ipTitle} · ${pos.role}` : '포지션';
+  bearipAddNotification(
+    {
+      type: 'crew',
+      title: accepting ? '지원이 수락됐어요' : '지원 결과가 나왔어요',
+      message: accepting ? `'${label}' 지원이 수락됐어요. 크루로 함께해요!` : `'${label}' 지원이 이번에는 받아들여지지 않았어요.`,
+      link: 'crew-match.html',
+    },
+    updated.name
+  );
+  return updated;
+}
+
+function bearipDeletePosition(id) {
+  bearipGetApplicants(id).forEach((a) => bearipRemoveApplicantByName(id, a.name));
+  delete _bearipDataCache.positions[id];
+  if (bearipFirebaseReady()) firebase.database().ref('positions/' + id).remove();
 }
 
 // ---- Firebase-backed cross-device data ----
@@ -691,8 +778,8 @@ function bearipSafePathSegment(str) {
   return String(str || '').replace(/[.#$[\]/]/g, '_') || '_guest';
 }
 
-const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {} };
-const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [] };
+const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {} };
+const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [] };
 // Firebase's first 'value' callback for a watched path can take a real
 // moment to arrive (network round-trip, larger the more attachments have
 // piled up) — until then _bearipDataCache[kind] is just its empty starting
@@ -700,7 +787,7 @@ const _bearipDataListeners = { notifications: [], productionRequests: [], ipRevi
 // bearipLoadProductionRequests()/bearipLoadIpReviews() etc. before this
 // flips true and shows a flat "없어요" empty state ends up lying to GM —
 // looking permanently broken instead of just still loading.
-const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false };
+const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false };
 
 function bearipIsDataLoaded(kind) {
   return !!_bearipDataLoaded[kind];
@@ -1109,9 +1196,9 @@ function bearipDeletePortfolioItem(id) {
 }
 
 // ---- Generic per-browser "membership" sets, e.g. followed IPs, joined IPs,
-// applied-to positions — anywhere a button just needs an on/off toggle that
+// proposed creators — anywhere a button just needs an on/off toggle that
 // survives reload, keyed by a namespaced localStorage key. Every caller's key
-// so far (bearip_applied_positions) is personal ("things I did"), so this is
+// so far (bearip_joined_ips, ...) is personal ("things I did"), so this is
 // scoped per account like the rest of MY DNA's own data.
 function bearipSetList(key) {
   try {
@@ -1419,4 +1506,39 @@ function bearipDeleteAssetFile(id) {
   const _u = bearipGetUser();
   if (_u && _u.nickname === 'GM') _bearipWatchPath('allIPs', 'allIPs');
   _bearipWatchPath('publicCreators', 'publicCreators');
+  _bearipWatchPath('positions', 'positions');
+  _bearipWatchPath('positionApplicants', 'positionApplicants');
+})();
+
+// One-time move of any 모집글/지원자 this browser made back when they were
+// localStorage-only. Only postings whose IP is one of the logged-in user's own
+// IPs are claimed (the old local list wasn't per-account, so it can hold other
+// nicknames' leftovers on a shared browser); the rest stay put untouched.
+(function bearipMigrateLocalPositions() {
+  if (!bearipFirebaseReady()) return;
+  const user = bearipGetUser();
+  if (!user || !user.nickname || user.nickname === 'GM') return;
+  const doneKey = 'bearip_positions_migrated::' + user.nickname;
+  if (localStorage.getItem(doneKey)) return;
+  localStorage.setItem(doneKey, '1');
+  let localPositions;
+  let localApplicants;
+  try {
+    localPositions = JSON.parse(localStorage.getItem('bearip_positions') || '[]');
+    localApplicants = JSON.parse(localStorage.getItem('bearip_position_applicants') || '{}');
+  } catch (e) {
+    return;
+  }
+  const myIps = bearipLoadIPs();
+  const mine = localPositions.filter((p) => p && p.id && myIps.some((ip) => ip.title === p.ipTitle));
+  if (!mine.length) return;
+  mine.forEach((p) => {
+    const ip = myIps.find((i) => i.title === p.ipTitle);
+    bearipAddPosition(Object.assign({}, p, { ownerNickname: user.nickname, ipId: ip.id }));
+    (localApplicants[p.id] || []).forEach((a) => bearipAddApplicant(p.id, a));
+    delete localApplicants[p.id];
+  });
+  const movedIds = mine.map((p) => p.id);
+  localStorage.setItem('bearip_positions', JSON.stringify(localPositions.filter((p) => !movedIds.includes(p.id))));
+  localStorage.setItem('bearip_position_applicants', JSON.stringify(localApplicants));
 })();

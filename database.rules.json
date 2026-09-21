@@ -81,6 +81,33 @@
         ".validate": "newData.hasChildren(['nickname', 'positions'])",
         "nickname": { ".validate": "newData.isString()" }
       }
+    },
+
+    "positions": {
+      ".read": true,
+      "$posId": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['id', 'ipTitle', 'role', 'ownerNickname'])",
+        "id": { ".validate": "newData.isString()" },
+        "ipTitle": { ".validate": "newData.isString()" },
+        "role": { ".validate": "newData.isString()" },
+        "ownerNickname": { ".validate": "newData.isString()" },
+        "count": { ".validate": "newData.isNumber()" },
+        "filled": { ".validate": "newData.isNumber()" }
+      }
+    },
+
+    "positionApplicants": {
+      ".read": true,
+      "$posId": {
+        "$appId": {
+          ".write": true,
+          ".validate": "newData.hasChildren(['id', 'name', 'status', 'appliedAt'])",
+          "name": { ".validate": "newData.isString()" },
+          "status": { ".validate": "newData.isString() && (newData.val() == 'pending' || newData.val() == 'accepted' || newData.val() == 'rejected')" },
+          "appliedAt": { ".validate": "newData.isString()" }
+        }
+      }
     }
   }
 }

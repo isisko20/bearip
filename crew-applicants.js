@@ -1,9 +1,9 @@
 // "지원자 관리" — consolidates every posting the user has created (via CREW
 // MATCH's "모집글 올리기") into one page, so 승낙/거절 doesn't require opening
-// each posting card on crew-match.html one at a time. Reads/writes the same
-// bearip_positions / bearip_position_applicants stores crew-match-post.js
-// uses, so both pages stay in sync (no live two-way binding, just shared
-// persisted state re-read on load, same as everywhere else in this app).
+// each posting card on crew-match.html one at a time. Postings/applicants are
+// shared Firebase data (positions / positionApplicants, see storage.js), so
+// this shows only the postings YOU own — anyone can apply from any device —
+// and redraws live when a new application comes in.
 
 const CA_APPLICANT_STATUS_LABEL = { pending: '검토 중', accepted: '수락됨', rejected: '거절됨' };
 
@@ -21,17 +21,17 @@ let caActiveFilter = 'all';
 function caApplicantRowHtml(posId, a) {
   const actions =
     a.status === 'pending'
-      ? `<button type="button" class="ca-applicant-accept" data-pos-id="${posId}" data-app-id="${a.id}">승낙</button>
-         <button type="button" class="ca-applicant-reject" data-pos-id="${posId}" data-app-id="${a.id}">거절</button>`
-      : `<span class="ca-applicant-status ${a.status}">${CA_APPLICANT_STATUS_LABEL[a.status] || a.status}</span>`;
+      ? `<button type="button" class="ca-applicant-accept" data-pos-id="${bearipEscapeAttr(posId)}" data-app-id="${bearipEscapeAttr(a.id)}">승낙</button>
+         <button type="button" class="ca-applicant-reject" data-pos-id="${bearipEscapeAttr(posId)}" data-app-id="${bearipEscapeAttr(a.id)}">거절</button>`
+      : `<span class="ca-applicant-status ${bearipEscapeAttr(a.status)}">${CA_APPLICANT_STATUS_LABEL[a.status] || bearipEscapeHtml(a.status)}</span>`;
   return `
     <div class="ca-applicant-item">
       <div class="ca-applicant-row">
-        <button type="button" class="ca-applicant-name" data-info-id="${a.id}">${bearipEscapeHtml(a.name)}</button>
+        <button type="button" class="ca-applicant-name">${bearipEscapeHtml(a.name)}</button>
         <span class="ca-applicant-time">${caFormatRelativeTime(a.appliedAt)}</span>
         <span class="ca-applicant-actions">${actions}</span>
       </div>
-      <div class="ca-applicant-detail" id="ca-applicant-detail-${a.id}" hidden>
+      <div class="ca-applicant-detail" hidden>
         <div class="ca-applicant-detail-role">${bearipEscapeHtml(a.role || '역할 미지정')}</div>
         <div class="ca-applicant-detail-bio">${bearipEscapeHtml(a.bio || '아직 작성된 소개가 없어요.')}</div>
         ${a.portfolioCount ? `<div class="ca-applicant-detail-portfolio">포트폴리오 ${a.portfolioCount}개</div>` : ''}
@@ -51,7 +51,7 @@ function caCardHtml(pos) {
   return `
     <div class="ca-card">
       <div class="ca-card-top">
-        <div class="ca-thumb ${pos.thumb || 'thumb-3'}"></div>
+        <div class="ca-thumb ${bearipEscapeAttr(pos.thumb || 'thumb-3')}"></div>
         <div class="ca-card-info">
           <div class="ca-ip">${bearipEscapeHtml(pos.ipTitle)}</div>
           <div class="ca-role">${bearipEscapeHtml(pos.role)} 모집</div>
@@ -78,7 +78,10 @@ function caRenderList() {
   const emptyDesc = document.getElementById('caEmptyDesc');
   if (!list || !empty) return;
 
-  const all = typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : [];
+  const me = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
+  const all = (typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : []).filter(
+    (p) => me && p.ownerNickname === me.nickname
+  );
   const filtered = caActiveFilter === 'pending' ? all.filter(caHasPendingApplicant) : all;
 
   if (!filtered.length) {
@@ -100,7 +103,7 @@ function caRenderList() {
 
   list.querySelectorAll('.ca-applicant-name').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const detail = document.getElementById(`ca-applicant-detail-${btn.dataset.infoId}`);
+      const detail = btn.closest('.ca-applicant-item').querySelector('.ca-applicant-detail');
       if (detail) detail.hidden = !detail.hidden;
     });
   });
@@ -113,16 +116,9 @@ function caRenderList() {
 }
 
 function caUpdateApplicant(posId, appId, status) {
-  const updated = bearipUpdateApplicantStatus(posId, appId, status);
+  // Also tells the applicant the outcome and bumps the posting's filled count.
+  const updated = bearipDecideApplicant(posId, appId, status === 'accepted');
   if (!updated) return;
-
-  if (status === 'accepted') {
-    const pos = (typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : []).find((p) => p.id === posId);
-    if (pos) {
-      const newFilled = Math.min((pos.filled || 0) + 1, pos.count);
-      bearipUpdatePosition(posId, { filled: newFilled });
-    }
-  }
 
   bearipAddNotification({
     type: 'crew',
@@ -147,4 +143,10 @@ document.getElementById('caFilterRow').addEventListener('click', (e) => {
   caRenderList();
 });
 
-document.addEventListener('DOMContentLoaded', caRenderList);
+document.addEventListener('DOMContentLoaded', () => {
+  caRenderList();
+  if (typeof bearipOnDataChange === 'function') {
+    bearipOnDataChange('positions', caRenderList);
+    bearipOnDataChange('positionApplicants', caRenderList);
+  }
+});
