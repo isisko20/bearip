@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     bearipOnDataChange('notifications', renderStats);
     // 지원한 포지션 count and the 소속 크루 rows both come from shared
     // posting/applicant data that loads (and changes) asynchronously.
-    ['positions', 'positionApplicants'].forEach((kind) => {
+    ['positions', 'positionApplicants', 'ipJoinRequests'].forEach((kind) => {
       bearipOnDataChange(kind, renderStats);
       bearipOnDataChange(kind, renderCrew);
     });
@@ -204,15 +204,22 @@ function renderCrew() {
 
   // IPs this user asked to join as crew (ip-detail.html's 참여하기), on
   // someone else's project.
-  bearipSetList('bearip_joined_ips').forEach((id) => {
-    const ip = ips.find((i) => i.id === id);
-    const title = ip ? ip.title : null;
-    if (!title) return;
+  // The real request records carry their own IP title (and the owner's
+  // answer), so this no longer depends on the IP being in this browser.
+  const publicIps = typeof bearipLoadBrowsableIPs === 'function' ? bearipLoadBrowsableIPs() : [];
+  const JOIN_STATUS = {
+    pending: { cls: 'pending', label: '승인 대기' },
+    accepted: { cls: 'member', label: '크루 참여 중' },
+    rejected: { cls: 'rejected', label: '거절됨' },
+  };
+  bearipMyJoinRequests().forEach((req) => {
+    const ip = ips.find((i) => i.id === req.ipId) || publicIps.find((i) => i.id === req.ipId);
+    const meta = JOIN_STATUS[req.status] || JOIN_STATUS.pending;
     rows.push(`
       <div class="pf-crew-row">
         <div class="pf-crew-thumb"${pfCrewThumbStyle(ip)}></div>
-        <div class="pf-crew-info"><div class="n">${esc(title)}</div><div class="r">크루 참여 신청</div></div>
-        <span class="pf-crew-status pending">승인 대기</span>
+        <div class="pf-crew-info"><div class="n">${esc(req.ipTitle || '제목 없는 IP')}</div><div class="r">크루 참여 신청</div></div>
+        <span class="pf-crew-status ${meta.cls}">${meta.label}</span>
       </div>
     `);
   });

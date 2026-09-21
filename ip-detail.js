@@ -1,13 +1,49 @@
 // Wires the IP detail hero/recruit action buttons: 참여하기, 팔로우, 지원하기.
-// State is kept in localStorage (namespaced sets) so it survives reload.
+// 참여하기 and 지원하기 are shared Firebase data (ipJoinRequests /
+// positionApplicants, see storage.js); 팔로우 is still a per-browser flag.
 
-const IPD_JOIN_KEY = 'bearip_joined_ips';
 const IPD_FOLLOW_KEY = 'bearip_followed_ips';
 
-function ipdSetJoinedUI(btn, joined) {
-  btn.textContent = joined ? '참여 신청 완료' : '참여하기';
-  btn.disabled = joined;
-  btn.classList.toggle('is-done', joined);
+// 참여하기 — label/enabled state comes from the user's real join request
+// (owner accept/reject included), not a local flag.
+function ipdRenderJoinButton() {
+  const btn = document.getElementById('ipdJoinBtn');
+  if (!btn) return;
+  if (!ipdCurrentIp) {
+    btn.disabled = true;
+    return;
+  }
+  const state = bearipJoinButtonState(ipdCurrentIp);
+  btn.textContent = state.label;
+  btn.disabled = state.disabled;
+  btn.classList.toggle('is-done', state.kind !== 'none');
+}
+
+// 참여 크리에이터 — the owner plus everyone whose join request was accepted.
+let ipdOwnerName = null;
+function ipdRenderCrewPanel() {
+  const wrap = document.querySelector('.ipd-creators');
+  if (!wrap || !ipdCurrentIp) return;
+  const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
+  const members = bearipGetJoinRequests(ipdCurrentIp.id).filter((r) => r.status === 'accepted');
+  const memberHtml = members
+    .map(
+      (m, i) => `
+      <div class="ipd-creator-row">
+        <div class="ipd-creator-avatar thumb-${(i % 8) + 3}"></div>
+        <div class="ipd-creator-info"><div class="n">${esc(m.name)}</div><div class="r">크루</div></div>
+      </div>`
+    )
+    .join('');
+  wrap.innerHTML = `
+    <div class="ipd-creator-row">
+      <div class="ipd-creator-avatar thumb-2"></div>
+      <div class="ipd-creator-info"><div class="n">${esc(ipdOwnerName || '크리에이터')}</div><div class="r">오너</div></div>
+      <span class="ipd-creator-badge">오너</span>
+    </div>
+    ${memberHtml}
+    ${members.length ? '' : '<div class="ipd-creators-empty">아직 합류한 크루가 없어요. CREW MATCH에서 모집해보세요.</div>'}
+  `;
 }
 
 function ipdSetFollowUI(btn, following) {
@@ -142,17 +178,7 @@ function ipdApplyDynamicIP() {
   // recorded owner, fall back to a neutral label instead of misreporting
   // the current *viewer* as the owner.
   const ownerName = ip.ownerNickname || (isOwnIP && user ? user.nickname : null);
-  const creatorsWrap = document.querySelector('.ipd-creators');
-  if (creatorsWrap) {
-    creatorsWrap.innerHTML = `
-      <div class="ipd-creator-row">
-        <div class="ipd-creator-avatar thumb-2"></div>
-        <div class="ipd-creator-info"><div class="n">${esc(ownerName || '크리에이터')}</div><div class="r">오너</div></div>
-        <span class="ipd-creator-badge">오너</span>
-      </div>
-      <div class="ipd-creators-empty">아직 합류한 크루가 없어요. CREW MATCH에서 모집해보세요.</div>
-    `;
-  }
+  ipdOwnerName = ownerName;
 
   document.getElementById('ipdEpCount').textContent = '0';
   const epList = document.querySelector('.ipd-ep-list');
@@ -171,6 +197,8 @@ function ipdApplyDynamicIP() {
 
   ipdCurrentIp = ip;
   ipdRenderRecruitPanel();
+  ipdRenderCrewPanel();
+  ipdRenderJoinButton();
 
   const infoGenre = document.getElementById('ipdInfoGenre');
   if (infoGenre) infoGenre.textContent = (ip.genres && ip.genres[0]) || '미지정';
@@ -357,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const baseFollowerCount = parseInt(followerCountEl.textContent, 10) || 0;
 
   // Restore state from a previous visit.
-  ipdSetJoinedUI(joinBtn, bearipSetHas(IPD_JOIN_KEY, joinBtn.dataset.ip));
+  ipdRenderJoinButton();
   const isFollowing = bearipSetHas(IPD_FOLLOW_KEY, followBtn.dataset.ip);
   ipdSetFollowUI(followBtn, isFollowing);
   followerCountEl.textContent = baseFollowerCount + (isFollowing ? 1 : 0);
@@ -365,21 +393,32 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof bearipOnDataChange === 'function') {
     bearipOnDataChange('positions', ipdRenderRecruitPanel);
     bearipOnDataChange('positionApplicants', ipdRenderRecruitPanel);
+    bearipOnDataChange('ipJoinRequests', ipdRenderJoinButton);
+    bearipOnDataChange('ipJoinRequests', ipdRenderCrewPanel);
   }
 
   joinBtn.addEventListener('click', () => {
-    if (joinBtn.disabled) return;
+    if (joinBtn.disabled || !ipdCurrentIp) return;
     if (!bearipRequireLogin('ip-detail.html')) return;
-    const nowJoined = bearipSetToggle(IPD_JOIN_KEY, joinBtn.dataset.ip);
-    ipdSetJoinedUI(joinBtn, nowJoined);
-    if (nowJoined) {
-      bearipAddNotification({
-        type: 'crew',
-        title: 'IP 참여를 신청했어요',
-        message: `'${joinBtn.dataset.ipTitle}'에 참여 신청을 보냈어요. 오너의 승인을 기다려주세요.`,
-        link: 'profile.html',
-      });
+    const state = bearipJoinButtonState(ipdCurrentIp);
+
+    if (state.kind === 'pending') {
+      // Withdrawing is immediate — nothing to confirm on the way out.
+      bearipCancelJoinRequest(ipdCurrentIp.id);
+      bearipShowToast('참여 신청을 취소했어요');
+      ipdRenderJoinButton();
+      return;
     }
+    if (state.kind !== 'none') return;
+
+    odOpenApplyForm(
+      `'${ipdCurrentIp.title}'`,
+      (message) => {
+        bearipRequestToJoinIp(ipdCurrentIp, message);
+        ipdRenderJoinButton();
+      },
+      { title: '참여 신청', submitLabel: '신청하기' }
+    );
   });
 
   followBtn.addEventListener('click', () => {

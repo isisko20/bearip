@@ -173,8 +173,12 @@ function odEnsureApplyModal() {
 
 // subtitle: e.g. "'서울 야행수선단' · 비주얼 아티스트". onSubmit(message) fires
 // once the user confirms — message is '' when left blank, never skipped.
-function odOpenApplyForm(subtitle, onSubmit) {
+// opts.title / opts.submitLabel reword the modal for other uses (e.g. IP 참여
+// 신청) — defaults stay "지원하기" for position applications.
+function odOpenApplyForm(subtitle, onSubmit, opts) {
   const overlay = odEnsureApplyModal();
+  overlay.querySelector('.od-apply-modal-head .t').textContent = (opts && opts.title) || '지원하기';
+  document.getElementById('odApplyModalSubmit').textContent = (opts && opts.submitLabel) || '지원하기';
   document.getElementById('odApplyModalSub').textContent = subtitle;
   document.getElementById('odApplyModalMessage').value = '';
   odApplyModalSubmitHandler = onSubmit;

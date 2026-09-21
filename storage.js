@@ -411,6 +411,8 @@ function bearipDeleteIP(id) {
   bearipLoadPositions()
     .filter((p) => p.ownerNickname === me && (p.ipId ? p.ipId === id : p.ipTitle === ip.title))
     .forEach((p) => bearipDeletePosition(p.id));
+  // Same for requests to join it.
+  bearipDeleteJoinRequestsForIp(id);
 }
 
 // ---- Shared "IP DNA 현황" breakdown metadata ----
@@ -755,6 +757,123 @@ function bearipDeletePosition(id) {
   if (bearipFirebaseReady()) firebase.database().ref('positions/' + id).remove();
 }
 
+// ---- IP 참여 신청 (ip-detail.html's 참여하기) ----
+// ipJoinRequests/<ipId>/<nickname> in Firebase — same shape as position
+// applicants. This used to be a local "joined" flag that only ever flipped a
+// button in the requester's own browser (plus a notification to themself), so
+// the IP's owner never knew and could never say yes. Keyed by IP id, so an
+// owner finds their requests by their own IP ids without needing anything
+// else to be recorded on the IP.
+function bearipGetJoinRequests(ipId) {
+  const map = _bearipDataCache.ipJoinRequests[ipId] || {};
+  return Object.keys(map)
+    .map((key) => Object.assign({}, map[key], { id: key }))
+    .sort((a, b) => new Date(a.requestedAt || 0) - new Date(b.requestedAt || 0));
+}
+
+function bearipMyJoinRequest(ipId) {
+  const user = bearipGetUser();
+  if (!user) return null;
+  return bearipGetJoinRequests(ipId).find((r) => r.name === user.nickname) || null;
+}
+
+// Every request the current user has sent, across all IPs (newest first).
+function bearipMyJoinRequests() {
+  const user = bearipGetUser();
+  if (!user) return [];
+  const key = bearipApplicantKey(user.nickname);
+  return Object.keys(_bearipDataCache.ipJoinRequests)
+    .map((ipId) => (_bearipDataCache.ipJoinRequests[ipId] || {})[key] && Object.assign({}, _bearipDataCache.ipJoinRequests[ipId][key], { id: key }))
+    .filter(Boolean)
+    .sort((a, b) => new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0));
+}
+
+function _bearipJoinRef(ipId, key) {
+  return firebase.database().ref('ipJoinRequests/' + ipId + '/' + key);
+}
+
+// What 참여하기 should show/do for the current user on this IP. ip.ownerNickname
+// may be missing on very old IPs — an IP that's in the viewer's own local list
+// is theirs regardless.
+function bearipJoinButtonState(ip) {
+  const user = bearipGetUser();
+  const isOwn = !!(user && ((ip.ownerNickname && ip.ownerNickname === user.nickname) || bearipLoadIPs().some((i) => i.id === ip.id)));
+  if (isOwn) return { label: '내 IP', disabled: true, kind: 'owner' };
+  const mine = bearipMyJoinRequest(ip.id);
+  if (!mine) return { label: '참여하기', disabled: false, kind: 'none' };
+  if (mine.status === 'accepted') return { label: '참여 중', disabled: true, kind: 'accepted' };
+  if (mine.status === 'rejected') return { label: '거절됨', disabled: true, kind: 'rejected' };
+  return { label: '참여 신청 취소', disabled: false, kind: 'pending' };
+}
+
+function bearipRequestToJoinIp(ip, message) {
+  const user = bearipGetUser();
+  if (!user || !ip || !ip.id) return null;
+  const key = bearipApplicantKey(user.nickname);
+  const record = {
+    id: key,
+    name: user.nickname,
+    ipId: ip.id,
+    ipTitle: ip.title || '',
+    ownerNickname: ip.ownerNickname || '',
+    bio: user.bio || '',
+    message: message || '',
+    requestedAt: new Date().toISOString(),
+    status: 'pending',
+  };
+  (_bearipDataCache.ipJoinRequests[ip.id] = _bearipDataCache.ipJoinRequests[ip.id] || {})[key] = record;
+  if (bearipFirebaseReady()) _bearipFirebaseWrite(() => _bearipJoinRef(ip.id, key).set(bearipFirebaseSafe(record)));
+  bearipAddNotification({
+    type: 'crew',
+    title: 'IP 참여를 신청했어요',
+    message: `'${ip.title}'에 참여 신청을 보냈어요. 오너의 승인을 기다려주세요.`,
+    link: 'profile.html',
+  });
+  if (ip.ownerNickname && ip.ownerNickname !== user.nickname) {
+    bearipAddNotification(
+      { type: 'crew', title: 'IP 참여 신청이 왔어요', message: `${user.nickname}님이 '${ip.title}'에 참여하고 싶어해요.`, link: 'crew-applicants.html' },
+      ip.ownerNickname
+    );
+  }
+  return record;
+}
+
+function bearipCancelJoinRequest(ipId) {
+  const user = bearipGetUser();
+  if (!user) return;
+  const key = bearipApplicantKey(user.nickname);
+  if (_bearipDataCache.ipJoinRequests[ipId]) delete _bearipDataCache.ipJoinRequests[ipId][key];
+  if (bearipFirebaseReady()) _bearipJoinRef(ipId, key).remove();
+}
+
+// Owner accepts/rejects a request; the requester is told the outcome.
+function bearipDecideJoinRequest(ipId, requestId, accepting) {
+  const byIp = _bearipDataCache.ipJoinRequests[ipId] || {};
+  const current = byIp[requestId];
+  if (!current) return null;
+  const status = accepting ? 'accepted' : 'rejected';
+  byIp[requestId] = Object.assign({}, current, { status });
+  if (bearipFirebaseReady()) _bearipFirebaseWrite(() => _bearipJoinRef(ipId, requestId + '/status').set(status));
+  const title = current.ipTitle || 'IP';
+  bearipAddNotification(
+    {
+      type: 'crew',
+      title: accepting ? 'IP 참여가 승인됐어요' : 'IP 참여 결과가 나왔어요',
+      message: accepting ? `'${title}'에 크루로 합류했어요!` : `'${title}' 참여 신청이 이번에는 받아들여지지 않았어요.`,
+      link: 'profile.html',
+    },
+    current.name
+  );
+  return Object.assign({}, byIp[requestId], { id: requestId });
+}
+
+function bearipDeleteJoinRequestsForIp(ipId) {
+  bearipGetJoinRequests(ipId).forEach((r) => {
+    if (bearipFirebaseReady()) _bearipJoinRef(ipId, r.id).remove();
+  });
+  delete _bearipDataCache.ipJoinRequests[ipId];
+}
+
 // ---- Firebase-backed cross-device data ----
 // Everything above is deliberately per-browser (localStorage) — MY DNA's own
 // IPs, credits, portfolio. But 제작요청/전문가검토/알림 only make sense if the
@@ -778,8 +897,8 @@ function bearipSafePathSegment(str) {
   return String(str || '').replace(/[.#$[\]/]/g, '_') || '_guest';
 }
 
-const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {} };
-const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [] };
+const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {}, ipJoinRequests: {} };
+const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [], ipJoinRequests: [] };
 // Firebase's first 'value' callback for a watched path can take a real
 // moment to arrive (network round-trip, larger the more attachments have
 // piled up) — until then _bearipDataCache[kind] is just its empty starting
@@ -787,7 +906,7 @@ const _bearipDataListeners = { notifications: [], productionRequests: [], ipRevi
 // bearipLoadProductionRequests()/bearipLoadIpReviews() etc. before this
 // flips true and shows a flat "없어요" empty state ends up lying to GM —
 // looking permanently broken instead of just still loading.
-const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false };
+const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false, ipJoinRequests: false };
 
 function bearipIsDataLoaded(kind) {
   return !!_bearipDataLoaded[kind];
@@ -1508,6 +1627,7 @@ function bearipDeleteAssetFile(id) {
   _bearipWatchPath('publicCreators', 'publicCreators');
   _bearipWatchPath('positions', 'positions');
   _bearipWatchPath('positionApplicants', 'positionApplicants');
+  _bearipWatchPath('ipJoinRequests', 'ipJoinRequests');
 })();
 
 // One-time move of any 모집글/지원자 this browser made back when they were

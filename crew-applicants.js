@@ -18,11 +18,13 @@ function caFormatRelativeTime(iso) {
 
 let caActiveFilter = 'all';
 
-function caApplicantRowHtml(posId, a) {
+// kind: 'position' (an applicant to a 모집글, refId = position id) or 'join'
+// (a request to join the IP itself, refId = IP id).
+function caApplicantRowHtml(refId, a, kind) {
   const actions =
     a.status === 'pending'
-      ? `<button type="button" class="ca-applicant-accept" data-pos-id="${bearipEscapeAttr(posId)}" data-app-id="${bearipEscapeAttr(a.id)}">승낙</button>
-         <button type="button" class="ca-applicant-reject" data-pos-id="${bearipEscapeAttr(posId)}" data-app-id="${bearipEscapeAttr(a.id)}">거절</button>`
+      ? `<button type="button" class="ca-applicant-accept" data-kind="${kind}" data-ref-id="${bearipEscapeAttr(refId)}" data-app-id="${bearipEscapeAttr(a.id)}">승낙</button>
+         <button type="button" class="ca-applicant-reject" data-kind="${kind}" data-ref-id="${bearipEscapeAttr(refId)}" data-app-id="${bearipEscapeAttr(a.id)}">거절</button>`
       : `<span class="ca-applicant-status ${bearipEscapeAttr(a.status)}">${CA_APPLICANT_STATUS_LABEL[a.status] || bearipEscapeHtml(a.status)}</span>`;
   return `
     <div class="ca-applicant-item">
@@ -45,7 +47,7 @@ function caCardHtml(pos) {
   const applicants = bearipGetApplicants(pos.id);
   const tagsHtml = (pos.tags || []).map((t) => `<span>${bearipEscapeHtml(t)}</span>`).join('');
   const applicantsHtml = applicants.length
-    ? applicants.map((a) => caApplicantRowHtml(pos.id, a)).join('')
+    ? applicants.map((a) => caApplicantRowHtml(pos.id, a, 'position')).join('')
     : '<div class="ca-applicants-empty">아직 지원자가 없어요.</div>';
 
   return `
@@ -71,6 +73,30 @@ function caHasPendingApplicant(pos) {
   return bearipGetApplicants(pos.id).some((a) => a.status === 'pending');
 }
 
+// One card per IP of mine that has people asking to join it (ip-detail.html's
+// 참여하기). A request looks like an applicant, minus the role/portfolio bits.
+function caJoinCardHtml(ip, requests, index) {
+  const rows = requests
+    .map((r) => caApplicantRowHtml(ip.id, { ...r, appliedAt: r.requestedAt, role: 'IP 참여 신청' }, 'join'))
+    .join('');
+  const accepted = requests.filter((r) => r.status === 'accepted').length;
+  return `
+    <div class="ca-card">
+      <div class="ca-card-top">
+        <div class="ca-thumb thumb-${(index % 8) + 1}"></div>
+        <div class="ca-card-info">
+          <div class="ca-ip">${bearipEscapeHtml(ip.title || '제목 없는 IP')}</div>
+          <div class="ca-role">IP 참여 신청</div>
+        </div>
+        <div class="ca-card-meta">
+          <div class="frac">크루 ${accepted}명</div>
+        </div>
+      </div>
+      <div class="ca-applicants">${rows}</div>
+    </div>
+  `;
+}
+
 function caRenderList() {
   const list = document.getElementById('caList');
   const empty = document.getElementById('caEmpty');
@@ -84,13 +110,21 @@ function caRenderList() {
   );
   const filtered = caActiveFilter === 'pending' ? all.filter(caHasPendingApplicant) : all;
 
-  if (!filtered.length) {
+  // People asking to join one of MY IPs (keyed by IP id, so no owner field is
+  // needed — I just look up each of my own IPs).
+  const myIps = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
+  const joinGroups = myIps
+    .map((ip) => ({ ip, requests: bearipGetJoinRequests(ip.id) }))
+    .filter((g) => g.requests.length && (caActiveFilter !== 'pending' || g.requests.some((r) => r.status === 'pending')));
+  const anyJoinAtAll = myIps.some((ip) => bearipGetJoinRequests(ip.id).length);
+
+  if (!filtered.length && !joinGroups.length) {
     list.innerHTML = '';
     list.style.display = 'none';
     empty.style.display = 'flex';
-    if (!all.length) {
-      emptyTitle.textContent = '아직 올린 모집글이 없어요';
-      emptyDesc.textContent = 'CREW MATCH에서 모집글을 올리면 여기서 지원자를 관리할 수 있어요.';
+    if (!all.length && !anyJoinAtAll) {
+      emptyTitle.textContent = '아직 받은 지원이 없어요';
+      emptyDesc.textContent = 'CREW MATCH에서 모집글을 올리거나 IP를 공개하면 지원자와 참여 신청을 여기서 관리할 수 있어요.';
     } else {
       emptyTitle.textContent = '대기 중인 지원자가 없어요';
       emptyDesc.textContent = '모든 지원자를 이미 처리했어요.';
@@ -99,7 +133,8 @@ function caRenderList() {
   }
   list.style.display = 'flex';
   empty.style.display = 'none';
-  list.innerHTML = filtered.map(caCardHtml).join('');
+  list.innerHTML =
+    joinGroups.map((g, i) => caJoinCardHtml(g.ip, g.requests, i)).join('') + filtered.map(caCardHtml).join('');
 
   list.querySelectorAll('.ca-applicant-name').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -110,14 +145,15 @@ function caRenderList() {
   list.querySelectorAll('.ca-applicant-accept, .ca-applicant-reject').forEach((btn) => {
     btn.addEventListener('click', () => {
       const accepting = btn.classList.contains('ca-applicant-accept');
-      caUpdateApplicant(btn.dataset.posId, btn.dataset.appId, accepting ? 'accepted' : 'rejected');
+      caUpdateApplicant(btn.dataset.kind, btn.dataset.refId, btn.dataset.appId, accepting ? 'accepted' : 'rejected');
     });
   });
 }
 
-function caUpdateApplicant(posId, appId, status) {
-  // Also tells the applicant the outcome and bumps the posting's filled count.
-  const updated = bearipDecideApplicant(posId, appId, status === 'accepted');
+function caUpdateApplicant(kind, refId, appId, status) {
+  // Also tells the applicant the outcome (and, for a posting, bumps its filled count).
+  const decide = kind === 'join' ? bearipDecideJoinRequest : bearipDecideApplicant;
+  const updated = decide(refId, appId, status === 'accepted');
   if (!updated) return;
 
   bearipAddNotification({
@@ -148,5 +184,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof bearipOnDataChange === 'function') {
     bearipOnDataChange('positions', caRenderList);
     bearipOnDataChange('positionApplicants', caRenderList);
+    bearipOnDataChange('ipJoinRequests', caRenderList);
   }
 });

@@ -12,7 +12,7 @@ function cmPositionLabel(id) {
 function cmRenderMatchStatus() {
   const applied = bearipMyAppliedPositionIds();
   const proposed = bearipSetList('bearip_proposed_creators');
-  const joined = bearipSetList('bearip_joined_ips');
+  const joined = bearipMyJoinRequests().filter((r) => r.status === 'accepted');
 
   document.getElementById('cmStatApplied').textContent = applied.length;
   document.getElementById('cmStatProposed').textContent = proposed.length;
@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof bearipOnDataChange === 'function') {
     bearipOnDataChange('positions', cmRenderMatchStatus);
     bearipOnDataChange('positionApplicants', cmRenderMatchStatus);
+    bearipOnDataChange('ipJoinRequests', cmRenderMatchStatus);
   }
 
   document.getElementById('cmAppliedRows').addEventListener('click', (e) => {

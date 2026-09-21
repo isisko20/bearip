@@ -97,6 +97,20 @@
       }
     },
 
+    "ipJoinRequests": {
+      ".read": true,
+      "$ipId": {
+        "$reqId": {
+          ".write": true,
+          ".validate": "newData.hasChildren(['id', 'name', 'ipId', 'status', 'requestedAt'])",
+          "name": { ".validate": "newData.isString()" },
+          "ipId": { ".validate": "newData.isString()" },
+          "status": { ".validate": "newData.isString() && (newData.val() == 'pending' || newData.val() == 'accepted' || newData.val() == 'rejected')" },
+          "requestedAt": { ".validate": "newData.isString()" }
+        }
+      }
+    },
+
     "positionApplicants": {
       ".read": true,
       "$posId": {

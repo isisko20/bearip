@@ -296,7 +296,7 @@ function renderBottomStats() {
   if (!ipsEl || typeof bearipLoadIPs !== 'function') return;
 
   const ips = bearipLoadIPs();
-  const joined = typeof bearipSetList === 'function' ? bearipSetList('bearip_joined_ips') : [];
+  const joined = typeof bearipMyJoinRequests === 'function' ? bearipMyJoinRequests().filter((r) => r.status === 'accepted') : [];
   const applied = typeof bearipMyAppliedPositionIds === 'function' ? bearipMyAppliedPositionIds() : [];
   const positions = typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : [];
   const likesTotal = ips.reduce((sum, ip) => sum + (ip.likes || 0), 0);
@@ -313,5 +313,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof bearipOnDataChange === 'function') {
     bearipOnDataChange('positions', renderBottomStats);
     bearipOnDataChange('positionApplicants', renderBottomStats);
+    bearipOnDataChange('ipJoinRequests', renderBottomStats);
   }
 });
