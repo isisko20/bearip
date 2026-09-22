@@ -923,6 +923,61 @@ function bearipDeleteFollowersForIp(ipId) {
   delete _bearipDataCache.ipFollowers[ipId];
 }
 
+// ---- 고아 데이터 점검 (GM) ----
+// bearipDeleteIP cleans up everything it knows to when an IP is deleted, but
+// that safety net has grown collection by collection over time — anything
+// deleted before a given cleanup existed (or through some path that missed
+// it) is still out there, referencing an IP id nothing can resolve anymore.
+// GM-only sweep, manually triggered (not automatic — this is real data,
+// worth a look before deleting, unlike the age-based notification prune
+// above). Requires GM's client, since only it watches allIPs.
+function bearipScanOrphans() {
+  const allIps = bearipLoadAllIPsForGm();
+  const idSet = new Set(allIps.map((ip) => ip.id));
+  const titleSet = new Set(allIps.map((ip) => ip.title));
+  const belongsToKnownIp = (ipId, ipTitle) => (ipId ? idSet.has(ipId) : titleSet.has(ipTitle));
+
+  const posIdSet = new Set(bearipLoadPositions().map((p) => p.id));
+
+  return {
+    ipOverallComments: Object.keys(_bearipDataCache.ipOverallComments || {}).filter((id) => !idSet.has(id)),
+    productionRequests: bearipLoadProductionRequests()
+      .filter((r) => !belongsToKnownIp(r.ipId, null))
+      .map((r) => r.id),
+    ipReviews: bearipLoadIpReviews()
+      .filter((r) => !belongsToKnownIp(r.ipId, null))
+      .map((r) => r.id),
+    positions: bearipLoadPositions()
+      .filter((p) => !belongsToKnownIp(p.ipId, p.ipTitle))
+      .map((p) => p.id),
+    ipJoinRequests: Object.keys(_bearipDataCache.ipJoinRequests || {}).filter((id) => !idSet.has(id)),
+    ipFollowers: Object.keys(_bearipDataCache.ipFollowers || {}).filter((id) => !idSet.has(id)),
+    positionApplicants: Object.keys(_bearipDataCache.positionApplicants || {}).filter((posId) => !posIdSet.has(posId)),
+  };
+}
+
+function bearipOrphanCount(report) {
+  return Object.values(report).reduce((sum, list) => sum + list.length, 0);
+}
+
+function bearipCleanupOrphans(report) {
+  if (!bearipFirebaseReady()) return;
+  report.ipOverallComments.forEach((id) => firebase.database().ref('ipOverallComments/' + id).remove());
+  report.productionRequests.forEach((id) => bearipDeleteProductionRequest(id));
+  report.ipReviews.forEach((id) => bearipDeleteIpReview(id));
+  report.positions.forEach((id) => bearipDeletePosition(id));
+  report.ipJoinRequests.forEach((id) => bearipDeleteJoinRequestsForIp(id));
+  report.ipFollowers.forEach((id) => bearipDeleteFollowersForIp(id));
+  // Deletes each applicant individually, not the whole positionApplicants/
+  // <posId> node — the rules only grant write at the applicant level (same
+  // "no collection-root wipe" shape as every other collection here), and the
+  // position itself is already gone, so bearipDeletePosition isn't it either.
+  report.positionApplicants.forEach((posId) => {
+    bearipGetApplicants(posId).forEach((a) => bearipRemoveApplicantByName(posId, a.name));
+    delete _bearipDataCache.positionApplicants[posId];
+  });
+}
+
 // ---- Firebase-backed cross-device data ----
 // Everything above is deliberately per-browser (localStorage) — MY DNA's own
 // IPs, credits, portfolio. But 제작요청/전문가검토/알림 only make sense if the
@@ -1456,6 +1511,37 @@ function bearipMarkNotificationRead(id) {
   _bearipFirebaseWrite(() => firebase.database().ref(bearipNotificationsPath() + '/' + id + '/read').set(true));
 }
 
+// Read notifications older than this just sit there forever otherwise —
+// nobody re-reads a month-old "지원했어요" toast, and the list was only ever
+// going to grow. Unread notifications are never touched, no matter how old;
+// only something the person has already seen and dismissed gets swept.
+const BEARIP_NOTIF_MAX_AGE_DAYS = 30;
+let _bearipNotifPruneChecked = false;
+
+// Runs at most once per nickname per day (a localStorage timestamp, not a
+// server job — there's no backend to run one on) and only after the live
+// notifications cache has actually loaded, so it never mistakes "still
+// loading" for "nothing to prune". Wired to bearipOnDataChange('notifications',
+// ...) near the bottom of this file, so it fires on every page once real data
+// arrives.
+function bearipPruneOldNotificationsIfDue() {
+  if (_bearipNotifPruneChecked) return;
+  if (!bearipIsDataLoaded('notifications')) return;
+  _bearipNotifPruneChecked = true;
+  if (!bearipFirebaseReady()) return;
+  const user = bearipGetUser();
+  if (!user) return;
+  const throttleKey = bearipScopedKey('bearip_notif_pruned_at');
+  const now = Date.now();
+  const last = Number(localStorage.getItem(throttleKey) || 0);
+  if (now - last < 24 * 60 * 60 * 1000) return;
+  localStorage.setItem(throttleKey, String(now));
+  const cutoff = now - BEARIP_NOTIF_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+  bearipLoadNotifications()
+    .filter((n) => n.read && new Date(n.createdAt).getTime() < cutoff)
+    .forEach((n) => firebase.database().ref(bearipNotificationsPath() + '/' + n.id).remove());
+}
+
 // Lets a "click to upload" zone (a container with its own file input +
 // existing click/change handlers) also accept drag-and-drop — dropping a
 // file just puts it on the SAME input and re-fires its 'change' event, so
@@ -1678,6 +1764,7 @@ function bearipDeleteAssetFile(id) {
   _bearipWatchPath('positionApplicants', 'positionApplicants');
   _bearipWatchPath('ipJoinRequests', 'ipJoinRequests');
   _bearipWatchPath('ipFollowers', 'ipFollowers');
+  bearipOnDataChange('notifications', bearipPruneOldNotificationsIfDue);
 })();
 
 // One-time move of any 모집글/지원자 this browser made back when they were

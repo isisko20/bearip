@@ -17,12 +17,82 @@ function prShowGmLocked() {
   const list = document.getElementById('prList');
   const empty = document.getElementById('prEmpty');
   const locked = document.getElementById('prGmLocked');
+  const cleanup = document.getElementById('prCleanupPanel');
   if (filterRow) filterRow.style.display = 'none';
   if (list) list.style.display = 'none';
   if (empty) empty.style.display = 'none';
+  if (cleanup) cleanup.style.display = 'none';
   if (locked) locked.style.display = 'flex';
   const loginBtn = document.getElementById('prGmLoginBtn');
   if (loginBtn) loginBtn.addEventListener('click', () => bearipGoToLogin('production-requests.html'));
+}
+
+// 고아 데이터 점검 — a manual, GM-only sweep for records still referencing an
+// IP that's since been deleted (bearipScanOrphans/bearipCleanupOrphans, both
+// in storage.js). Kept a deliberate two-step scan-then-confirm instead of a
+// silent background job, since this deletes real data and the count is worth
+// a look before it's gone.
+const PR_ORPHAN_LABEL = {
+  ipOverallComments: '종합 코멘트',
+  productionRequests: '제작요청',
+  ipReviews: '전문가 검토',
+  positions: '모집글',
+  ipJoinRequests: 'IP 참여 신청',
+  ipFollowers: '팔로워',
+  positionApplicants: '지원자 목록',
+};
+
+function prRenderCleanupResult(report) {
+  const resultEl = document.getElementById('prCleanupResult');
+  if (!resultEl) return;
+  const total = bearipOrphanCount(report);
+  resultEl.hidden = false;
+
+  if (total === 0) {
+    resultEl.innerHTML = '<div class="pr-cleanup-clean">고아 데이터가 없어요. 깨끗해요.</div>';
+    return;
+  }
+
+  const rows = Object.keys(report)
+    .filter((key) => report[key].length)
+    .map((key) => `<div class="pr-cleanup-row"><span class="k">${PR_ORPHAN_LABEL[key] || key}</span><span class="v">${report[key].length}건</span></div>`)
+    .join('');
+  resultEl.innerHTML = `
+    <div class="pr-cleanup-summary">삭제된 IP를 참조하는 데이터 ${total}건을 찾았어요.</div>
+    ${rows}
+    <button type="button" class="pr-cleanup-purge-btn" id="prCleanupPurgeBtn">전부 정리하기</button>
+  `;
+  document.getElementById('prCleanupPurgeBtn').addEventListener('click', () => prConfirmCleanup(report));
+}
+
+// Same custom-overlay pattern prConfirmPurge above uses instead of a native
+// confirm() (can be blocked outright in this prototype's embedded contexts).
+function prConfirmCleanup(report) {
+  const total = bearipOrphanCount(report);
+  const overlay = document.createElement('div');
+  overlay.className = 'pr-confirm-overlay';
+  overlay.innerHTML = `
+    <div class="pr-confirm-box">
+      <div class="pr-confirm-title">${total}건을 정리할까요?</div>
+      <div class="pr-confirm-desc">삭제된 IP를 참조하던 데이터예요. 되돌릴 수 없어요.</div>
+      <div class="pr-confirm-actions">
+        <button type="button" class="pr-confirm-cancel">취소</button>
+        <button type="button" class="pr-confirm-submit reject">정리하기</button>
+      </div>
+    </div>
+  `;
+  (document.querySelector('.dna-app') || document.body).appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close();
+  });
+  overlay.querySelector('.pr-confirm-cancel').addEventListener('click', close);
+  overlay.querySelector('.pr-confirm-submit').addEventListener('click', () => {
+    close();
+    bearipCleanupOrphans(report);
+    bearipShowToast(`${total}건 정리했어요`);
+    document.getElementById('prCleanupResult').hidden = true;
+  });
 }
 
 function prFormatRelativeTime(iso) {
@@ -315,4 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   prRenderList();
   if (typeof bearipOnDataChange === 'function') bearipOnDataChange('productionRequests', prRenderList);
+
+  const scanBtn = document.getElementById('prCleanupScanBtn');
+  if (scanBtn) scanBtn.addEventListener('click', () => prRenderCleanupResult(bearipScanOrphans()));
 });

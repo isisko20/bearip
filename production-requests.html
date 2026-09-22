@@ -121,6 +121,15 @@
       </div>
     </div>
 
+    <section class="pr-cleanup-panel" id="prCleanupPanel">
+      <div class="pr-cleanup-head">
+        <div class="t">고아 데이터 점검</div>
+        <div class="s">삭제된 IP를 아직 참조하고 있는 데이터를 찾아서 정리해요.</div>
+      </div>
+      <button type="button" class="pr-cleanup-scan-btn" id="prCleanupScanBtn">점검하기</button>
+      <div class="pr-cleanup-result" id="prCleanupResult" hidden></div>
+    </section>
+
     <div class="pr-filter-row" id="prFilterRow">
       <button type="button" class="pr-filter-btn active" data-filter="all">전체</button>
       <button type="button" class="pr-filter-btn" data-filter="pending">검토 대기</button>
