@@ -54,7 +54,8 @@ function odBuildPublishedCard(ip, index) {
   card.dataset.ipId = ip.id;
   card.dataset.created = (ip.createdAt || '').slice(0, 10) || '1970-01-01';
   card.dataset.dna = dna;
-  card.dataset.followers = 0;
+  const followerCount = typeof bearipFollowerCount === 'function' ? bearipFollowerCount(ip.id) : 0;
+  card.dataset.followers = followerCount;
   card.dataset.recruiting = isRecruiting ? '1' : '0';
   card.innerHTML = `
     <div class="od-card-banner ${bannerClass}"${bannerStyle}>
@@ -76,8 +77,8 @@ function odBuildPublishedCard(ip, index) {
       </div>
       ${latestWorkHtml}
       <div class="od-foot-stats">
-        <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg>0</span><span class="lbl">팔로워</span></div>
-        <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.6 8.5 3 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 4 0 6.4 4 4.5 7.5C19 16.5 12 21 12 21z"/></svg>0</span><span class="lbl">응원</span></div>
+        <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg>${followerCount}</span><span class="lbl">팔로워</span></div>
+        <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.6 8.5 3 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 4 0 6.4 4 4.5 7.5C19 16.5 12 21 12 21z"/></svg>${bearipFormatCount(ip.likes || 0)}</span><span class="lbl">응원</span></div>
         <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg>0</span><span class="lbl">활동</span></div>
       </div>
       <div class="od-card-actions">
@@ -170,5 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
     bearipOnDataChange('publicIPs', odRenderPublishedCards);
     bearipOnDataChange('allIPs', odRenderPublishedCards);
     bearipOnDataChange('positions', odRenderPublishedCards);
+    bearipOnDataChange('ipFollowers', odRenderPublishedCards);
   }
 });

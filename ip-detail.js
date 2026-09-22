@@ -1,8 +1,16 @@
 // Wires the IP detail hero/recruit action buttons: 참여하기, 팔로우, 지원하기.
-// 참여하기 and 지원하기 are shared Firebase data (ipJoinRequests /
-// positionApplicants, see storage.js); 팔로우 is still a per-browser flag.
+// All three are shared Firebase data now (ipJoinRequests / ipFollowers /
+// positionApplicants, see storage.js).
 
-const IPD_FOLLOW_KEY = 'bearip_followed_ips';
+// 팔로우 — real follower count and state, not a per-browser flag with a
+// hardcoded 0 next to it.
+function ipdRenderFollowButton() {
+  const btn = document.getElementById('ipdFollowBtn');
+  const countEl = document.getElementById('ipdFollowerCount');
+  if (!btn || !ipdCurrentIp) return;
+  ipdSetFollowUI(btn, bearipIsFollowingIp(ipdCurrentIp.id));
+  if (countEl) countEl.textContent = bearipFollowerCount(ipdCurrentIp.id);
+}
 
 // 참여하기 — label/enabled state comes from the user's real join request
 // (owner accept/reject included), not a local flag.
@@ -158,10 +166,9 @@ function ipdApplyDynamicIP() {
   followBtn.dataset.ip = ip.id;
   followBtn.dataset.ipTitle = ip.title;
 
-  // No real follower/activity tracking for user IPs yet — honest zeros
-  // rather than carrying over the demo's fixed numbers. 좋아요 is real,
-  // though: it's the same count CONTENT ROOM and TOP 100 read.
-  document.getElementById('ipdFollowerCount').textContent = '0';
+  // No real activity tracking for user IPs yet — an honest zero rather than
+  // carrying over the demo's fixed number. 좋아요 is real, though: it's the
+  // same count CONTENT ROOM and TOP 100 read; 팔로워 is set below.
   document.getElementById('ipdActivityCount').textContent = '0';
   const cheerBtn = document.getElementById('ipdCheerBtn');
   cheerBtn.dataset.ip = ip.id;
@@ -199,6 +206,7 @@ function ipdApplyDynamicIP() {
   ipdRenderRecruitPanel();
   ipdRenderCrewPanel();
   ipdRenderJoinButton();
+  ipdRenderFollowButton();
 
   const infoGenre = document.getElementById('ipdInfoGenre');
   if (infoGenre) infoGenre.textContent = (ip.genres && ip.genres[0]) || '미지정';
@@ -381,20 +389,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const joinBtn = document.getElementById('ipdJoinBtn');
   const followBtn = document.getElementById('ipdFollowBtn');
-  const followerCountEl = document.getElementById('ipdFollowerCount');
-  const baseFollowerCount = parseInt(followerCountEl.textContent, 10) || 0;
 
   // Restore state from a previous visit.
   ipdRenderJoinButton();
-  const isFollowing = bearipSetHas(IPD_FOLLOW_KEY, followBtn.dataset.ip);
-  ipdSetFollowUI(followBtn, isFollowing);
-  followerCountEl.textContent = baseFollowerCount + (isFollowing ? 1 : 0);
+  ipdRenderFollowButton();
 
   if (typeof bearipOnDataChange === 'function') {
     bearipOnDataChange('positions', ipdRenderRecruitPanel);
     bearipOnDataChange('positionApplicants', ipdRenderRecruitPanel);
     bearipOnDataChange('ipJoinRequests', ipdRenderJoinButton);
     bearipOnDataChange('ipJoinRequests', ipdRenderCrewPanel);
+    bearipOnDataChange('ipFollowers', ipdRenderFollowButton);
   }
 
   joinBtn.addEventListener('click', () => {
@@ -422,10 +427,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   followBtn.addEventListener('click', () => {
-    if (!bearipRequireLogin('ip-detail.html')) return;
-    const nowFollowing = bearipSetToggle(IPD_FOLLOW_KEY, followBtn.dataset.ip);
-    ipdSetFollowUI(followBtn, nowFollowing);
-    followerCountEl.textContent = baseFollowerCount + (nowFollowing ? 1 : 0);
+    if (!bearipRequireLogin('ip-detail.html') || !ipdCurrentIp) return;
+    if (bearipIsFollowingIp(ipdCurrentIp.id)) bearipUnfollowIp(ipdCurrentIp.id);
+    else bearipFollowIp(ipdCurrentIp);
+    ipdRenderFollowButton();
   });
 
   // 좋아요 (응원) — real IPs persist the count into ip.likes so CONTENT

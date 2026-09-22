@@ -122,6 +122,18 @@
           "appliedAt": { ".validate": "newData.isString()" }
         }
       }
+    },
+
+    "ipFollowers": {
+      ".read": true,
+      "$ipId": {
+        "$nickname": {
+          ".write": true,
+          ".validate": "newData.hasChildren(['name', 'followedAt'])",
+          "name": { ".validate": "newData.isString()" },
+          "followedAt": { ".validate": "newData.isString()" }
+        }
+      }
     }
   }
 }

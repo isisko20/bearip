@@ -411,8 +411,9 @@ function bearipDeleteIP(id) {
   bearipLoadPositions()
     .filter((p) => p.ownerNickname === me && (p.ipId ? p.ipId === id : p.ipTitle === ip.title))
     .forEach((p) => bearipDeletePosition(p.id));
-  // Same for requests to join it.
+  // Same for requests to join it, and its followers.
   bearipDeleteJoinRequestsForIp(id);
+  bearipDeleteFollowersForIp(id);
 }
 
 // ---- Shared "IP DNA 현황" breakdown metadata ----
@@ -874,6 +875,54 @@ function bearipDeleteJoinRequestsForIp(ipId) {
   delete _bearipDataCache.ipJoinRequests[ipId];
 }
 
+// ---- IP 팔로우 ----
+// ipFollowers/<ipId>/<nickname> in Firebase — used to be a per-browser flag
+// (bearip_followed_ips) with a follower count that was always a hardcoded 0,
+// since nothing ever counted across devices. Unlike 참여하기, following has no
+// owner approval step — it's just a visible "I follow this" list.
+function bearipGetFollowers(ipId) {
+  const map = _bearipDataCache.ipFollowers[ipId] || {};
+  return Object.keys(map).map((key) => Object.assign({}, map[key], { id: key }));
+}
+
+function bearipFollowerCount(ipId) {
+  return Object.keys(_bearipDataCache.ipFollowers[ipId] || {}).length;
+}
+
+function bearipIsFollowingIp(ipId) {
+  const user = bearipGetUser();
+  if (!user) return false;
+  return !!(_bearipDataCache.ipFollowers[ipId] || {})[bearipApplicantKey(user.nickname)];
+}
+
+function _bearipFollowRef(ipId, key) {
+  return firebase.database().ref('ipFollowers/' + ipId + '/' + key);
+}
+
+function bearipFollowIp(ip) {
+  const user = bearipGetUser();
+  if (!user || !ip || !ip.id) return;
+  const key = bearipApplicantKey(user.nickname);
+  const record = { name: user.nickname, followedAt: new Date().toISOString() };
+  (_bearipDataCache.ipFollowers[ip.id] = _bearipDataCache.ipFollowers[ip.id] || {})[key] = record;
+  if (bearipFirebaseReady()) _bearipFirebaseWrite(() => _bearipFollowRef(ip.id, key).set(bearipFirebaseSafe(record)));
+}
+
+function bearipUnfollowIp(ipId) {
+  const user = bearipGetUser();
+  if (!user) return;
+  const key = bearipApplicantKey(user.nickname);
+  if (_bearipDataCache.ipFollowers[ipId]) delete _bearipDataCache.ipFollowers[ipId][key];
+  if (bearipFirebaseReady()) _bearipFollowRef(ipId, key).remove();
+}
+
+function bearipDeleteFollowersForIp(ipId) {
+  bearipGetFollowers(ipId).forEach((f) => {
+    if (bearipFirebaseReady()) _bearipFollowRef(ipId, f.id).remove();
+  });
+  delete _bearipDataCache.ipFollowers[ipId];
+}
+
 // ---- Firebase-backed cross-device data ----
 // Everything above is deliberately per-browser (localStorage) — MY DNA's own
 // IPs, credits, portfolio. But 제작요청/전문가검토/알림 only make sense if the
@@ -897,8 +946,8 @@ function bearipSafePathSegment(str) {
   return String(str || '').replace(/[.#$[\]/]/g, '_') || '_guest';
 }
 
-const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {}, ipJoinRequests: {} };
-const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [], ipJoinRequests: [] };
+const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {}, ipJoinRequests: {}, ipFollowers: {} };
+const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [], ipJoinRequests: [], ipFollowers: [] };
 // Firebase's first 'value' callback for a watched path can take a real
 // moment to arrive (network round-trip, larger the more attachments have
 // piled up) — until then _bearipDataCache[kind] is just its empty starting
@@ -906,7 +955,7 @@ const _bearipDataListeners = { notifications: [], productionRequests: [], ipRevi
 // bearipLoadProductionRequests()/bearipLoadIpReviews() etc. before this
 // flips true and shows a flat "없어요" empty state ends up lying to GM —
 // looking permanently broken instead of just still loading.
-const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false, ipJoinRequests: false };
+const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false, ipJoinRequests: false, ipFollowers: false };
 
 function bearipIsDataLoaded(kind) {
   return !!_bearipDataLoaded[kind];
@@ -1628,6 +1677,7 @@ function bearipDeleteAssetFile(id) {
   _bearipWatchPath('positions', 'positions');
   _bearipWatchPath('positionApplicants', 'positionApplicants');
   _bearipWatchPath('ipJoinRequests', 'ipJoinRequests');
+  _bearipWatchPath('ipFollowers', 'ipFollowers');
 })();
 
 // One-time move of any 모집글/지원자 this browser made back when they were
