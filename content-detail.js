@@ -183,6 +183,19 @@ function cdRenderLikeCount(ip, episode) {
   if (el) el.textContent = cdFormatCount(typeof bearipEpisodeLikeCount === 'function' ? bearipEpisodeLikeCount(ip.id, episode.id) : 0);
 }
 
+// Header search — jumps to Content Room's own listing/search rather than
+// filtering anything on this single-episode page. Wired outside the snapshot
+// branch below so it still works even on the "회차를 찾을 수 없어요" empty state.
+document.addEventListener('DOMContentLoaded', () => {
+  const headerSearch = document.getElementById('crHeaderSearchInput');
+  if (!headerSearch) return;
+  headerSearch.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const q = headerSearch.value.trim();
+    location.href = q ? `consume.html?q=${encodeURIComponent(q)}` : 'consume.html';
+  });
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   const snapshot = cdConsumeSnapshot();
   if (!snapshot) {
