@@ -212,6 +212,8 @@
 .md-applicant-detail-role { font-weight: 700; color: var(--dr-purple); margin-bottom: 4px; }
 .md-applicant-detail-bio { color: var(--dr-ink); line-height: 1.5; }
 .md-applicant-detail-portfolio { color: var(--dr-ink-soft); margin-top: 6px; }
+.md-applicant-portfolio-row { display: flex; gap: 5px; margin-top: 5px; }
+.md-applicant-portfolio-chip { width: 26px; height: 26px; border-radius: 6px; flex-shrink: 0; }
 .md-applicant-detail-message { color: var(--dr-ink); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--dr-border); line-height: 1.5; font-style: italic; }
 
 /* ---- Goal selector ---- */

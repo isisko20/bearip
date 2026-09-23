@@ -114,7 +114,7 @@ function cmRenderApplicantsPanel(pos, panelEl, fracEl) {
           <div class="cm-applicant-detail" hidden>
             <div class="cm-applicant-detail-role">${bearipEscapeHtml(a.role || '역할 미지정')}</div>
             <div class="cm-applicant-detail-bio">${bearipEscapeHtml(a.bio || '아직 작성된 소개가 없어요.')}</div>
-            ${a.portfolioCount ? `<div class="cm-applicant-detail-portfolio">포트폴리오 ${a.portfolioCount}개</div>` : ''}
+            ${typeof bearipRenderApplicantPortfolioHtml === 'function' ? bearipRenderApplicantPortfolioHtml(a, 'cm-applicant') : ''}
             ${a.message ? `<div class="cm-applicant-detail-message">"${bearipEscapeHtml(a.message)}"</div>` : ''}
           </div>
         </div>

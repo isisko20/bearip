@@ -58,11 +58,9 @@ function mdRenderApplicantsAlert() {
           <div class="md-applicant-detail-role">${bearipEscapeHtml(applicant.role || '역할 미지정')}</div>
           <div class="md-applicant-detail-bio">${bearipEscapeHtml(applicant.bio || '아직 작성된 소개가 없어요.')}</div>
           ${
-            kind === 'join'
-              ? ''
-              : applicant.portfolioCount
-                ? `<div class="md-applicant-detail-portfolio">공개된 포트폴리오 ${applicant.portfolioCount}개</div>`
-                : '<div class="md-applicant-detail-portfolio">공개된 포트폴리오가 없어요.</div>'
+            typeof bearipRenderApplicantPortfolioHtml === 'function' && bearipRenderApplicantPortfolioHtml(applicant, 'md-applicant')
+              ? bearipRenderApplicantPortfolioHtml(applicant, 'md-applicant')
+              : '<div class="md-applicant-detail-portfolio">공개된 포트폴리오가 없어요.</div>'
           }
           ${applicant.message ? `<div class="md-applicant-detail-message">"${bearipEscapeHtml(applicant.message)}"</div>` : ''}
         </div>

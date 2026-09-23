@@ -735,18 +735,48 @@ function bearipApplyButtonState(pos) {
   return { label: '지원 취소', disabled: false, kind: 'pending' };
 }
 
+// profile.html's 포트폴리오 tab promises "지원할 때 공개" items surface to
+// whoever reviews the application — until now that was only ever a bare
+// count ("포트폴리오 3개"), with no way to actually see any of it. Reused by
+// both 지원하기 (positions) and 참여하기 (ipJoinRequests, which previously
+// attached no portfolio info at all) so a reviewer sees the same real
+// thumbnails/titles either way.
+function bearipVisiblePortfolioSummary() {
+  return bearipLoadPortfolio()
+    .filter((p) => p.visibility !== 'private')
+    .map((p) => ({ id: p.id, title: p.title, thumb: p.thumb }));
+}
+
+// Shared by crew-match-post.js, crew-applicants.js, my-dna-applicants.js —
+// classPrefix is e.g. 'cm-applicant' / 'ca-applicant' / 'md-applicant',
+// matching each page's own `${prefix}-detail-portfolio` CSS.
+function bearipRenderApplicantPortfolioHtml(applicant, classPrefix) {
+  const items = applicant.portfolio || [];
+  if (!items.length) return '';
+  const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
+  const chips = items
+    .slice(0, 6)
+    .map((p) => `<div class="${classPrefix}-portfolio-chip ${esc(p.thumb || 'thumb-1')}" title="${esc(p.title || '포트폴리오')}"></div>`)
+    .join('');
+  return `
+    <div class="${classPrefix}-detail-portfolio">
+      포트폴리오 ${items.length}개
+      <div class="${classPrefix}-portfolio-row">${chips}</div>
+    </div>
+  `;
+}
+
 // Applying also tells the posting's owner — before, the "notification" only
 // ever went to the applicant themself, so the person who could act on it
 // never heard about it.
 function bearipApplyToPosition(pos, message) {
   const user = bearipGetUser();
   if (!user) return null;
-  const visiblePortfolio = bearipLoadPortfolio().filter((p) => p.visibility !== 'private').length;
   const record = bearipAddApplicant(pos.id, {
     name: user.nickname,
     role: bearipGetMyPositions()[0] || '',
     bio: user.bio || '',
-    portfolioCount: visiblePortfolio,
+    portfolio: bearipVisiblePortfolioSummary(),
     message: message || '',
     appliedAt: new Date().toISOString(),
     status: 'pending',
@@ -854,6 +884,7 @@ function bearipRequestToJoinIp(ip, message) {
     ipTitle: ip.title || '',
     ownerNickname: ip.ownerNickname || '',
     bio: user.bio || '',
+    portfolio: bearipVisiblePortfolioSummary(),
     message: message || '',
     requestedAt: new Date().toISOString(),
     status: 'pending',
