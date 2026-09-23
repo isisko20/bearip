@@ -991,8 +991,16 @@ function bearipCleanupOrphans(report) {
 // listener keeps an in-memory cache current, so callers don't need to learn
 // async. A renderer that should redraw the moment fresh data arrives (not
 // just on next page load) should register with bearipOnDataChange(kind, fn).
+// Requires an actual Firebase-issued identity (Anonymous Auth, see
+// firebase-init.js), not just the SDK being loaded — the rules now require
+// `auth != null` on every collection, so a read/write attempted before
+// sign-in resolves would just be rejected anyway. This is checked on every
+// call site that touches Firebase (there's no per-call queueing/retry), but
+// in practice sign-in resolves within a page load or two — see
+// bearipInitFirebaseAfterAuth below for the one place that genuinely can't
+// just skip a beat: setting up the live watchers themselves.
 function bearipFirebaseReady() {
-  return typeof firebase !== 'undefined' && !!firebase.apps && firebase.apps.length > 0;
+  return typeof firebase !== 'undefined' && !!firebase.apps && firebase.apps.length > 0 && !!firebase.auth().currentUser;
 }
 
 // Realtime Database path segments can't contain . # $ [ ] / — nicknames are
@@ -1748,8 +1756,7 @@ function bearipDeleteAssetFile(id) {
 // global queues GM (or any viewer) needs to see in full. Run once per page
 // load — nickname changes always go through a full page reload (see
 // bearipSetUser's callers), so there's no live-switch case to handle here.
-(function bearipInitFirebaseWatchers() {
-  if (!bearipFirebaseReady()) return;
+function _bearipStartFirebaseWatchers() {
   _bearipWatchPath('notifications', bearipNotificationsPath());
   _bearipWatchPath('productionRequests', 'productionRequests');
   _bearipWatchPath('ipReviews', 'ipReviews');
@@ -1765,14 +1772,13 @@ function bearipDeleteAssetFile(id) {
   _bearipWatchPath('ipJoinRequests', 'ipJoinRequests');
   _bearipWatchPath('ipFollowers', 'ipFollowers');
   bearipOnDataChange('notifications', bearipPruneOldNotificationsIfDue);
-})();
+}
 
 // One-time move of any 모집글/지원자 this browser made back when they were
 // localStorage-only. Only postings whose IP is one of the logged-in user's own
 // IPs are claimed (the old local list wasn't per-account, so it can hold other
 // nicknames' leftovers on a shared browser); the rest stay put untouched.
-(function bearipMigrateLocalPositions() {
-  if (!bearipFirebaseReady()) return;
+function _bearipStartLocalPositionsMigration() {
   const user = bearipGetUser();
   if (!user || !user.nickname || user.nickname === 'GM') return;
   const doneKey = 'bearip_positions_migrated::' + user.nickname;
@@ -1798,4 +1804,22 @@ function bearipDeleteAssetFile(id) {
   const movedIds = mine.map((p) => p.id);
   localStorage.setItem('bearip_positions', JSON.stringify(localPositions.filter((p) => !movedIds.includes(p.id))));
   localStorage.setItem('bearip_position_applicants', JSON.stringify(localApplicants));
+}
+
+// The watchers/migration above both need a real signed-in Firebase user
+// (bearipFirebaseReady()) to do anything useful, and that's no longer
+// synchronous the moment this script runs — Anonymous Auth (firebase-init.js)
+// resolves a beat later. onAuthStateChanged fires once with whatever's
+// already cached (near-instant on a repeat visit) and again the first time
+// sign-in actually completes, so this starts everything at the first real
+// opportunity rather than the fixed instant this file happened to load.
+(function bearipInitFirebaseAfterAuth() {
+  if (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) return;
+  let started = false;
+  firebase.auth().onAuthStateChanged((user) => {
+    if (!user || started) return;
+    started = true;
+    _bearipStartFirebaseWatchers();
+    _bearipStartLocalPositionsMigration();
+  });
 })();

@@ -5,8 +5,8 @@
 
     "notifications": {
       "$nickname": {
-        ".read": true,
-        ".write": true,
+        ".read": "auth != null",
+        ".write": "auth != null",
         "$notifId": {
           ".validate": "newData.hasChildren(['type', 'title', 'message', 'createdAt', 'read'])",
           "type": { ".validate": "newData.isString()" },
@@ -19,10 +19,10 @@
     },
 
     "productionRequests": {
-      ".read": true,
+      ".read": "auth != null",
       ".indexOn": ["ipId"],
       "$reqId": {
-        ".write": true,
+        ".write": "auth != null",
         ".validate": "newData.hasChildren(['ipId', 'requesterNickname', 'status', 'requestedAt'])",
         "ipId": { ".validate": "newData.isString()" },
         "requesterNickname": { ".validate": "newData.isString()" },
@@ -33,10 +33,10 @@
     },
 
     "ipReviews": {
-      ".read": true,
+      ".read": "auth != null",
       ".indexOn": ["ipId"],
       "$reviewId": {
-        ".write": true,
+        ".write": "auth != null",
         ".validate": "newData.hasChildren(['ipId', 'requesterNickname', 'stepKey', 'status', 'requestedAt'])",
         "ipId": { ".validate": "newData.isString()" },
         "requesterNickname": { ".validate": "newData.isString()" },
@@ -47,17 +47,17 @@
     },
 
     "ipOverallComments": {
-      ".read": true,
+      ".read": "auth != null",
       "$ipId": {
-        ".write": true,
+        ".write": "auth != null",
         ".validate": "newData.isString() || newData.val() == null"
       }
     },
 
     "publicIPs": {
-      ".read": true,
+      ".read": "auth != null",
       "$ipId": {
-        ".write": true,
+        ".write": "auth != null",
         ".validate": "newData.hasChildren(['id', 'title'])",
         "id": { ".validate": "newData.isString()" },
         "title": { ".validate": "newData.isString()" }
@@ -65,9 +65,9 @@
     },
 
     "allIPs": {
-      ".read": true,
+      ".read": "auth != null",
       "$ipId": {
-        ".write": true,
+        ".write": "auth != null",
         ".validate": "newData.hasChildren(['id', 'title'])",
         "id": { ".validate": "newData.isString()" },
         "title": { ".validate": "newData.isString()" }
@@ -75,18 +75,18 @@
     },
 
     "publicCreators": {
-      ".read": true,
+      ".read": "auth != null",
       "$nickname": {
-        ".write": true,
+        ".write": "auth != null",
         ".validate": "newData.hasChildren(['nickname', 'positions'])",
         "nickname": { ".validate": "newData.isString()" }
       }
     },
 
     "positions": {
-      ".read": true,
+      ".read": "auth != null",
       "$posId": {
-        ".write": true,
+        ".write": "auth != null",
         ".validate": "newData.hasChildren(['id', 'ipTitle', 'role', 'ownerNickname'])",
         "id": { ".validate": "newData.isString()" },
         "ipTitle": { ".validate": "newData.isString()" },
@@ -98,10 +98,10 @@
     },
 
     "ipJoinRequests": {
-      ".read": true,
+      ".read": "auth != null",
       "$ipId": {
         "$reqId": {
-          ".write": true,
+          ".write": "auth != null",
           ".validate": "newData.hasChildren(['id', 'name', 'ipId', 'status', 'requestedAt'])",
           "name": { ".validate": "newData.isString()" },
           "ipId": { ".validate": "newData.isString()" },
@@ -112,10 +112,10 @@
     },
 
     "positionApplicants": {
-      ".read": true,
+      ".read": "auth != null",
       "$posId": {
         "$appId": {
-          ".write": true,
+          ".write": "auth != null",
           ".validate": "newData.hasChildren(['id', 'name', 'status', 'appliedAt'])",
           "name": { ".validate": "newData.isString()" },
           "status": { ".validate": "newData.isString() && (newData.val() == 'pending' || newData.val() == 'accepted' || newData.val() == 'rejected')" },
@@ -125,10 +125,10 @@
     },
 
     "ipFollowers": {
-      ".read": true,
+      ".read": "auth != null",
       "$ipId": {
         "$nickname": {
-          ".write": true,
+          ".write": "auth != null",
           ".validate": "newData.hasChildren(['name', 'followedAt'])",
           "name": { ".validate": "newData.isString()" },
           "followedAt": { ".validate": "newData.isString()" }
