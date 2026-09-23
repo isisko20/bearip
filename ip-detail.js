@@ -66,6 +66,57 @@ const IPD_GOAL_LABELS = { webnovel: '웹소설', webtoon: '웹툰', video: '영�
 // the recruit list can redraw when postings/applications change elsewhere.
 let ipdCurrentIp = null;
 
+function ipdFormatRelativeTime(iso) {
+  const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (min < 1) return '방금 전';
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  return `${Math.floor(hr / 24)}일 전`;
+}
+
+// "콘텐츠/회차" — this IP's real episodes (currentIP.episodes), each opening
+// the real reader (content-detail.html) with this IP's full snapshot handed
+// over the same one-shot sessionStorage way odBuildPublishedCard etc. already
+// do — a published IP may not exist in the reader's own local storage at all.
+function ipdRenderEpisodeList() {
+  const countEl = document.getElementById('ipdEpCount');
+  const listEl = document.querySelector('.ipd-ep-list');
+  if (!countEl || !listEl || !ipdCurrentIp) return;
+  const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
+  const episodes = ipdCurrentIp.episodes || [];
+  countEl.textContent = episodes.length;
+
+  if (!episodes.length) {
+    listEl.innerHTML = '<div class="ipd-ep-empty">아직 등록된 회차가 없어요.</div>';
+    return;
+  }
+  listEl.innerHTML = episodes
+    .map((ep, i) => {
+      const thumbStyle = ep.imageData ? ` style="background-image:url('${ep.imageData}');background-size:cover;background-position:center"` : '';
+      const thumbClass = ep.imageData ? '' : `thumb-${(i % 8) + 1}`;
+      return `
+        <a class="ipd-ep-card" href="#" data-episode-id="${esc(ep.id)}">
+          <div class="ipd-ep-thumb ${thumbClass}"${thumbStyle}></div>
+          <div class="ipd-ep-info">
+            <div class="n">EP ${i + 1}</div>
+            <div class="t">${esc(ep.title || '제목 없음')}</div>
+            <div class="m">${ipdFormatRelativeTime(ep.createdAt)}</div>
+          </div>
+          <svg class="ipd-ep-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+        </a>
+      `;
+    })
+    .join('');
+}
+
+function ipdGoToEpisode(episodeId) {
+  if (!ipdCurrentIp) return;
+  sessionStorage.setItem('bearip_view_ip_snapshot', JSON.stringify(ipdCurrentIp));
+  sessionStorage.setItem('bearip_view_episode_id', episodeId);
+  location.href = 'content-detail.html';
+}
+
 // "모집 중인 포지션" — this IP's real CREW MATCH postings (Firebase), each with
 // an apply button that reflects the user's actual application status. Rebuilt
 // wholesale on every change; clicks are handled by one delegated listener
@@ -187,10 +238,6 @@ function ipdApplyDynamicIP() {
   const ownerName = ip.ownerNickname || (isOwnIP && user ? user.nickname : null);
   ipdOwnerName = ownerName;
 
-  document.getElementById('ipdEpCount').textContent = '0';
-  const epList = document.querySelector('.ipd-ep-list');
-  if (epList) epList.innerHTML = '<div class="ipd-ep-empty">아직 등록된 회차가 없어요.</div>';
-
   const feed = document.querySelector('.ipd-feed');
   if (feed) {
     if (ip.createdAt) {
@@ -203,6 +250,7 @@ function ipdApplyDynamicIP() {
   }
 
   ipdCurrentIp = ip;
+  ipdRenderEpisodeList();
   ipdRenderRecruitPanel();
   ipdRenderCrewPanel();
   ipdRenderJoinButton();
@@ -464,6 +512,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Delegated: the recruit list is rebuilt whenever postings/applications
   // change, so buttons can't be wired one by one at load.
   document.addEventListener('click', (e) => {
+    const epCard = e.target.closest('.ipd-ep-card');
+    if (epCard) {
+      e.preventDefault();
+      ipdGoToEpisode(epCard.dataset.episodeId);
+      return;
+    }
     const btn = e.target.closest('.ipd-apply-btn');
     if (!btn || btn.disabled) return;
     if (!bearipRequireLogin('ip-detail.html')) return;

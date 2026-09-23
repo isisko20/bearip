@@ -377,6 +377,75 @@
    z-index would otherwise fall back to unreliable DOM order). */
 #scoreEditOverlay { z-index: 210; }
 
+/* ---- 회차 관리 ---- */
+.md-episode-add-btn {
+  padding: 10px 18px; border-radius: 999px; border: none;
+  background: linear-gradient(120deg, var(--dr-purple), var(--dr-purple-2));
+  color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.md-episode-vis-hint {
+  margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--dr-active-bg);
+  color: var(--dr-purple); font-size: 11.5px; line-height: 1.5;
+}
+.md-episode-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.md-episode-empty { font-size: 12.5px; color: var(--dr-ink-soft); padding: 30px 0; text-align: center; }
+.md-episode-card {
+  display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px;
+  border: 1px solid var(--dr-border); background: var(--dr-panel);
+}
+.md-episode-thumb {
+  width: 56px; height: 56px; border-radius: 10px; flex-shrink: 0; background-size: cover; background-position: center;
+}
+.md-episode-info { flex: 1; min-width: 0; }
+.md-episode-title { font-size: 13.5px; font-weight: 800; color: var(--dr-ink); }
+.md-episode-preview {
+  font-size: 11.5px; color: var(--dr-ink-soft); margin-top: 2px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.md-episode-meta { font-size: 11px; color: var(--dr-ink-soft); margin-top: 4px; }
+.md-episode-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.md-episode-edit-btn, .md-episode-delete-btn {
+  padding: 7px 12px; border-radius: 8px; border: 1px solid var(--dr-border); background: var(--dr-bg);
+  color: var(--dr-ink-soft); font-size: 11.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.md-episode-edit-btn:hover { color: var(--dr-purple); border-color: var(--dr-purple); }
+.md-episode-delete-btn:hover { color: #d64545; border-color: #d64545; }
+
+/* Editor overlay */
+.md-episode-editor-box { max-width: 420px; max-height: 88vh; overflow-y: auto; }
+.md-episode-title-input {
+  width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--dr-border);
+  background: var(--dr-bg-soft); color: var(--dr-ink); font-size: 13px; font-family: inherit; margin-bottom: 10px;
+}
+.md-episode-title-input:focus { outline: none; border-color: var(--dr-purple); }
+.md-episode-upload {
+  border: 1.5px dashed var(--dr-border); border-radius: 12px; padding: 18px 14px; text-align: center;
+  cursor: pointer; background-size: cover; background-position: center; margin-bottom: 10px;
+}
+.md-episode-upload svg { width: 22px; height: 22px; color: var(--dr-ink-soft); margin-bottom: 6px; }
+.md-episode-upload .t { font-size: 12px; font-weight: 700; color: var(--dr-ink); }
+.md-episode-upload .d { font-size: 10.5px; color: var(--dr-ink-soft); margin-top: 3px; }
+.md-episode-upload.has-file { border-style: solid; }
+.md-episode-upload.has-file .t, .md-episode-upload.has-file .d { text-shadow: 0 1px 3px rgba(0,0,0,0.6); color: #fff; }
+.md-episode-upload.error { border-color: #d64545; }
+.md-episode-upload.error .d { color: #d64545; }
+.md-episode-body-input, .md-episode-note-input {
+  width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--dr-border);
+  background: var(--dr-bg-soft); color: var(--dr-ink); font-size: 12.5px; font-family: inherit;
+  resize: vertical; margin-bottom: 10px;
+}
+.md-episode-body-input { min-height: 120px; }
+.md-episode-note-input { min-height: 56px; }
+.md-episode-body-input:focus, .md-episode-note-input:focus, .md-episode-link-input:focus { outline: none; border-color: var(--dr-purple); }
+.md-episode-link-input {
+  width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--dr-border);
+  background: var(--dr-bg-soft); color: var(--dr-ink); font-size: 12.5px; font-family: inherit; margin-bottom: 10px;
+}
+.md-episode-save-btn {
+  width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--dr-purple);
+  color: #fff; font-size: 13px; font-weight: 800; cursor: pointer; font-family: inherit;
+}
+
 .md-dna-report-box { max-width: 660px; }
 .md-dna-report-body { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; }
 .md-dna-tiles { flex: 1 1 360px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }

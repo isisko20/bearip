@@ -143,11 +143,24 @@ function crRenderPublished() {
     if (actions) actions.style.display = 'flex';
     const infoBtn = document.getElementById('crHeroInfoBtn');
     if (infoBtn) infoBtn.addEventListener('click', () => crGoToIp(ip));
-    // No real per-episode content exists yet (content-detail.html is a
-    // static mockup, not wired to any real IP), so the hero only offers the
-    // one action that's genuinely real: the IP's own detail page.
+    // 재생 only makes sense once this IP actually has a readable episode
+    // (my-dna-episodes.js) — style.display, not .remove(), since this whole
+    // block re-runs on every publicIPs/allIPs change and a first episode
+    // could show up after the empty-state render already ran once.
     const playBtn = document.getElementById('crHeroPlayBtn');
-    if (playBtn) playBtn.remove();
+    if (playBtn) {
+      const firstEpisode = (ip.episodes || [])[0];
+      if (firstEpisode) {
+        playBtn.style.display = '';
+        playBtn.onclick = () => {
+          sessionStorage.setItem('bearip_view_ip_snapshot', JSON.stringify(ip));
+          sessionStorage.setItem('bearip_view_episode_id', firstEpisode.id);
+          location.href = 'content-detail.html';
+        };
+      } else {
+        playBtn.style.display = 'none';
+      }
+    }
   }
 }
 

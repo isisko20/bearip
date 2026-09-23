@@ -40,6 +40,8 @@ const PR_ORPHAN_LABEL = {
   ipJoinRequests: 'IP 참여 신청',
   ipFollowers: '팔로워',
   positionApplicants: '지원자 목록',
+  episodeLikes: '회차 좋아요',
+  episodeComments: '회차 댓글',
 };
 
 function prRenderCleanupResult(report) {

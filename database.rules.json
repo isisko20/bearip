@@ -134,6 +134,35 @@
           "followedAt": { ".validate": "newData.isString()" }
         }
       }
+    },
+
+    "episodeLikes": {
+      ".read": "auth != null",
+      "$ipId": {
+        "$episodeId": {
+          "$nickname": {
+            ".write": "auth != null",
+            ".validate": "newData.hasChildren(['name', 'likedAt'])",
+            "name": { ".validate": "newData.isString()" },
+            "likedAt": { ".validate": "newData.isString()" }
+          }
+        }
+      }
+    },
+
+    "episodeComments": {
+      ".read": "auth != null",
+      "$ipId": {
+        "$episodeId": {
+          "$commentId": {
+            ".write": "auth != null",
+            ".validate": "newData.hasChildren(['id', 'name', 'text', 'createdAt'])",
+            "name": { ".validate": "newData.isString()" },
+            "text": { ".validate": "newData.isString()" },
+            "createdAt": { ".validate": "newData.isString()" }
+          }
+        }
+      }
     }
   }
 }

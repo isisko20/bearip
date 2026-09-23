@@ -159,6 +159,7 @@
           <button class="md-tab active" data-tab-target="overview">개요</button>
           <button class="md-tab" data-tab-target="assets">ASSETS</button>
           <button class="md-tab" data-tab-target="production">제작요청</button>
+          <button class="md-tab" data-tab-target="episodes">회차</button>
           <button class="md-tab" data-tab-target="discussion">DISCUSSION</button>
         </div>
 
@@ -434,6 +435,19 @@
           </section>
         </div>
 
+        <!-- 회차 tab -->
+        <div class="md-tab-panel" data-tab-panel="episodes">
+          <section class="md-panel">
+            <div class="md-section-label">
+              <span class="t">회차 관리</span>
+              <span class="hint">공개하면 IP 상세와 Content Room에서 실제로 읽을 수 있어요</span>
+            </div>
+            <button type="button" class="md-episode-add-btn" id="mdEpisodeAddBtn">+ 새 회차 올리기</button>
+            <div class="md-episode-vis-hint" id="mdEpisodeVisHint" style="display:none">비공개 IP예요. 상단에서 "OPEN DNA에 공개하기"를 눌러야 다른 사람이 회차를 볼 수 있어요.</div>
+            <div class="md-episode-list" id="mdEpisodeList"></div>
+          </section>
+        </div>
+
         <!-- DISCUSSION tab -->
         <div class="md-tab-panel" data-tab-panel="discussion">
           <section class="md-panel">
@@ -540,5 +554,6 @@
 <script src="my-dna-tabs.js"></script>
 <script src="my-dna-discussion.js"></script>
 <script src="my-dna-applicants.js"></script>
+<script src="my-dna-episodes.js"></script>
 </body>
 </html>

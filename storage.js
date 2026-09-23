@@ -310,11 +310,29 @@ function bearipOffloadLocalSubmissionBlobs(ips) {
       if (assetsChanged) ipChanged = true;
     }
 
+    let episodes = ip.episodes;
+    if (Array.isArray(ip.episodes) && ip.episodes.length) {
+      let episodesChanged = false;
+      episodes = ip.episodes.map((ep) => {
+        if (typeof ep.fileData !== 'string' || ep.fileData.length <= BEARIP_LOCAL_INLINE_LIMIT_BYTES) return ep;
+        const blobId = ep.blobId || 'ep_' + ep.id + '_file';
+        try {
+          bearipSaveAssetFile(blobId, bearipDataUrlToBlob(ep.fileData)).catch(() => {});
+        } catch (e) {
+          return ep;
+        }
+        episodesChanged = true;
+        return Object.assign({}, ep, { fileData: null, blobStored: true, blobId });
+      });
+      if (episodesChanged) ipChanged = true;
+    }
+
     if (!ipChanged) return ip;
     anyChanged = true;
     const clone = Object.assign({}, ip);
     if (roadmap !== ip.roadmap) clone.roadmap = roadmap;
     if (assets !== ip.assets) clone.assets = assets;
+    if (episodes !== ip.episodes) clone.episodes = episodes;
     return clone;
   });
   return anyChanged ? out : ips;
@@ -399,6 +417,11 @@ function bearipDeleteIP(id) {
     });
     (ip.assets || []).forEach((asset) => {
       if (asset.blobStored) bearipDeleteAssetFile(asset.blobId || asset.id);
+    });
+    (ip.episodes || []).forEach((ep) => {
+      if (ep.blobId) bearipDeleteAssetFile(ep.blobId);
+      bearipDeleteEpisodeLikes(id, ep.id);
+      bearipDeleteEpisodeComments(id, ep.id);
     });
   }
 
@@ -936,6 +959,159 @@ function bearipDeleteFollowersForIp(ipId) {
   delete _bearipDataCache.ipFollowers[ipId];
 }
 
+// ---- 회차 (episodes) ----
+// A real, readable episode — separate from the roadmap's "업로드/연재" step,
+// which turned out to mean "proof you published elsewhere" (see its hint
+// text: 예: 업로드 완료 화면 / 업로드 플랫폼, 공개 일정), not the actual content.
+// Episodes live on the IP object itself (ip.episodes), the same way roadmap/
+// assets do — bearipUpdateIP already re-syncs the full IP to publicIPs/allIPs
+// on every save, so a published IP's episodes reach other people for free,
+// no separate collection needed for the content itself. Large files still go
+// through the same local IndexedDB offload / remote rehydrate as roadmap
+// submissions (see bearipOffloadLocalSubmissionBlobs / bearipHydrateIpForRemote
+// below) so this doesn't blow past localStorage's quota or leave a reader on
+// another device staring at a null fileData.
+function bearipMakeEpisodeId() {
+  return 'ep_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+function bearipAddEpisode(ip, episode) {
+  const record = Object.assign({ id: bearipMakeEpisodeId(), createdAt: new Date().toISOString() }, episode);
+  const episodes = (ip.episodes || []).concat([record]);
+  ip.episodes = episodes;
+  bearipUpdateIP(ip.id, { episodes });
+  return record;
+}
+
+function bearipUpdateEpisode(ip, episodeId, patch) {
+  const episodes = (ip.episodes || []).map((e) => (e.id === episodeId ? Object.assign({}, e, patch) : e));
+  ip.episodes = episodes;
+  return bearipUpdateIP(ip.id, { episodes });
+}
+
+function bearipDeleteEpisode(ip, episodeId) {
+  const target = (ip.episodes || []).find((e) => e.id === episodeId);
+  if (target && target.blobId && typeof bearipDeleteAssetFile === 'function') bearipDeleteAssetFile(target.blobId);
+  const episodes = (ip.episodes || []).filter((e) => e.id !== episodeId);
+  ip.episodes = episodes;
+  bearipUpdateIP(ip.id, { episodes });
+  bearipDeleteEpisodeLikes(ip.id, episodeId);
+  bearipDeleteEpisodeComments(ip.id, episodeId);
+}
+
+// Renders an episode's actual content — image, then audio/video/other file,
+// then an external link, then whatever short note/body text there is. Mirrors
+// bearipRenderResultFileHtml's shape (see below) but for episode fields
+// instead of a production-request's result* fields, and adds body/note text
+// since an episode (especially a webnovel chapter) is often just prose with
+// no attachment at all.
+function bearipRenderEpisodeBodyHtml(ep, classPrefix) {
+  const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
+  const parts = [];
+  if (ep.imageData) {
+    parts.push(`<img class="${classPrefix}-image" src="${ep.imageData}" alt="${esc(ep.title || '')}">`);
+  }
+  const isAudio = ep.mime && ep.mime.startsWith('audio/');
+  const isVideo = ep.mime && ep.mime.startsWith('video/');
+  const fileMeta = ep.fileSize ? ` · ${Math.max(1, Math.round(ep.fileSize / 1024))}KB` : '';
+  if (ep.fileData && isAudio) {
+    parts.push(`<audio class="${classPrefix}-audio" controls preload="metadata" src="${ep.fileData}"></audio>`);
+  } else if (ep.fileData && isVideo) {
+    parts.push(`<video class="${classPrefix}-video" controls preload="metadata" src="${ep.fileData}"></video>`);
+  } else if (ep.fileData) {
+    parts.push(`<a class="${classPrefix}-file" href="${ep.fileData}" download="${esc(ep.fileName)}" target="_blank" rel="noopener">${esc(ep.fileName)}${fileMeta}</a>`);
+  }
+  if (ep.link) {
+    parts.push(`<a class="${classPrefix}-file" href="${esc(ep.link)}" target="_blank" rel="noopener">외부 링크에서 보기 →</a>`);
+  }
+  if (ep.body) {
+    parts.push(`<p class="${classPrefix}-body">${esc(ep.body).replace(/\n/g, '<br>')}</p>`);
+  }
+  if (ep.note) {
+    parts.push(`<p class="${classPrefix}-note">${esc(ep.note).replace(/\n/g, '<br>')}</p>`);
+  }
+  return parts.join('');
+}
+
+// ---- 회차 좋아요/댓글 — the one piece of an episode that genuinely needs its
+// own Firebase collection: unlike the episode's own content (which travels
+// with the IP snapshot the owner already syncs), a reader liking or
+// commenting on someone ELSE's episode has to reach that owner's device from
+// wherever the reader is. Same $ipId/$episodeId/$key shape as
+// ipFollowers/ipJoinRequests, so cleanup follows the same per-child-delete
+// rule (no collection-root write is granted — see database.rules.json).
+function bearipGetEpisodeLikes(ipId, episodeId) {
+  const map = ((_bearipDataCache.episodeLikes[ipId] || {})[episodeId]) || {};
+  return Object.keys(map).map((key) => Object.assign({}, map[key], { id: key }));
+}
+
+function bearipEpisodeLikeCount(ipId, episodeId) {
+  return bearipGetEpisodeLikes(ipId, episodeId).length;
+}
+
+function bearipIsLikingEpisode(ipId, episodeId) {
+  const user = bearipGetUser();
+  if (!user) return false;
+  return !!((_bearipDataCache.episodeLikes[ipId] || {})[episodeId] || {})[bearipApplicantKey(user.nickname)];
+}
+
+function _bearipEpisodeLikeRef(ipId, episodeId, key) {
+  return firebase.database().ref('episodeLikes/' + ipId + '/' + episodeId + '/' + key);
+}
+
+function bearipLikeEpisode(ipId, episodeId) {
+  const user = bearipGetUser();
+  if (!user) return;
+  const key = bearipApplicantKey(user.nickname);
+  const record = { name: user.nickname, likedAt: new Date().toISOString() };
+  const byIp = (_bearipDataCache.episodeLikes[ipId] = _bearipDataCache.episodeLikes[ipId] || {});
+  (byIp[episodeId] = byIp[episodeId] || {})[key] = record;
+  if (bearipFirebaseReady()) _bearipFirebaseWrite(() => _bearipEpisodeLikeRef(ipId, episodeId, key).set(bearipFirebaseSafe(record)));
+}
+
+function bearipUnlikeEpisode(ipId, episodeId) {
+  const user = bearipGetUser();
+  if (!user) return;
+  const key = bearipApplicantKey(user.nickname);
+  if ((_bearipDataCache.episodeLikes[ipId] || {})[episodeId]) delete _bearipDataCache.episodeLikes[ipId][episodeId][key];
+  if (bearipFirebaseReady()) _bearipEpisodeLikeRef(ipId, episodeId, key).remove();
+}
+
+function bearipDeleteEpisodeLikes(ipId, episodeId) {
+  bearipGetEpisodeLikes(ipId, episodeId).forEach((l) => {
+    if (bearipFirebaseReady()) _bearipEpisodeLikeRef(ipId, episodeId, l.id).remove();
+  });
+  if (_bearipDataCache.episodeLikes[ipId]) delete _bearipDataCache.episodeLikes[ipId][episodeId];
+}
+
+function bearipGetEpisodeComments(ipId, episodeId) {
+  const map = ((_bearipDataCache.episodeComments[ipId] || {})[episodeId]) || {};
+  return Object.keys(map)
+    .map((key) => Object.assign({}, map[key], { id: key }))
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+}
+
+function bearipAddEpisodeComment(ipId, episodeId, text) {
+  const user = bearipGetUser();
+  if (!user || !text) return null;
+  const id = 'epc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  const record = { id, name: user.nickname, text, createdAt: new Date().toISOString() };
+  const byIp = (_bearipDataCache.episodeComments[ipId] = _bearipDataCache.episodeComments[ipId] || {});
+  const byEpisode = (byIp[episodeId] = byIp[episodeId] || {});
+  byEpisode[id] = record;
+  if (bearipFirebaseReady()) {
+    _bearipFirebaseWrite(() => firebase.database().ref('episodeComments/' + ipId + '/' + episodeId + '/' + id).set(bearipFirebaseSafe(record)));
+  }
+  return record;
+}
+
+function bearipDeleteEpisodeComments(ipId, episodeId) {
+  bearipGetEpisodeComments(ipId, episodeId).forEach((c) => {
+    if (bearipFirebaseReady()) firebase.database().ref('episodeComments/' + ipId + '/' + episodeId + '/' + c.id).remove();
+  });
+  if (_bearipDataCache.episodeComments[ipId]) delete _bearipDataCache.episodeComments[ipId][episodeId];
+}
+
 // ---- 고아 데이터 점검 (GM) ----
 // bearipDeleteIP cleans up everything it knows to when an IP is deleted, but
 // that safety net has grown collection by collection over time — anything
@@ -966,6 +1142,8 @@ function bearipScanOrphans() {
     ipJoinRequests: Object.keys(_bearipDataCache.ipJoinRequests || {}).filter((id) => !idSet.has(id)),
     ipFollowers: Object.keys(_bearipDataCache.ipFollowers || {}).filter((id) => !idSet.has(id)),
     positionApplicants: Object.keys(_bearipDataCache.positionApplicants || {}).filter((posId) => !posIdSet.has(posId)),
+    episodeLikes: Object.keys(_bearipDataCache.episodeLikes || {}).filter((id) => !idSet.has(id)),
+    episodeComments: Object.keys(_bearipDataCache.episodeComments || {}).filter((id) => !idSet.has(id)),
   };
 }
 
@@ -988,6 +1166,14 @@ function bearipCleanupOrphans(report) {
   report.positionApplicants.forEach((posId) => {
     bearipGetApplicants(posId).forEach((a) => bearipRemoveApplicantByName(posId, a.name));
     delete _bearipDataCache.positionApplicants[posId];
+  });
+  // Same per-child rule as above — walk down to each episode, then each
+  // like/comment under it, since no rule grants a write at the ipId level.
+  report.episodeLikes.forEach((ipId) => {
+    Object.keys((_bearipDataCache.episodeLikes || {})[ipId] || {}).forEach((episodeId) => bearipDeleteEpisodeLikes(ipId, episodeId));
+  });
+  report.episodeComments.forEach((ipId) => {
+    Object.keys((_bearipDataCache.episodeComments || {})[ipId] || {}).forEach((episodeId) => bearipDeleteEpisodeComments(ipId, episodeId));
   });
 }
 
@@ -1022,8 +1208,8 @@ function bearipSafePathSegment(str) {
   return String(str || '').replace(/[.#$[\]/]/g, '_') || '_guest';
 }
 
-const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {}, ipJoinRequests: {}, ipFollowers: {} };
-const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [], ipJoinRequests: [], ipFollowers: [] };
+const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {}, ipJoinRequests: {}, ipFollowers: {}, episodeLikes: {}, episodeComments: {} };
+const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [], ipJoinRequests: [], ipFollowers: [], episodeLikes: [], episodeComments: [] };
 // Firebase's first 'value' callback for a watched path can take a real
 // moment to arrive (network round-trip, larger the more attachments have
 // piled up) — until then _bearipDataCache[kind] is just its empty starting
@@ -1031,7 +1217,7 @@ const _bearipDataListeners = { notifications: [], productionRequests: [], ipRevi
 // bearipLoadProductionRequests()/bearipLoadIpReviews() etc. before this
 // flips true and shows a flat "없어요" empty state ends up lying to GM —
 // looking permanently broken instead of just still loading.
-const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false, ipJoinRequests: false, ipFollowers: false };
+const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false, ipJoinRequests: false, ipFollowers: false, episodeLikes: false, episodeComments: false };
 
 function bearipIsDataLoaded(kind) {
   return !!_bearipDataLoaded[kind];
@@ -1208,15 +1394,24 @@ async function bearipHydrateSubmissionsForRemote(submissions) {
 }
 
 async function bearipHydrateIpForRemote(ip) {
-  if (!ip || !Array.isArray(ip.roadmap)) return ip;
-  const roadmap = await Promise.all(
-    ip.roadmap.map(async (step) => {
-      if (!Array.isArray(step.submissions) || !step.submissions.length) return step;
-      const submissions = await bearipHydrateSubmissionsForRemote(step.submissions);
-      return submissions === step.submissions ? step : Object.assign({}, step, { submissions });
-    })
-  );
-  return Object.assign({}, ip, { roadmap });
+  if (!ip) return ip;
+  const out = {};
+  if (Array.isArray(ip.roadmap)) {
+    out.roadmap = await Promise.all(
+      ip.roadmap.map(async (step) => {
+        if (!Array.isArray(step.submissions) || !step.submissions.length) return step;
+        const submissions = await bearipHydrateSubmissionsForRemote(step.submissions);
+        return submissions === step.submissions ? step : Object.assign({}, step, { submissions });
+      })
+    );
+  }
+  // Episodes need this even more than roadmap submissions do — those are
+  // only ever seen by the IP's own owner and GM, but an episode is meant to
+  // be read by someone who has no local copy of this IP at all.
+  if (Array.isArray(ip.episodes) && ip.episodes.length) {
+    out.episodes = await bearipHydrateSubmissionsForRemote(ip.episodes);
+  }
+  return Object.keys(out).length ? Object.assign({}, ip, out) : ip;
 }
 
 function bearipAddIpReview(review) {
@@ -1784,6 +1979,8 @@ function _bearipStartFirebaseWatchers() {
   _bearipWatchPath('positionApplicants', 'positionApplicants');
   _bearipWatchPath('ipJoinRequests', 'ipJoinRequests');
   _bearipWatchPath('ipFollowers', 'ipFollowers');
+  _bearipWatchPath('episodeLikes', 'episodeLikes');
+  _bearipWatchPath('episodeComments', 'episodeComments');
   bearipOnDataChange('notifications', bearipPruneOldNotificationsIfDue);
 }
 
