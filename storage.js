@@ -416,6 +416,19 @@ function bearipDeleteIP(id) {
   bearipDeleteFollowersForIp(id);
 }
 
+// ---- Shared genre tag options ----
+// Used by new-ip.js (첫 IP 생성) and my-dna-render.js (MY DNA's genre editor)
+// so both offer the same preset pool — one definition instead of two lists
+// that quietly drift apart. Either surface still lets someone type their own
+// beyond this list; this is just the quick-pick starting set, picked to cover
+// the tropes/genres actually common on Korean web fiction platforms, not just
+// the original 9 broad categories.
+const BEARIP_GENRE_OPTIONS = [
+  '무협', '정통무협', '판타지', '로맨스판타지', 'SF', '미스터리', '스릴러', '로맨스',
+  '드라마', '액션', '코미디', '호러', '느와르', '학원', '일상', '힐링', '성장',
+  '시대극', '아포칼립스', '하렘', '먼치킨', '회귀/환생', '스포츠', '음악',
+];
+
 // ---- Shared "IP DNA 현황" breakdown metadata ----
 // Used by MY DNA (my-dna-render.js), OPEN DNA's DNA report popup, and the
 // DNA ROOM home summary, so all three stay in sync with one definition.

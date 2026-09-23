@@ -123,9 +123,13 @@ document.querySelectorAll('.ni-goal').forEach((goal) => {
   });
 });
 
-// Step 2: genre chips (max 3) — delegated so custom chips added later work
-// exactly the same as the preset ones without needing their own listener.
+// Step 2: genre chips — rendered from the shared pool (storage.js) instead of
+// static markup, so new-ip.html and MY DNA's own genre editor can't drift
+// apart. Delegated click handling so custom chips added later work exactly
+// like the preset ones without needing their own listener. No cap on how
+// many — someone writing a genre-blend IP shouldn't have to pick just one.
 const genreChipsWrap = document.getElementById('genreChips');
+genreChipsWrap.innerHTML = BEARIP_GENRE_OPTIONS.map((g) => `<button class="ni-chip" data-genre="${niEscapeHtml(g)}">${niEscapeHtml(g)}</button>`).join('');
 genreChipsWrap.addEventListener('click', (e) => {
   const chip = e.target.closest('.ni-chip');
   if (!chip) return;
@@ -137,7 +141,6 @@ genreChipsWrap.addEventListener('click', (e) => {
     if (chip.classList.contains('custom')) chip.remove();
     else chip.classList.remove('active');
   } else {
-    if (selectedGenres.length >= 3) return;
     chip.classList.add('active');
     selectedGenres.push(genre);
   }
@@ -150,10 +153,6 @@ const genreCustomAddBtn = document.getElementById('genreCustomAddBtn');
 function addCustomGenre() {
   const value = genreCustomInput.value.trim();
   if (!value) return;
-  if (selectedGenres.length >= 3) {
-    genreCustomInput.value = '';
-    return;
-  }
   if (selectedGenres.includes(value)) {
     genreCustomInput.value = '';
     return;
@@ -630,7 +629,6 @@ function applyDraft(draft) {
   document.querySelectorAll('.ni-chip').forEach((c) => c.classList.remove('active'));
   selectedGenres = [];
   (draft.selectedGenres || []).forEach((g) => {
-    if (selectedGenres.length >= 3) return;
     const existing = Array.from(document.querySelectorAll('.ni-chip')).find((c) => c.dataset.genre === g);
     if (existing) {
       existing.classList.add('active');

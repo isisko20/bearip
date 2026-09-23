@@ -260,8 +260,6 @@ function renderGoals() {
   }
 }
 
-const MD_GENRE_OPTIONS = ['무협', '판타지', 'SF', '미스터리', '로맨스', '드라마', '액션', '코미디', '호러'];
-
 function renderGenreTags() {
   const wrap = document.getElementById('mdGenreTags');
   if (!wrap) return;
@@ -284,12 +282,37 @@ function renderGenreTags() {
 function renderGenrePicker() {
   const picker = document.getElementById('mdGenrePicker');
   if (!picker) return;
+  const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
   const genres = currentIP.genres || [];
-  picker.innerHTML = MD_GENRE_OPTIONS.map(
-    (g) => `<button type="button" class="md-genre-picker-chip${genres.includes(g) ? ' active' : ''}" data-genre="${g}">${g}</button>`
-  ).join('');
+  // Custom (typed-in) tags this IP already has but that aren't in the shared
+  // preset pool still need a chip here — otherwise picking "+ 장르 태그" would
+  // show it as unselected even though it's already on, and re-clicking a
+  // preset chip that happens to share the name would toggle the wrong thing.
+  const customActive = genres.filter((g) => !BEARIP_GENRE_OPTIONS.includes(g));
+  picker.innerHTML =
+    BEARIP_GENRE_OPTIONS.concat(customActive)
+      .map((g) => `<button type="button" class="md-genre-picker-chip${genres.includes(g) ? ' active' : ''}" data-genre="${esc(g)}">${esc(g)}</button>`)
+      .join('') +
+    `<div class="md-genre-custom">
+      <input type="text" id="mdGenreCustomInput" placeholder="원하는 장르를 직접 입력하고 Enter" maxlength="12">
+      <button type="button" class="md-genre-custom-add-btn" id="mdGenreCustomAddBtn">추가</button>
+    </div>`;
   picker.querySelectorAll('.md-genre-picker-chip').forEach((btn) => {
     btn.addEventListener('click', () => toggleGenre(btn.dataset.genre));
+  });
+  const customInput = document.getElementById('mdGenreCustomInput');
+  const addCustom = () => {
+    const value = customInput.value.trim();
+    if (!value) return;
+    customInput.value = '';
+    if (!(currentIP.genres || []).includes(value)) toggleGenre(value);
+  };
+  document.getElementById('mdGenreCustomAddBtn').addEventListener('click', addCustom);
+  customInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addCustom();
+    }
   });
 }
 
