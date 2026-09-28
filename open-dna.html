@@ -157,6 +157,23 @@
       </div>
     </section>
 
+    <!-- 북마크한 IP -->
+    <section>
+      <div class="od-section-head">
+        <div class="od-section-title">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg></span>
+          <div>
+            <div class="t">북마크한 IP</div>
+            <div class="s">카드의 북마크 버튼으로 저장한 IP예요</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="od-cards" id="odBookmarkedGrid">
+        <div class="od-empty-state" id="odBookmarkedEmpty">아직 북마크한 IP가 없어요. 카드의 북마크 버튼을 눌러보세요.</div>
+      </div>
+    </section>
+
     <!-- Bottom -->
     <section class="od-bottom">
       <div class="od-results-panel">
@@ -196,6 +213,7 @@
 <script src="storage.js"></script>
 <script src="auth-ui.js"></script><script src="open-dna.js"></script>
 <script src="open-dna-published.js"></script>
+<script src="open-dna-bookmarks.js"></script>
 <script src="open-dna-search.js"></script>
 <script>
   let odTabNoteTimer = null;

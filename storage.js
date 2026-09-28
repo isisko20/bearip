@@ -997,6 +997,22 @@ function bearipMyBookmarkedEpisodes() {
   return found;
 }
 
+// Every IP this browser bookmarked (open-dna.js's 북마크 button —
+// OD_BOOKMARK_KEY, per-account localStorage, id-only), for OPEN DNA's own
+// 북마크한 IP section — same reverse-lookup shape as bearipMyFollowedIps.
+function bearipMyBookmarkedIps() {
+  let ids;
+  try {
+    ids = JSON.parse(localStorage.getItem(bearipMigrateLegacyKey('bearip_bookmarked_ips'))) || [];
+  } catch (e) {
+    ids = [];
+  }
+  if (!ids.length) return [];
+  const idSet = new Set(ids);
+  const browsable = typeof bearipLoadBrowsableIPs === 'function' ? bearipLoadBrowsableIPs() : [];
+  return browsable.filter((ip) => idSet.has(ip.id));
+}
+
 function _bearipFollowRef(ipId, key) {
   return firebase.database().ref('ipFollowers/' + ipId + '/' + key);
 }

@@ -35,6 +35,11 @@ function odWireBookmarkButton(btn) {
     if (typeof bearipRequireLogin === 'function' && !bearipRequireLogin('open-dna.html')) return;
     const bookmarked = bearipSetToggle(OD_BOOKMARK_KEY, btn.dataset.ip);
     odSetBookmarkUI(btn, bookmarked);
+    // Bookmark state is local-only (no Firebase event fires when it
+    // changes), and this handler's own e.stopPropagation() above means a
+    // document-level delegated listener would never see this click either —
+    // call the 북마크한 IP section's re-render directly instead.
+    if (typeof odbRenderBookmarks === 'function') odbRenderBookmarks();
   });
 }
 
