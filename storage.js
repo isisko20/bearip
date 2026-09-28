@@ -971,6 +971,30 @@ function bearipMyFollowedIps() {
   return browsable.filter((ip) => bearipIsFollowingIp(ip.id));
 }
 
+// Every episode this browser bookmarked (content-detail.html's 북마크
+// button — CD_BOOKMARK_KEY, per-account localStorage, id-only), resolved
+// back to the actual {ip, episode} pair for CONTENT ROOM's 북마크 row. There's
+// no reverse index, so this scans every visible IP's episodes the same way
+// bearipMyFollowedIps scans for follows.
+function bearipMyBookmarkedEpisodes() {
+  let ids;
+  try {
+    ids = JSON.parse(localStorage.getItem(bearipMigrateLegacyKey('bearip_bookmarked_content'))) || [];
+  } catch (e) {
+    ids = [];
+  }
+  if (!ids.length) return [];
+  const idSet = new Set(ids);
+  const browsable = typeof bearipLoadBrowsableIPs === 'function' ? bearipLoadBrowsableIPs() : [];
+  const found = [];
+  browsable.forEach((ip) => {
+    (ip.episodes || []).forEach((episode) => {
+      if (idSet.has(episode.id)) found.push({ ip, episode });
+    });
+  });
+  return found;
+}
+
 function _bearipFollowRef(ipId, key) {
   return firebase.database().ref('ipFollowers/' + ipId + '/' + key);
 }

@@ -29,6 +29,7 @@
       <button class="cr-tab" data-tab="challenge">챌린지</button>
       <button class="cr-tab" data-tab="official">오피셜</button>
       <button class="cr-tab" data-tab="top100">TOP 100</button>
+      <button class="cr-tab" data-tab="bookmark">북마크</button>
     </div>
 
     <label class="cr-search">
@@ -140,6 +141,23 @@
       </div>
     </section>
 
+    <!-- 북마크 -->
+    <section class="cr-row bookmark" data-section="bookmark">
+      <div class="cr-row-head">
+        <div>
+          <div class="cr-row-title"><span class="tier-dot"></span>북마크한 회차</div>
+          <div class="cr-row-sub">회차 리더에서 북마크한 콘텐츠예요</div>
+        </div>
+      </div>
+      <div class="cr-carousel">
+        <button class="cr-arrow prev" aria-label="이전"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <div class="cr-carousel-track">
+          <div class="cr-row-empty">아직 북마크한 회차가 없어요. 회차를 읽다가 북마크 버튼을 눌러보세요.</div>
+        </div>
+        <button class="cr-arrow next" aria-label="다음"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+    </section>
+
   </main>
 </div>
 <script src="script.js"></script>
@@ -151,6 +169,7 @@
 <script src="auth-ui.js"></script>
 <script src="content-room.js"></script>
 <script src="content-room-published.js"></script>
+<script src="content-room-bookmarks.js"></script>
 <script src="content-room-search.js"></script>
 </body>
 </html>
