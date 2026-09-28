@@ -435,9 +435,10 @@ function bearipDeleteIP(id) {
   bearipLoadPositions()
     .filter((p) => p.ownerNickname === me && (p.ipId ? p.ipId === id : p.ipTitle === ip.title))
     .forEach((p) => bearipDeletePosition(p.id));
-  // Same for requests to join it, and its followers.
+  // Same for requests to join it, its followers, and its view records.
   bearipDeleteJoinRequestsForIp(id);
   bearipDeleteFollowersForIp(id);
+  bearipDeleteIpViews(id);
 }
 
 // ---- Shared genre tag options ----
@@ -1030,6 +1031,44 @@ function bearipDeleteFollowersForIp(ipId) {
   delete _bearipDataCache.ipFollowers[ipId];
 }
 
+// ---- IP 조회수 ----
+// One record per unique visitor (ipViews/<ipId>/<nickname>), same shape as
+// 팔로워/좋아요. Replaces the old ip.views field, which only ever incremented
+// when the OWNER'S OWN browser happened to have this IP in local storage —
+// i.e. only when the owner reopened their own IP, never when anyone else
+// actually viewed it (see ipdApplyDynamicIP's old isOwnIP-gated increment).
+// That made CONTENT ROOM's TOP 100 ranking meaningless; this fixes it the
+// same way bearipRecordEpisodeView already does for per-episode views.
+function bearipGetIpViews(ipId) {
+  const map = _bearipDataCache.ipViews[ipId] || {};
+  return Object.keys(map).map((key) => Object.assign({}, map[key], { id: key }));
+}
+
+function bearipIpViewCount(ipId) {
+  return bearipGetIpViews(ipId).length;
+}
+
+function _bearipIpViewRef(ipId, key) {
+  return firebase.database().ref('ipViews/' + ipId + '/' + key);
+}
+
+function bearipRecordIpView(ip) {
+  const user = bearipGetUser();
+  if (!user || !ip || !ip.id) return;
+  if (ip.ownerNickname === user.nickname) return;
+  const key = bearipApplicantKey(user.nickname);
+  const record = { name: user.nickname, viewedAt: new Date().toISOString() };
+  (_bearipDataCache.ipViews[ip.id] = _bearipDataCache.ipViews[ip.id] || {})[key] = record;
+  if (bearipFirebaseReady()) _bearipFirebaseWrite(() => _bearipIpViewRef(ip.id, key).set(bearipFirebaseSafe(record)));
+}
+
+function bearipDeleteIpViews(ipId) {
+  bearipGetIpViews(ipId).forEach((v) => {
+    if (bearipFirebaseReady()) _bearipIpViewRef(ipId, v.id).remove();
+  });
+  delete _bearipDataCache.ipViews[ipId];
+}
+
 // ---- 회차 (episodes) ----
 // A real, readable episode — separate from the roadmap's "업로드/연재" step,
 // which turned out to mean "proof you published elsewhere" (see its hint
@@ -1280,6 +1319,7 @@ function bearipScanOrphans() {
     episodeLikes: Object.keys(_bearipDataCache.episodeLikes || {}).filter((id) => !idSet.has(id)),
     episodeComments: Object.keys(_bearipDataCache.episodeComments || {}).filter((id) => !idSet.has(id)),
     episodeViews: Object.keys(_bearipDataCache.episodeViews || {}).filter((id) => !idSet.has(id)),
+    ipViews: Object.keys(_bearipDataCache.ipViews || {}).filter((id) => !idSet.has(id)),
   };
 }
 
@@ -1314,6 +1354,7 @@ function bearipCleanupOrphans(report) {
   report.episodeViews.forEach((ipId) => {
     Object.keys((_bearipDataCache.episodeViews || {})[ipId] || {}).forEach((episodeId) => bearipDeleteEpisodeViews(ipId, episodeId));
   });
+  report.ipViews.forEach((ipId) => bearipDeleteIpViews(ipId));
 }
 
 // ---- Firebase-backed cross-device data ----
@@ -1347,8 +1388,8 @@ function bearipSafePathSegment(str) {
   return String(str || '').replace(/[.#$[\]/]/g, '_') || '_guest';
 }
 
-const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {}, ipJoinRequests: {}, ipFollowers: {}, episodeLikes: {}, episodeComments: {}, episodeViews: {} };
-const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [], ipJoinRequests: [], ipFollowers: [], episodeLikes: [], episodeComments: [], episodeViews: [] };
+const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {}, ipJoinRequests: {}, ipFollowers: {}, episodeLikes: {}, episodeComments: {}, episodeViews: {}, ipViews: {} };
+const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [], ipJoinRequests: [], ipFollowers: [], episodeLikes: [], episodeComments: [], episodeViews: [], ipViews: [] };
 // Firebase's first 'value' callback for a watched path can take a real
 // moment to arrive (network round-trip, larger the more attachments have
 // piled up) — until then _bearipDataCache[kind] is just its empty starting
@@ -1356,7 +1397,7 @@ const _bearipDataListeners = { notifications: [], productionRequests: [], ipRevi
 // bearipLoadProductionRequests()/bearipLoadIpReviews() etc. before this
 // flips true and shows a flat "없어요" empty state ends up lying to GM —
 // looking permanently broken instead of just still loading.
-const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false, ipJoinRequests: false, ipFollowers: false, episodeLikes: false, episodeComments: false, episodeViews: false };
+const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false, ipJoinRequests: false, ipFollowers: false, episodeLikes: false, episodeComments: false, episodeViews: false, ipViews: false };
 
 function bearipIsDataLoaded(kind) {
   return !!_bearipDataLoaded[kind];
@@ -2121,6 +2162,7 @@ function _bearipStartFirebaseWatchers() {
   _bearipWatchPath('episodeLikes', 'episodeLikes');
   _bearipWatchPath('episodeComments', 'episodeComments');
   _bearipWatchPath('episodeViews', 'episodeViews');
+  _bearipWatchPath('ipViews', 'ipViews');
   bearipOnDataChange('notifications', bearipPruneOldNotificationsIfDue);
 }
 

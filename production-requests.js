@@ -43,6 +43,7 @@ const PR_ORPHAN_LABEL = {
   episodeLikes: '회차 좋아요',
   episodeComments: '회차 댓글',
   episodeViews: '회차 조회수',
+  ipViews: 'IP 조회수',
 };
 
 function prRenderCleanupResult(report) {

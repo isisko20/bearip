@@ -169,16 +169,17 @@ function ipdApplyDynamicIP() {
   }
   if (!ip || !ip.id) return;
 
-  // CONTENT ROOM's cards and TOP 100 ranking read views/likes straight off
-  // the IP, so — unlike the demo's follower/cheer numbers, which have
-  // always been session-local only — this needs to actually persist. Only
-  // meaningful (and only actually writable) for an IP that lives in this
-  // visitor's own local storage — someone else's published IP has no local
-  // copy to update here, so it's just left showing its already-known count.
-  const isOwnIP = typeof bearipLoadIPs === 'function' && bearipLoadIPs().some((i) => i.id === ip.id);
-  if (isOwnIP) {
-    ip.views = (ip.views || 0) + 1;
-    bearipUpdateIP(ip.id, { views: ip.views });
+  // CONTENT ROOM's TOP 100 ranking reads this (bearipIpViewCount) — a real
+  // per-unique-visitor count (storage.js's ipViews), not the old ip.views
+  // field, which only ever incremented when the OWNER'S OWN browser reopened
+  // this same IP (the only case where it lived in local storage to update),
+  // so it never actually counted anyone else viewing it. This runs the
+  // instant the page loads, before anonymous sign-in has necessarily
+  // resolved — same fix content-detail.js's own view-recording needed.
+  if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length && typeof bearipRecordIpView === 'function') {
+    firebase.auth().onAuthStateChanged((u) => {
+      if (u) bearipRecordIpView(ip);
+    });
   }
 
   const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;

@@ -177,6 +177,18 @@
           }
         }
       }
+    },
+
+    "ipViews": {
+      ".read": "auth != null",
+      "$ipId": {
+        "$nickname": {
+          ".write": "auth != null",
+          ".validate": "newData.hasChildren(['name', 'viewedAt'])",
+          "name": { ".validate": "newData.isString()" },
+          "viewedAt": { ".validate": "newData.isString()" }
+        }
+      }
     }
   }
 }
