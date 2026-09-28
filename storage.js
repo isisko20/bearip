@@ -962,6 +962,15 @@ function bearipIsFollowingIp(ipId) {
   return !!(_bearipDataCache.ipFollowers[ipId] || {})[bearipApplicantKey(user.nickname)];
 }
 
+// Every IP the current user follows, for 마이페이지's 팔로잉 tab — there's no
+// per-user reverse index in Firebase, so this just filters every IP this
+// visitor can already see (bearipLoadBrowsableIPs, same list OPEN DNA/CONTENT
+// ROOM browse) down to the ones ipFollowers says they follow.
+function bearipMyFollowedIps() {
+  const browsable = typeof bearipLoadBrowsableIPs === 'function' ? bearipLoadBrowsableIPs() : [];
+  return browsable.filter((ip) => bearipIsFollowingIp(ip.id));
+}
+
 function _bearipFollowRef(ipId, key) {
   return firebase.database().ref('ipFollowers/' + ipId + '/' + key);
 }

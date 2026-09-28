@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderPositionsChips();
   renderPortfolio();
   renderCrew();
+  renderFollowing();
   // True up bio/응원 drift for anyone already opted in (e.g. an IP picked up
   // likes since the last time positions/portfolio were saved here) — a
   // no-op (bearipSyncMyCreatorProfile removes instead) if no position is set.
@@ -30,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
       bearipOnDataChange(kind, renderStats);
       bearipOnDataChange(kind, renderCrew);
     });
+    ['ipFollowers', 'publicIPs', 'allIPs'].forEach((kind) => bearipOnDataChange(kind, renderFollowing));
   }
 
   // ---- Tabs ----
@@ -241,6 +243,47 @@ function renderCrew() {
   });
 
   list.innerHTML = rows.join('') || '<div class="pf-crew-empty">아직 참여 중인 크루가 없어요.</div>';
+}
+
+function renderFollowing() {
+  const list = document.getElementById('followingList');
+  if (!list) return;
+  const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
+  const followed = typeof bearipMyFollowedIps === 'function' ? bearipMyFollowedIps() : [];
+
+  if (!followed.length) {
+    list.innerHTML = '<div class="pf-crew-empty">아직 팔로우한 IP가 없어요. OPEN DNA나 CONTENT ROOM에서 마음에 드는 IP를 팔로우해보세요.</div>';
+    return;
+  }
+
+  list.innerHTML = followed
+    .map(
+      (ip) => `
+      <div class="pf-crew-row">
+        <div class="pf-crew-thumb"${pfCrewThumbStyle(ip)}></div>
+        <div class="pf-crew-info"><div class="n">${esc(ip.title || '제목 없는 IP')}</div><div class="r">팔로워 ${bearipFollowerCount(ip.id)}명</div></div>
+        <button type="button" class="pf-following-view-btn" data-id="${bearipEscapeAttr(ip.id)}">보기</button>
+        <button type="button" class="pf-following-unfollow-btn" data-id="${bearipEscapeAttr(ip.id)}">언팔로우</button>
+      </div>
+    `
+    )
+    .join('');
+
+  list.querySelectorAll('.pf-following-view-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const ip = followed.find((i) => i.id === btn.dataset.id);
+      if (!ip) return;
+      sessionStorage.setItem('bearip_view_ip_snapshot', JSON.stringify(ip));
+      location.href = 'ip-detail.html';
+    });
+  });
+  list.querySelectorAll('.pf-following-unfollow-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      bearipUnfollowIp(btn.dataset.id);
+      bearipShowToast('팔로우를 취소했어요');
+      renderFollowing();
+    });
+  });
 }
 
 function flashSaved(id) {

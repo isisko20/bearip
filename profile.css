@@ -94,6 +94,15 @@
 .pf-crew-status.rejected { background: #fbe9e9; color: #d64545; }
 .pf-crew-empty { font-size: 12.5px; color: var(--dr-ink-soft); }
 
+/* 팔로잉 */
+.pf-following-view-btn, .pf-following-unfollow-btn {
+  font-size: 11px; font-weight: 700; padding: 7px 12px; border-radius: 999px; border: none;
+  cursor: pointer; font-family: inherit; flex-shrink: 0;
+}
+.pf-following-view-btn { background: var(--dr-purple); color: #fff; }
+.pf-following-unfollow-btn { background: var(--dr-bg-soft); color: var(--dr-ink-soft); }
+.pf-following-unfollow-btn:hover { color: #d64545; }
+
 html[data-theme="dark"] .dna-app .pf-vis-badge.apply,
 html[data-theme="dark"] .dna-app .pf-crew-status.pending { background: rgba(217,121,31,0.18); color: #e0954a; }
 html[data-theme="dark"] .dna-app .pf-vis-badge.always,
