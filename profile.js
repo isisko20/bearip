@@ -35,15 +35,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---- Tabs ----
-  document.querySelectorAll('#pfTabs .pf-tab').forEach((tab) => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('#pfTabs .pf-tab').forEach((t) => t.classList.remove('active'));
-      tab.classList.add('active');
-      document.querySelectorAll('.pf-tab-panel').forEach((panel) => {
-        panel.classList.toggle('active', panel.dataset.pfPanel === tab.dataset.pfTab);
-      });
+  function activateTab(name) {
+    const tab = document.querySelector(`#pfTabs .pf-tab[data-pf-tab="${name}"]`);
+    if (!tab) return;
+    document.querySelectorAll('#pfTabs .pf-tab').forEach((t) => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.pf-tab-panel').forEach((panel) => {
+      panel.classList.toggle('active', panel.dataset.pfPanel === name);
     });
+  }
+  document.querySelectorAll('#pfTabs .pf-tab').forEach((tab) => {
+    tab.addEventListener('click', () => activateTab(tab.dataset.pfTab));
   });
+  // crew-match.html's "나도 크리에이터로 등록하기" links here with ?tab=positions
+  // so it lands directly on the tab that actually makes you findable there,
+  // instead of the default 프로필 설정 tab.
+  const requestedTab = new URLSearchParams(location.search).get('tab');
+  if (requestedTab) activateTab(requestedTab);
 
   // ---- 프로필 설정 저장 ----
   document.getElementById('settingsSaveBtn').addEventListener('click', () => {
