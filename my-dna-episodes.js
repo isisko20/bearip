@@ -15,6 +15,7 @@ function mdEpisodeCardHtml(ep, index) {
   const esc = bearipEscapeHtml;
   const likeCount = typeof bearipEpisodeLikeCount === 'function' ? bearipEpisodeLikeCount(currentIP.id, ep.id) : 0;
   const commentCount = typeof bearipGetEpisodeComments === 'function' ? bearipGetEpisodeComments(currentIP.id, ep.id).length : 0;
+  const viewCount = typeof bearipEpisodeViewCount === 'function' ? bearipEpisodeViewCount(currentIP.id, ep.id) : 0;
   const thumbStyle = ep.imageData ? ` style="background-image:url('${ep.imageData}')"` : '';
   const thumbClass = ep.imageData ? '' : MD_EPISODE_THUMBS[index % MD_EPISODE_THUMBS.length];
   const preview = (ep.body || ep.note || '').slice(0, 60);
@@ -24,7 +25,7 @@ function mdEpisodeCardHtml(ep, index) {
       <div class="md-episode-info">
         <div class="md-episode-title">${esc(ep.title || '제목 없음')}</div>
         ${preview ? `<div class="md-episode-preview">${esc(preview)}</div>` : ''}
-        <div class="md-episode-meta">${mdFormatRelativeTime(ep.createdAt)} · 좋아요 ${likeCount} · 댓글 ${commentCount}</div>
+        <div class="md-episode-meta">${mdFormatRelativeTime(ep.createdAt)} · 조회수 ${viewCount} · 좋아요 ${likeCount} · 댓글 ${commentCount}</div>
       </div>
       <div class="md-episode-actions">
         <button type="button" class="md-episode-edit-btn" data-episode-id="${esc(ep.id)}">수정</button>
@@ -240,6 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof bearipOnDataChange === 'function') {
     bearipOnDataChange('episodeLikes', mdRenderEpisodes);
     bearipOnDataChange('episodeComments', mdRenderEpisodes);
+    bearipOnDataChange('episodeViews', mdRenderEpisodes);
   }
 
   const addBtn = document.getElementById('mdEpisodeAddBtn');

@@ -9,7 +9,11 @@
 
 const CD_BOOKMARK_KEY = 'bearip_bookmarked_content';
 const CD_COMMENT_LIKE_KEY = 'bearip_liked_comments';
-const CD_THUMBS = ['thumb-1', 'thumb-2', 'thumb-3', 'thumb-4', 'thumb-5', 'thumb-6', 'thumb-7', 'thumb-8'];
+// cr-thumb-N (content-room.css) — this page never defined its own thumb-N
+// gradient classes, so every fallback thumbnail here (player, creator
+// avatar, episode strip, 추천 콘텐츠) rendered flat black until this pointed
+// at the one that's actually loaded.
+const CD_THUMBS = ['cr-thumb-1', 'cr-thumb-2', 'cr-thumb-3', 'cr-thumb-4', 'cr-thumb-5', 'cr-thumb-6', 'cr-thumb-7', 'cr-thumb-8', 'cr-thumb-9', 'cr-thumb-10'];
 
 function cdFormatCount(n) {
   return n.toLocaleString('ko-KR');
@@ -173,6 +177,92 @@ function cdRenderEpisode(ip, episode) {
   cdRenderEpisodeStrip(ip, episode);
 }
 
+// 추천 콘텐츠 — was 4 hardcoded "모의 선택 영역" rows that never linked
+// anywhere. Picks up to 4 real episodes: this IP's other episodes first
+// (같은 세계관 다음 이야기), then other IPs sharing a genre, then anything
+// else recent, so the panel always has an honest reason for each pick
+// instead of pretending a real recommendation engine exists.
+function cdBuildRelated(ip, episode) {
+  const browsable = typeof bearipLoadBrowsableIPs === 'function' ? bearipLoadBrowsableIPs() : [];
+  const picks = [];
+  const usedEpisodeIds = new Set([episode.id]);
+
+  (ip.episodes || [])
+    .filter((e) => !usedEpisodeIds.has(e.id))
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .forEach((e) => {
+      if (picks.length < 4) {
+        picks.push({ ip, episode: e });
+        usedEpisodeIds.add(e.id);
+      }
+    });
+
+  const myGenres = new Set(ip.genres || []);
+  const others = browsable.filter((i) => i.id !== ip.id);
+
+  if (picks.length < 4 && myGenres.size) {
+    others.forEach((otherIp) => {
+      if (picks.length >= 4) return;
+      const firstEp = (otherIp.episodes || []).find((e) => !usedEpisodeIds.has(e.id));
+      if (!firstEp) return;
+      if (!(otherIp.genres || []).some((g) => myGenres.has(g))) return;
+      picks.push({ ip: otherIp, episode: firstEp });
+      usedEpisodeIds.add(firstEp.id);
+    });
+  }
+
+  if (picks.length < 4) {
+    others.forEach((otherIp) => {
+      if (picks.length >= 4) return;
+      const firstEp = (otherIp.episodes || []).find((e) => !usedEpisodeIds.has(e.id));
+      if (!firstEp) return;
+      picks.push({ ip: otherIp, episode: firstEp });
+      usedEpisodeIds.add(firstEp.id);
+    });
+  }
+
+  return picks;
+}
+
+function cdRenderRelated(ip, episode) {
+  const list = document.getElementById('cdRelatedList');
+  if (!list) return;
+  const esc = bearipEscapeHtml;
+  const picks = cdBuildRelated(ip, episode);
+
+  if (!picks.length) {
+    list.innerHTML = `
+      <div class="cd-related-row disabled">
+        <div class="cd-related-thumb"></div>
+        <div class="cd-related-info"><div class="t">아직 추천할 콘텐츠가 없어요</div></div>
+      </div>
+    `;
+    return;
+  }
+
+  list.innerHTML = picks
+    .map(({ ip: relIp, episode: relEp }, i) => {
+      const thumbStyle = relEp.imageData
+        ? ` style="background-image:url('${relEp.imageData}');background-size:cover;background-position:center"`
+        : '';
+      const thumbClass = relEp.imageData ? '' : CD_THUMBS[i % CD_THUMBS.length];
+      return `
+        <div class="cd-related-row" data-index="${i}" style="cursor:pointer">
+          <div class="cd-related-thumb ${thumbClass}"${thumbStyle}></div>
+          <div class="cd-related-info"><div class="t">${esc(relEp.title || '제목 없음')}</div><div class="m">${esc(relIp.title || '제목 없는 IP')}</div></div>
+        </div>
+      `;
+    })
+    .join('');
+
+  list.querySelectorAll('.cd-related-row').forEach((row) => {
+    row.addEventListener('click', () => {
+      const pick = picks[Number(row.dataset.index)];
+      if (pick) cdGoToEpisode(pick.ip, pick.episode.id);
+    });
+  });
+}
+
 function cdSetFollowUI(btn, following) {
   btn.textContent = following ? '팔로잉' : '팔로우';
   btn.classList.toggle('following', following);
@@ -181,6 +271,11 @@ function cdSetFollowUI(btn, following) {
 function cdRenderLikeCount(ip, episode) {
   const el = document.getElementById('likeCount');
   if (el) el.textContent = cdFormatCount(typeof bearipEpisodeLikeCount === 'function' ? bearipEpisodeLikeCount(ip.id, episode.id) : 0);
+}
+
+function cdRenderViewCount(ip, episode) {
+  const el = document.getElementById('viewCount');
+  if (el) el.textContent = cdFormatCount(typeof bearipEpisodeViewCount === 'function' ? bearipEpisodeViewCount(ip.id, episode.id) : 0);
 }
 
 // Header search — jumps to Content Room's own listing/search rather than
@@ -204,6 +299,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   const { ip, episode } = snapshot;
   cdRenderEpisode(ip, episode);
+  cdRenderRelated(ip, episode);
+  if (typeof bearipOnDataChange === 'function') {
+    bearipOnDataChange('publicIPs', () => cdRenderRelated(ip, episode));
+    bearipOnDataChange('allIPs', () => cdRenderRelated(ip, episode));
+  }
+
+  cdRenderViewCount(ip, episode);
+  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('episodeViews', () => cdRenderViewCount(ip, episode));
+  // Unlike a like/follow click (which only ever fires once anonymous sign-in
+  // has long since resolved), this runs the instant the page loads — calling
+  // bearipRecordEpisodeView straight away would silently no-op on a fresh
+  // load (bearipFirebaseReady() false, no retry — see storage.js's own note
+  // by that function). onAuthStateChanged waits for the one thing that isn't
+  // already true yet.
+  if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length && typeof bearipRecordEpisodeView === 'function') {
+    firebase.auth().onAuthStateChanged((u) => {
+      if (u) bearipRecordEpisodeView(ip.id, episode.id);
+    });
+  }
 
   const likeBtn = document.getElementById('likeBtn');
   const bookmarkBtn = document.getElementById('bookmarkBtn');

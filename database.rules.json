@@ -163,6 +163,20 @@
           }
         }
       }
+    },
+
+    "episodeViews": {
+      ".read": "auth != null",
+      "$ipId": {
+        "$episodeId": {
+          "$nickname": {
+            ".write": "auth != null",
+            ".validate": "newData.hasChildren(['name', 'viewedAt'])",
+            "name": { ".validate": "newData.isString()" },
+            "viewedAt": { ".validate": "newData.isString()" }
+          }
+        }
+      }
     }
   }
 }

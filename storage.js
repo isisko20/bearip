@@ -422,6 +422,7 @@ function bearipDeleteIP(id) {
       if (ep.blobId) bearipDeleteAssetFile(ep.blobId);
       bearipDeleteEpisodeLikes(id, ep.id);
       bearipDeleteEpisodeComments(id, ep.id);
+      bearipDeleteEpisodeViews(id, ep.id);
     });
   }
 
@@ -1006,6 +1007,12 @@ function bearipFollowIp(ip) {
   const record = { name: user.nickname, followedAt: new Date().toISOString() };
   (_bearipDataCache.ipFollowers[ip.id] = _bearipDataCache.ipFollowers[ip.id] || {})[key] = record;
   if (bearipFirebaseReady()) _bearipFirebaseWrite(() => _bearipFollowRef(ip.id, key).set(bearipFirebaseSafe(record)));
+  if (ip.ownerNickname && ip.ownerNickname !== user.nickname) {
+    bearipAddNotification(
+      { type: 'ip', title: '새 팔로워가 생겼어요', message: `${user.nickname}님이 '${ip.title || '제목 없는 IP'}'를 팔로우했어요.`, link: 'my-dna.html' },
+      ip.ownerNickname
+    );
+  }
 }
 
 function bearipUnfollowIp(ipId) {
@@ -1061,6 +1068,7 @@ function bearipDeleteEpisode(ip, episodeId) {
   bearipUpdateIP(ip.id, { episodes });
   bearipDeleteEpisodeLikes(ip.id, episodeId);
   bearipDeleteEpisodeComments(ip.id, episodeId);
+  bearipDeleteEpisodeViews(ip.id, episodeId);
 }
 
 // Renders an episode's actual content — image, then audio/video/other file,
@@ -1123,6 +1131,16 @@ function _bearipEpisodeLikeRef(ipId, episodeId, key) {
   return firebase.database().ref('episodeLikes/' + ipId + '/' + episodeId + '/' + key);
 }
 
+// Looks the episode's own IP up from whatever's currently visible
+// (bearipLoadBrowsableIPs) purely to name the owner/episode in a
+// notification — bearipLikeEpisode/bearipAddEpisodeComment only ever
+// receive the bare ids, matching the rest of this file's episode API.
+function _bearipFindEpisodeIp(ipId, episodeId) {
+  const ip = (typeof bearipLoadBrowsableIPs === 'function' ? bearipLoadBrowsableIPs() : []).find((i) => i.id === ipId);
+  if (!ip) return { ip: null, episode: null };
+  return { ip, episode: (ip.episodes || []).find((e) => e.id === episodeId) || null };
+}
+
 function bearipLikeEpisode(ipId, episodeId) {
   const user = bearipGetUser();
   if (!user) return;
@@ -1131,6 +1149,13 @@ function bearipLikeEpisode(ipId, episodeId) {
   const byIp = (_bearipDataCache.episodeLikes[ipId] = _bearipDataCache.episodeLikes[ipId] || {});
   (byIp[episodeId] = byIp[episodeId] || {})[key] = record;
   if (bearipFirebaseReady()) _bearipFirebaseWrite(() => _bearipEpisodeLikeRef(ipId, episodeId, key).set(bearipFirebaseSafe(record)));
+  const { ip, episode } = _bearipFindEpisodeIp(ipId, episodeId);
+  if (ip && ip.ownerNickname && ip.ownerNickname !== user.nickname) {
+    bearipAddNotification(
+      { type: 'ip', title: '회차에 좋아요를 받았어요', message: `${user.nickname}님이 '${episode ? episode.title || '회차' : '회차'}'에 좋아요를 눌렀어요.`, link: 'my-dna.html' },
+      ip.ownerNickname
+    );
+  }
 }
 
 function bearipUnlikeEpisode(ipId, episodeId) {
@@ -1146,6 +1171,45 @@ function bearipDeleteEpisodeLikes(ipId, episodeId) {
     if (bearipFirebaseReady()) _bearipEpisodeLikeRef(ipId, episodeId, l.id).remove();
   });
   if (_bearipDataCache.episodeLikes[ipId]) delete _bearipDataCache.episodeLikes[ipId][episodeId];
+}
+
+// 조회수 — one record per unique visitor (same shape as 좋아요/팔로워), not a
+// raw hit counter: a plain incrementing number at a shared path can't be
+// written safely under the "no collection-root write" rule every other
+// collection here follows, and counting unique visitors is the more honest
+// number anyway (refreshing the page shouldn't inflate it). The owner's own
+// visits don't count — same reasoning as content-detail.js not inflating a
+// creator's likes on their own work by even offering the like button there.
+function bearipGetEpisodeViews(ipId, episodeId) {
+  const map = ((_bearipDataCache.episodeViews[ipId] || {})[episodeId]) || {};
+  return Object.keys(map).map((key) => Object.assign({}, map[key], { id: key }));
+}
+
+function bearipEpisodeViewCount(ipId, episodeId) {
+  return bearipGetEpisodeViews(ipId, episodeId).length;
+}
+
+function _bearipEpisodeViewRef(ipId, episodeId, key) {
+  return firebase.database().ref('episodeViews/' + ipId + '/' + episodeId + '/' + key);
+}
+
+function bearipRecordEpisodeView(ipId, episodeId) {
+  const user = bearipGetUser();
+  if (!user) return;
+  const { ip } = _bearipFindEpisodeIp(ipId, episodeId);
+  if (ip && ip.ownerNickname === user.nickname) return;
+  const key = bearipApplicantKey(user.nickname);
+  const record = { name: user.nickname, viewedAt: new Date().toISOString() };
+  const byIp = (_bearipDataCache.episodeViews[ipId] = _bearipDataCache.episodeViews[ipId] || {});
+  (byIp[episodeId] = byIp[episodeId] || {})[key] = record;
+  if (bearipFirebaseReady()) _bearipFirebaseWrite(() => _bearipEpisodeViewRef(ipId, episodeId, key).set(bearipFirebaseSafe(record)));
+}
+
+function bearipDeleteEpisodeViews(ipId, episodeId) {
+  bearipGetEpisodeViews(ipId, episodeId).forEach((v) => {
+    if (bearipFirebaseReady()) _bearipEpisodeViewRef(ipId, episodeId, v.id).remove();
+  });
+  if (_bearipDataCache.episodeViews[ipId]) delete _bearipDataCache.episodeViews[ipId][episodeId];
 }
 
 function bearipGetEpisodeComments(ipId, episodeId) {
@@ -1165,6 +1229,13 @@ function bearipAddEpisodeComment(ipId, episodeId, text) {
   byEpisode[id] = record;
   if (bearipFirebaseReady()) {
     _bearipFirebaseWrite(() => firebase.database().ref('episodeComments/' + ipId + '/' + episodeId + '/' + id).set(bearipFirebaseSafe(record)));
+  }
+  const { ip, episode } = _bearipFindEpisodeIp(ipId, episodeId);
+  if (ip && ip.ownerNickname && ip.ownerNickname !== user.nickname) {
+    bearipAddNotification(
+      { type: 'ip', title: '회차에 댓글이 달렸어요', message: `${user.nickname}님이 '${episode ? episode.title || '회차' : '회차'}'에 댓글을 남겼어요: "${text}"`, link: 'my-dna.html' },
+      ip.ownerNickname
+    );
   }
   return record;
 }
@@ -1208,6 +1279,7 @@ function bearipScanOrphans() {
     positionApplicants: Object.keys(_bearipDataCache.positionApplicants || {}).filter((posId) => !posIdSet.has(posId)),
     episodeLikes: Object.keys(_bearipDataCache.episodeLikes || {}).filter((id) => !idSet.has(id)),
     episodeComments: Object.keys(_bearipDataCache.episodeComments || {}).filter((id) => !idSet.has(id)),
+    episodeViews: Object.keys(_bearipDataCache.episodeViews || {}).filter((id) => !idSet.has(id)),
   };
 }
 
@@ -1238,6 +1310,9 @@ function bearipCleanupOrphans(report) {
   });
   report.episodeComments.forEach((ipId) => {
     Object.keys((_bearipDataCache.episodeComments || {})[ipId] || {}).forEach((episodeId) => bearipDeleteEpisodeComments(ipId, episodeId));
+  });
+  report.episodeViews.forEach((ipId) => {
+    Object.keys((_bearipDataCache.episodeViews || {})[ipId] || {}).forEach((episodeId) => bearipDeleteEpisodeViews(ipId, episodeId));
   });
 }
 
@@ -1272,8 +1347,8 @@ function bearipSafePathSegment(str) {
   return String(str || '').replace(/[.#$[\]/]/g, '_') || '_guest';
 }
 
-const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {}, ipJoinRequests: {}, ipFollowers: {}, episodeLikes: {}, episodeComments: {} };
-const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [], ipJoinRequests: [], ipFollowers: [], episodeLikes: [], episodeComments: [] };
+const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {}, ipJoinRequests: {}, ipFollowers: {}, episodeLikes: {}, episodeComments: {}, episodeViews: {} };
+const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [], ipJoinRequests: [], ipFollowers: [], episodeLikes: [], episodeComments: [], episodeViews: [] };
 // Firebase's first 'value' callback for a watched path can take a real
 // moment to arrive (network round-trip, larger the more attachments have
 // piled up) — until then _bearipDataCache[kind] is just its empty starting
@@ -1281,7 +1356,7 @@ const _bearipDataListeners = { notifications: [], productionRequests: [], ipRevi
 // bearipLoadProductionRequests()/bearipLoadIpReviews() etc. before this
 // flips true and shows a flat "없어요" empty state ends up lying to GM —
 // looking permanently broken instead of just still loading.
-const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false, ipJoinRequests: false, ipFollowers: false, episodeLikes: false, episodeComments: false };
+const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false, ipJoinRequests: false, ipFollowers: false, episodeLikes: false, episodeComments: false, episodeViews: false };
 
 function bearipIsDataLoaded(kind) {
   return !!_bearipDataLoaded[kind];
@@ -2045,6 +2120,7 @@ function _bearipStartFirebaseWatchers() {
   _bearipWatchPath('ipFollowers', 'ipFollowers');
   _bearipWatchPath('episodeLikes', 'episodeLikes');
   _bearipWatchPath('episodeComments', 'episodeComments');
+  _bearipWatchPath('episodeViews', 'episodeViews');
   bearipOnDataChange('notifications', bearipPruneOldNotificationsIfDue);
 }
 
