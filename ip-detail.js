@@ -12,6 +12,19 @@ function ipdRenderFollowButton() {
   if (countEl) countEl.textContent = bearipFollowerCount(ipdCurrentIp.id);
 }
 
+// 응원(좋아요) — real per-unique-cheerer count (storage.js's ipCheers), same
+// shape as the follow button above. Used to persist into ip.likes via
+// bearipUpdateIP, which only ever actually saved when the clicker happened
+// to be the IP's own owner — everyone else's cheer just flickered the
+// on-screen number until the next reload.
+function ipdRenderCheerButton() {
+  const btn = document.getElementById('ipdCheerBtn');
+  const countEl = document.getElementById('ipdCheerCount');
+  if (!btn || !ipdCurrentIp) return;
+  btn.classList.toggle('active', bearipIsCheeringIp(ipdCurrentIp.id));
+  if (countEl) countEl.textContent = bearipFormatCount(bearipIpCheerCount(ipdCurrentIp.id));
+}
+
 // 참여하기 — label/enabled state comes from the user's real join request
 // (owner accept/reject included), not a local flag.
 function ipdRenderJoinButton() {
@@ -271,7 +284,7 @@ function ipdApplyDynamicIP() {
   const cheerBtn = document.getElementById('ipdCheerBtn');
   cheerBtn.dataset.ip = ip.id;
   cheerBtn.dataset.ipTitle = ip.title;
-  document.getElementById('ipdCheerCount').textContent = bearipFormatCount(ip.likes || 0);
+  ipdRenderCheerButton();
 
   const descEl = document.querySelector('.ipd-panel p.desc');
   if (descEl) descEl.textContent = ip.synopsis || ip.logline || '아직 작성된 소개가 없어요.';
@@ -489,8 +502,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Restore state from a previous visit.
   ipdRenderJoinButton();
   ipdRenderFollowButton();
+  ipdRenderCheerButton();
 
   if (typeof bearipOnDataChange === 'function') {
+    bearipOnDataChange('ipCheers', ipdRenderCheerButton);
     bearipOnDataChange('positions', ipdRenderRecruitPanel);
     bearipOnDataChange('positionApplicants', ipdRenderRecruitPanel);
     bearipOnDataChange('positionApplicants', ipdRenderCrewChatPanel);
@@ -550,32 +565,14 @@ document.addEventListener('DOMContentLoaded', () => {
     ipdRenderFollowButton();
   });
 
-  // 좋아요 (응원) — real IPs persist the count into ip.likes so CONTENT
-  // ROOM's cards and the TOP 100 ranking reflect it; the demo project has
-  // no real storage record, so it falls back to a session-local count like
-  // the follow button already does for it.
+  // 좋아요 (응원) — real per-unique-cheerer count, toggled the same way
+  // follow is above.
   const cheerBtn = document.getElementById('ipdCheerBtn');
-  const cheerCountEl = document.getElementById('ipdCheerCount');
-  const IPD_LIKE_KEY = 'bearip_liked_ips';
-  const baseCheerCount = bearipParseCount(cheerCountEl.textContent);
-  const alreadyCheered = bearipSetHas(IPD_LIKE_KEY, cheerBtn.dataset.ip);
-  cheerBtn.classList.toggle('active', alreadyCheered);
-  if (!bearipLoadIPs().some((i) => i.id === cheerBtn.dataset.ip)) {
-    cheerCountEl.textContent = bearipFormatCount(baseCheerCount + (alreadyCheered ? 1 : 0));
-  }
-
   cheerBtn.addEventListener('click', () => {
-    if (!bearipRequireLogin('ip-detail.html')) return;
-    const nowCheered = bearipSetToggle(IPD_LIKE_KEY, cheerBtn.dataset.ip);
-    cheerBtn.classList.toggle('active', nowCheered);
-    const realIp = bearipLoadIPs().find((i) => i.id === cheerBtn.dataset.ip);
-    if (realIp) {
-      const likes = Math.max(0, (realIp.likes || 0) + (nowCheered ? 1 : -1));
-      bearipUpdateIP(realIp.id, { likes });
-      cheerCountEl.textContent = bearipFormatCount(likes);
-    } else {
-      cheerCountEl.textContent = bearipFormatCount(baseCheerCount + (nowCheered ? 1 : 0));
-    }
+    if (!bearipRequireLogin('ip-detail.html') || !ipdCurrentIp) return;
+    if (bearipIsCheeringIp(ipdCurrentIp.id)) bearipUncheerIp(ipdCurrentIp.id);
+    else bearipCheerIp(ipdCurrentIp);
+    ipdRenderCheerButton();
   });
 
   // Delegated: the recruit list is rebuilt whenever postings/applications

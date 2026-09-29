@@ -225,6 +225,18 @@
           "createdAt": { ".validate": "newData.isString()" }
         }
       }
+    },
+
+    "ipCheers": {
+      ".read": "auth != null",
+      "$ipId": {
+        "$nickname": {
+          ".write": "auth != null",
+          ".validate": "newData.hasChildren(['name', 'cheeredAt'])",
+          "name": { ".validate": "newData.isString()" },
+          "cheeredAt": { ".validate": "newData.isString()" }
+        }
+      }
     }
   }
 }

@@ -45,6 +45,7 @@ const PR_ORPHAN_LABEL = {
   episodeViews: '회차 조회수',
   ipViews: 'IP 조회수',
   crewChat: '크루 채팅',
+  ipCheers: 'IP 응원',
 };
 
 function prRenderCleanupResult(report) {

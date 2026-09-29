@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // auth-ui.js's unread-badge refresh).
   if (typeof bearipOnDataChange === 'function') {
     bearipOnDataChange('notifications', renderStats);
+    bearipOnDataChange('ipCheers', renderStats);
     // 지원한 포지션 count and the 소속 크루 rows both come from shared
     // posting/applicant data that loads (and changes) asynchronously.
     ['positions', 'positionApplicants', 'ipJoinRequests'].forEach((kind) => {
@@ -131,10 +132,11 @@ function renderStats() {
   if (proposalsEl) {
     proposalsEl.textContent = bearipLoadNotifications().filter((n) => n.title === '매치 제안을 받았어요').length;
   }
-  // 받은 응원 — the real sum of 좋아요 across every IP this user owns (same
-  // count ip-detail.js's 응원 button and CONTENT ROOM both read/write).
+  // 받은 응원 — the real sum of unique cheerers across every IP this user
+  // owns (bearipIpCheerCount, same count ip-detail.js's 응원 button and
+  // CONTENT ROOM both read/write).
   const cheersEl = document.getElementById('pfStatCheers');
-  if (cheersEl) cheersEl.textContent = bearipFormatCount(ips.reduce((sum, ip) => sum + (ip.likes || 0), 0));
+  if (cheersEl) cheersEl.textContent = bearipFormatCount(ips.reduce((sum, ip) => sum + bearipIpCheerCount(ip.id), 0));
 }
 
 function renderPositionsChips() {

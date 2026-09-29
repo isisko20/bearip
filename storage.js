@@ -441,6 +441,7 @@ function bearipDeleteIP(id) {
   bearipDeleteFollowersForIp(id);
   bearipDeleteIpViews(id);
   bearipDeleteCrewChat(id);
+  bearipDeleteIpCheers(id);
 }
 
 // ---- Shared genre tag options ----
@@ -1087,6 +1088,58 @@ function bearipDeleteIpViews(ipId) {
   delete _bearipDataCache.ipViews[ipId];
 }
 
+// ---- IP 응원(좋아요) ----
+// One record per unique cheerer (ipCheers/<ipId>/<nickname>), same shape as
+// ipViews/ipFollowers. Replaces the old ip.likes field, which — like the old
+// ip.views — only ever persisted when the person clicking 응원 happened to be
+// the IP's OWNER on their own device (the only case where bearipUpdateIP's
+// write actually lands anywhere read back). Every other real visitor's cheer
+// only ever bumped a display-only local count that a refresh threw away, so
+// CONTENT ROOM cards, TOP 100, "받은 응원", and CREW MATCH's 응원 stat were
+// all reading a number that basically never reflected real engagement.
+function bearipGetIpCheers(ipId) {
+  const map = _bearipDataCache.ipCheers[ipId] || {};
+  return Object.keys(map).map((key) => Object.assign({}, map[key], { id: key }));
+}
+
+function bearipIpCheerCount(ipId) {
+  return bearipGetIpCheers(ipId).length;
+}
+
+function bearipIsCheeringIp(ipId) {
+  const user = bearipGetUser();
+  if (!user) return false;
+  return !!(_bearipDataCache.ipCheers[ipId] || {})[bearipApplicantKey(user.nickname)];
+}
+
+function _bearipIpCheerRef(ipId, key) {
+  return firebase.database().ref('ipCheers/' + ipId + '/' + key);
+}
+
+function bearipCheerIp(ip) {
+  const user = bearipGetUser();
+  if (!user || !ip || !ip.id) return;
+  const key = bearipApplicantKey(user.nickname);
+  const record = { name: user.nickname, cheeredAt: new Date().toISOString() };
+  (_bearipDataCache.ipCheers[ip.id] = _bearipDataCache.ipCheers[ip.id] || {})[key] = record;
+  if (bearipFirebaseReady()) _bearipFirebaseWrite(() => _bearipIpCheerRef(ip.id, key).set(bearipFirebaseSafe(record)));
+}
+
+function bearipUncheerIp(ipId) {
+  const user = bearipGetUser();
+  if (!user) return;
+  const key = bearipApplicantKey(user.nickname);
+  if (_bearipDataCache.ipCheers[ipId]) delete _bearipDataCache.ipCheers[ipId][key];
+  if (bearipFirebaseReady()) _bearipIpCheerRef(ipId, key).remove();
+}
+
+function bearipDeleteIpCheers(ipId) {
+  bearipGetIpCheers(ipId).forEach((c) => {
+    if (bearipFirebaseReady()) _bearipIpCheerRef(ipId, c.id).remove();
+  });
+  delete _bearipDataCache.ipCheers[ipId];
+}
+
 // ---- 회차 (episodes) ----
 // A real, readable episode — separate from the roadmap's "업로드/연재" step,
 // which turned out to mean "proof you published elsewhere" (see its hint
@@ -1502,6 +1555,7 @@ function bearipScanOrphans() {
     episodeViews: Object.keys(_bearipDataCache.episodeViews || {}).filter((id) => !idSet.has(id)),
     ipViews: Object.keys(_bearipDataCache.ipViews || {}).filter((id) => !idSet.has(id)),
     crewChat: Object.keys(_bearipDataCache.crewChat || {}).filter((id) => !idSet.has(id)),
+    ipCheers: Object.keys(_bearipDataCache.ipCheers || {}).filter((id) => !idSet.has(id)),
   };
 }
 
@@ -1538,6 +1592,7 @@ function bearipCleanupOrphans(report) {
   });
   report.ipViews.forEach((ipId) => bearipDeleteIpViews(ipId));
   report.crewChat.forEach((ipId) => bearipDeleteCrewChat(ipId));
+  report.ipCheers.forEach((ipId) => bearipDeleteIpCheers(ipId));
 }
 
 // ---- Firebase-backed cross-device data ----
@@ -1571,8 +1626,8 @@ function bearipSafePathSegment(str) {
   return String(str || '').replace(/[.#$[\]/]/g, '_') || '_guest';
 }
 
-const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {}, ipJoinRequests: {}, ipFollowers: {}, episodeLikes: {}, episodeComments: {}, episodeViews: {}, ipViews: {}, dmThreads: {}, crewChat: {} };
-const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [], ipJoinRequests: [], ipFollowers: [], episodeLikes: [], episodeComments: [], episodeViews: [], ipViews: [], dmThreads: [], crewChat: [] };
+const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {}, ipJoinRequests: {}, ipFollowers: {}, episodeLikes: {}, episodeComments: {}, episodeViews: {}, ipViews: {}, dmThreads: {}, crewChat: {}, ipCheers: {} };
+const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [], ipJoinRequests: [], ipFollowers: [], episodeLikes: [], episodeComments: [], episodeViews: [], ipViews: [], dmThreads: [], crewChat: [], ipCheers: [] };
 // Firebase's first 'value' callback for a watched path can take a real
 // moment to arrive (network round-trip, larger the more attachments have
 // piled up) — until then _bearipDataCache[kind] is just its empty starting
@@ -1580,7 +1635,7 @@ const _bearipDataListeners = { notifications: [], productionRequests: [], ipRevi
 // bearipLoadProductionRequests()/bearipLoadIpReviews() etc. before this
 // flips true and shows a flat "없어요" empty state ends up lying to GM —
 // looking permanently broken instead of just still loading.
-const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false, ipJoinRequests: false, ipFollowers: false, episodeLikes: false, episodeComments: false, episodeViews: false, ipViews: false, dmThreads: false, crewChat: false };
+const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false, ipJoinRequests: false, ipFollowers: false, episodeLikes: false, episodeComments: false, episodeViews: false, ipViews: false, dmThreads: false, crewChat: false, ipCheers: false };
 
 function bearipIsDataLoaded(kind) {
   return !!_bearipDataLoaded[kind];
@@ -1965,7 +2020,7 @@ function bearipSyncMyCreatorProfile() {
     bio: user.bio || '',
     positions,
     portfolio,
-    cheers: ips.reduce((sum, ip) => sum + (ip.likes || 0), 0),
+    cheers: ips.reduce((sum, ip) => sum + bearipIpCheerCount(ip.id), 0),
     joinedAt: user.joinedAt || null,
     updatedAt: new Date().toISOString(),
   };
@@ -2348,6 +2403,7 @@ function _bearipStartFirebaseWatchers() {
   _bearipWatchPath('ipViews', 'ipViews');
   _bearipWatchPath('dmThreads', 'dmThreads');
   _bearipWatchPath('crewChat', 'crewChat');
+  _bearipWatchPath('ipCheers', 'ipCheers');
   bearipOnDataChange('notifications', bearipPruneOldNotificationsIfDue);
 }
 

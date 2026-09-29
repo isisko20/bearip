@@ -299,7 +299,7 @@ function renderBottomStats() {
   const joined = typeof bearipMyJoinRequests === 'function' ? bearipMyJoinRequests().filter((r) => r.status === 'accepted') : [];
   const applied = typeof bearipMyAppliedPositionIds === 'function' ? bearipMyAppliedPositionIds() : [];
   const positions = typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : [];
-  const likesTotal = ips.reduce((sum, ip) => sum + (ip.likes || 0), 0);
+  const likesTotal = ips.reduce((sum, ip) => sum + (typeof bearipIpCheerCount === 'function' ? bearipIpCheerCount(ip.id) : 0), 0);
 
   ipsEl.textContent = bearipFormatCount(ips.length);
   document.getElementById('bottomStatJoined').textContent = bearipFormatCount(joined.length);
@@ -314,5 +314,6 @@ document.addEventListener('DOMContentLoaded', () => {
     bearipOnDataChange('positions', renderBottomStats);
     bearipOnDataChange('positionApplicants', renderBottomStats);
     bearipOnDataChange('ipJoinRequests', renderBottomStats);
+    bearipOnDataChange('ipCheers', renderBottomStats);
   }
 });

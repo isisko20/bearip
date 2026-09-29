@@ -11,10 +11,12 @@
 // the full IP snapshot since a published IP may not exist in this visitor's
 // own local storage at all.
 //
-// 조회수/좋아요 are real counts, not placeholders — 좋아요 straight off the IP
-// (ip.likes), 조회수 from storage.js's bearipIpViewCount (one unique visitor
-// per record, recorded from ip-detail.js) — so is the TOP 100 row below,
-// ranked by combined engagement across CHALLENGE + OFFICIAL tier content
+// 조회수/좋아요 are real counts, not placeholders — both are one-record-per-
+// unique-visitor collections in storage.js (bearipIpCheerCount/
+// bearipIpViewCount, recorded from ip-detail.js), not the old ip.likes/
+// ip.views fields, which only ever updated when the owner's own browser
+// happened to be the one clicking — so is the TOP 100 row below, ranked by
+// combined engagement across CHALLENGE + OFFICIAL tier content
 // only, matching that row's own "챌린지 + 오피셜 콘텐츠를 합산한" description.
 //
 // Re-rendered whenever the published list changes, not just on page load —
@@ -77,7 +79,7 @@ function crRenderPublished() {
         <div class="cr-play-overlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
       </div>
       <div class="title">${esc(ip.title || '제목 없는 IP')}</div>
-      <div class="meta">조회수 ${bearipFormatCount(bearipIpViewCount(ip.id))} · 좋아요 ${bearipFormatCount(ip.likes)}</div>
+      <div class="meta">조회수 ${bearipFormatCount(bearipIpViewCount(ip.id))} · 좋아요 ${bearipFormatCount(bearipIpCheerCount(ip.id))}</div>
     `;
     card.addEventListener('click', () => crGoToIp(ip));
     track.appendChild(card);
@@ -87,7 +89,7 @@ function crRenderPublished() {
   if (!rankTrack) return;
   const ranked = entries
     .filter((e) => e.stage === 'challenge' || e.stage === 'official')
-    .sort((a, b) => ((bearipIpViewCount(b.ip.id)) + (b.ip.likes || 0)) - ((bearipIpViewCount(a.ip.id)) + (a.ip.likes || 0)));
+    .sort((a, b) => ((bearipIpViewCount(b.ip.id)) + bearipIpCheerCount(b.ip.id)) - ((bearipIpViewCount(a.ip.id)) + bearipIpCheerCount(a.ip.id)));
 
   if (ranked.length) clearRowEmpty(rankTrack);
   ranked.forEach(({ ip, stage }, i) => {
@@ -100,7 +102,7 @@ function crRenderPublished() {
       <div class="cr-rank-poster-wrap">
         <div class="poster ${className}"${style}><span class="cr-tier-badge ${stage}">${BEARIP_STAGE_LABELS[stage]}</span></div>
         <div class="title">${esc(ip.title || '제목 없는 IP')}</div>
-        <div class="meta">조회수 ${bearipFormatCount(bearipIpViewCount(ip.id))} · 좋아요 ${bearipFormatCount(ip.likes)}</div>
+        <div class="meta">조회수 ${bearipFormatCount(bearipIpViewCount(ip.id))} · 좋아요 ${bearipFormatCount(bearipIpCheerCount(ip.id))}</div>
       </div>
     `;
     card.addEventListener('click', () => crGoToIp(ip));
@@ -111,7 +113,7 @@ function crRenderPublished() {
   // IP above seed stage, if one exists. Otherwise the static "아직
   // 대표작이 없어요" placeholder in the HTML stays as-is.
   const heroCandidates = entries.filter((e) => e.stage !== 'seed').sort(
-    (a, b) => ((bearipIpViewCount(b.ip.id)) + (b.ip.likes || 0)) - ((bearipIpViewCount(a.ip.id)) + (a.ip.likes || 0))
+    (a, b) => ((bearipIpViewCount(b.ip.id)) + bearipIpCheerCount(b.ip.id)) - ((bearipIpViewCount(a.ip.id)) + bearipIpCheerCount(a.ip.id))
   );
   if (heroCandidates.length) {
     const { ip, stage } = heroCandidates[0];
@@ -170,5 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
     bearipOnDataChange('publicIPs', crRenderPublished);
     bearipOnDataChange('allIPs', crRenderPublished);
     bearipOnDataChange('ipViews', crRenderPublished);
+    bearipOnDataChange('ipCheers', crRenderPublished);
   }
 });
