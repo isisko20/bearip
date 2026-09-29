@@ -189,6 +189,42 @@
           "viewedAt": { ".validate": "newData.isString()" }
         }
       }
+    },
+
+    "dmThreads": {
+      ".read": "auth != null",
+      "$threadId": {
+        "participants": {
+          "$nickname": {
+            ".write": "auth != null",
+            ".validate": "newData.hasChildren(['name', 'joinedAt'])",
+            "name": { ".validate": "newData.isString()" },
+            "joinedAt": { ".validate": "newData.isString()" }
+          }
+        },
+        "messages": {
+          "$msgId": {
+            ".write": "auth != null",
+            ".validate": "newData.hasChildren(['from', 'text', 'createdAt'])",
+            "from": { ".validate": "newData.isString()" },
+            "text": { ".validate": "newData.isString()" },
+            "createdAt": { ".validate": "newData.isString()" }
+          }
+        }
+      }
+    },
+
+    "crewChat": {
+      ".read": "auth != null",
+      "$ipId": {
+        "$msgId": {
+          ".write": "auth != null",
+          ".validate": "newData.hasChildren(['name', 'text', 'createdAt'])",
+          "name": { ".validate": "newData.isString()" },
+          "text": { ".validate": "newData.isString()" },
+          "createdAt": { ".validate": "newData.isString()" }
+        }
+      }
     }
   }
 }

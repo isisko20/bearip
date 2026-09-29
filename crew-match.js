@@ -55,9 +55,19 @@ function cmRenderCreatorCard(creator, index) {
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.6 8.5 3 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 4 0 6.4 4 4.5 7.5C19 16.5 12 21 12 21z"/></svg>
         <span>응원 ${typeof bearipFormatCount === 'function' ? bearipFormatCount(creator.cheers || 0) : creator.cheers || 0}</span>
       </span>
-      <button type="button" class="cm-propose-btn">매치 제안</button>
+      <div style="display:flex;gap:6px">
+        <button type="button" class="cm-message-btn">쪽지 보내기</button>
+        <button type="button" class="cm-propose-btn">매치 제안</button>
+      </div>
     </div>
   `;
+
+  const messageBtn = el.querySelector('.cm-message-btn');
+  messageBtn.addEventListener('click', () => {
+    if (!bearipRequireLogin('crew-match.html')) return;
+    sessionStorage.setItem('bearip_dm_open_with', creator.nickname);
+    location.href = 'messages.html';
+  });
 
   const proposeBtn = el.querySelector('.cm-propose-btn');
   cmSetProposeUI(proposeBtn, bearipSetHas(CM_PROPOSE_KEY, creator.nickname));

@@ -29,6 +29,15 @@ function ipdRenderJoinButton() {
 
 // 참여 크리에이터 — the owner plus everyone whose join request was accepted.
 let ipdOwnerName = null;
+
+// A 쪽지 button next to anyone who isn't me — same data-nickname + delegated
+// click pattern for both the owner row and every crew row below.
+function ipdMessageBtnHtml(nickname) {
+  const me = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
+  if (!me || me.nickname === nickname) return '';
+  return `<button type="button" class="ipd-creator-message-btn" data-nickname="${bearipEscapeAttr(nickname)}">쪽지</button>`;
+}
+
 function ipdRenderCrewPanel() {
   const wrap = document.querySelector('.ipd-creators');
   if (!wrap || !ipdCurrentIp) return;
@@ -40,6 +49,7 @@ function ipdRenderCrewPanel() {
       <div class="ipd-creator-row">
         <div class="ipd-creator-avatar thumb-${(i % 8) + 3}"></div>
         <div class="ipd-creator-info"><div class="n">${esc(m.name)}</div><div class="r">크루</div></div>
+        ${ipdMessageBtnHtml(m.name)}
       </div>`
     )
     .join('');
@@ -47,11 +57,47 @@ function ipdRenderCrewPanel() {
     <div class="ipd-creator-row">
       <div class="ipd-creator-avatar thumb-2"></div>
       <div class="ipd-creator-info"><div class="n">${esc(ipdOwnerName || '크리에이터')}</div><div class="r">오너</div></div>
+      ${ipdMessageBtnHtml(ipdOwnerName)}
       <span class="ipd-creator-badge">오너</span>
     </div>
     ${memberHtml}
     ${members.length ? '' : '<div class="ipd-creators-empty">아직 합류한 크루가 없어요. CREW MATCH에서 모집해보세요.</div>'}
   `;
+  wrap.querySelectorAll('.ipd-creator-message-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (!bearipRequireLogin('ip-detail.html')) return;
+      sessionStorage.setItem('bearip_dm_open_with', btn.dataset.nickname);
+      location.href = 'messages.html';
+    });
+  });
+}
+
+// 크루 채팅 — real-time, crew-only (bearipIsCrewMember, storage.js). Hidden
+// entirely for anyone else, same as this being a private crew space rather
+// than another public comment thread.
+function ipdRenderCrewChatPanel() {
+  const panel = document.getElementById('ipdCrewChatPanel');
+  const list = document.getElementById('ipdChatList');
+  if (!panel || !list || !ipdCurrentIp) return;
+
+  const isCrew = typeof bearipIsCrewMember === 'function' && bearipIsCrewMember(ipdCurrentIp);
+  panel.style.display = isCrew ? '' : 'none';
+  if (!isCrew) return;
+
+  const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
+  const messages = typeof bearipGetCrewChatMessages === 'function' ? bearipGetCrewChatMessages(ipdCurrentIp.id) : [];
+  list.innerHTML =
+    messages
+      .map(
+        (m) => `
+      <div class="ipd-chat-msg">
+        <div class="head"><span class="name">${esc(m.name)}</span><span class="time">${ipdFormatRelativeTime(m.createdAt)}</span></div>
+        <div class="text">${esc(m.text)}</div>
+      </div>
+    `
+      )
+      .join('') || '<div class="ipd-chat-empty">아직 대화가 없어요. 크루에게 첫 메시지를 남겨보세요.</div>';
+  list.scrollTop = list.scrollHeight;
 }
 
 function ipdSetFollowUI(btn, following) {
@@ -254,6 +300,7 @@ function ipdApplyDynamicIP() {
   ipdRenderEpisodeList();
   ipdRenderRecruitPanel();
   ipdRenderCrewPanel();
+  ipdRenderCrewChatPanel();
   ipdRenderJoinButton();
   ipdRenderFollowButton();
 
@@ -446,9 +493,30 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof bearipOnDataChange === 'function') {
     bearipOnDataChange('positions', ipdRenderRecruitPanel);
     bearipOnDataChange('positionApplicants', ipdRenderRecruitPanel);
+    bearipOnDataChange('positionApplicants', ipdRenderCrewChatPanel);
     bearipOnDataChange('ipJoinRequests', ipdRenderJoinButton);
     bearipOnDataChange('ipJoinRequests', ipdRenderCrewPanel);
+    bearipOnDataChange('ipJoinRequests', ipdRenderCrewChatPanel);
     bearipOnDataChange('ipFollowers', ipdRenderFollowButton);
+    bearipOnDataChange('crewChat', ipdRenderCrewChatPanel);
+  }
+
+  const chatInput = document.getElementById('ipdChatInput');
+  const chatSendBtn = document.getElementById('ipdChatSendBtn');
+  function ipdSendChat() {
+    if (!chatInput || !ipdCurrentIp) return;
+    const text = chatInput.value.trim();
+    if (!text) return;
+    if (!bearipRequireLogin('ip-detail.html')) return;
+    bearipSendCrewChatMessage(ipdCurrentIp.id, text);
+    chatInput.value = '';
+    ipdRenderCrewChatPanel();
+  }
+  if (chatSendBtn) chatSendBtn.addEventListener('click', ipdSendChat);
+  if (chatInput) {
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') ipdSendChat();
+    });
   }
 
   joinBtn.addEventListener('click', () => {

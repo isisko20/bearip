@@ -308,6 +308,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // 메시지 icon — same live-refresh pattern as the bell above, just counting
+  // unread DM threads (bearipLoadMyDmThreads) instead of notifications.
+  function bearipRefreshMessageIcon() {
+    const unread = typeof bearipLoadMyDmThreads === 'function' ? bearipLoadMyDmThreads().filter((t) => t.unread).length : 0;
+    document.querySelectorAll('.dr-icon-btn[aria-label="메시지"], .od-icon-btn[aria-label="메시지"]').forEach((btn) => {
+      let dot = btn.querySelector('.dot');
+      if (unread > 0 && !dot) {
+        dot = document.createElement('span');
+        dot.className = 'dot';
+        btn.appendChild(dot);
+      }
+      if (dot) dot.style.display = unread > 0 ? '' : 'none';
+    });
+  }
+  bearipRefreshMessageIcon();
+  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('dmThreads', bearipRefreshMessageIcon);
+
+  document.querySelectorAll('.dr-icon-btn[aria-label="메시지"], .od-icon-btn[aria-label="메시지"]').forEach((btn) => {
+    btn.style.cursor = 'pointer';
+    btn.addEventListener('click', () => {
+      if (typeof bearipRequireLogin === 'function' && !bearipRequireLogin('messages.html')) return;
+      location.href = 'messages.html';
+    });
+  });
+
   const chips = document.querySelectorAll('.dr-profile-chip, .od-avatar-chip, .cr-profile');
   if (chips.length === 0) return;
 

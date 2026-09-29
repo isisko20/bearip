@@ -435,10 +435,12 @@ function bearipDeleteIP(id) {
   bearipLoadPositions()
     .filter((p) => p.ownerNickname === me && (p.ipId ? p.ipId === id : p.ipTitle === ip.title))
     .forEach((p) => bearipDeletePosition(p.id));
-  // Same for requests to join it, its followers, and its view records.
+  // Same for requests to join it, its followers, its view records, and its
+  // crew chat history.
   bearipDeleteJoinRequestsForIp(id);
   bearipDeleteFollowersForIp(id);
   bearipDeleteIpViews(id);
+  bearipDeleteCrewChat(id);
 }
 
 // ---- Shared genre tag options ----
@@ -1267,6 +1269,169 @@ function bearipDeleteEpisodeViews(ipId, episodeId) {
   if (_bearipDataCache.episodeViews[ipId]) delete _bearipDataCache.episodeViews[ipId][episodeId];
 }
 
+// ---- 크루 채팅 (real-time group chat, per IP, crew-only) ----
+// Membership isn't its own collection — it's derived from data that already
+// exists: the owner, everyone accepted via 참여하기 (ipJoinRequests), and
+// everyone accepted into one of this IP's CREW MATCH postings
+// (positionApplicants). Same union ip-detail.js's own 참여 크리에이터 panel
+// should eventually use, but that panel currently only shows the
+// ipJoinRequests half — left as-is here since fixing that display is a
+// separate concern from who gets chat access.
+function bearipIpCrewNicknames(ip) {
+  if (!ip || !ip.id) return [];
+  const names = new Set();
+  if (ip.ownerNickname) names.add(ip.ownerNickname);
+  bearipGetJoinRequests(ip.id)
+    .filter((r) => r.status === 'accepted')
+    .forEach((r) => names.add(r.name));
+  (typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : [])
+    .filter((p) => (p.ipId ? p.ipId === ip.id : p.ipTitle === ip.title))
+    .forEach((p) => {
+      bearipGetApplicants(p.id)
+        .filter((a) => a.status === 'accepted')
+        .forEach((a) => names.add(a.name));
+    });
+  return Array.from(names);
+}
+
+function bearipIsCrewMember(ip) {
+  const user = bearipGetUser();
+  if (!user || !ip) return false;
+  return bearipIpCrewNicknames(ip).includes(user.nickname);
+}
+
+function bearipGetCrewChatMessages(ipId) {
+  const map = _bearipDataCache.crewChat[ipId] || {};
+  return Object.keys(map)
+    .map((key) => Object.assign({}, map[key], { id: key }))
+    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+}
+
+function bearipSendCrewChatMessage(ipId, text) {
+  const user = bearipGetUser();
+  if (!user || !text || !ipId) return null;
+  const id = 'cc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  const record = { name: user.nickname, text, createdAt: new Date().toISOString() };
+  const byIp = (_bearipDataCache.crewChat[ipId] = _bearipDataCache.crewChat[ipId] || {});
+  byIp[id] = record;
+  if (bearipFirebaseReady()) {
+    _bearipFirebaseWrite(() => firebase.database().ref('crewChat/' + ipId + '/' + id).set(bearipFirebaseSafe(record)));
+  }
+  return record;
+}
+
+function bearipDeleteCrewChat(ipId) {
+  bearipGetCrewChatMessages(ipId).forEach((m) => {
+    if (bearipFirebaseReady()) firebase.database().ref('crewChat/' + ipId + '/' + m.id).remove();
+  });
+  delete _bearipDataCache.crewChat[ipId];
+}
+
+// ---- 쪽지 (1:1 DM) ----
+// dmThreads/<threadId>/participants/<nickname> names who's in the thread —
+// reading it beats parsing threadId apart, so a nickname containing the
+// same "__" the id is joined with still resolves correctly. threadId itself
+// is still a deterministic sorted join of both nicknames purely so two
+// people always land in the same thread instead of a new one each time.
+function bearipDmThreadId(a, b) {
+  return [bearipSafePathSegment(a), bearipSafePathSegment(b)].sort().join('__');
+}
+
+function _bearipDmThreadRaw(threadId) {
+  return _bearipDataCache.dmThreads[threadId] || {};
+}
+
+function bearipGetDmThreadMessages(threadId) {
+  const map = _bearipDmThreadRaw(threadId).messages || {};
+  return Object.keys(map)
+    .map((key) => Object.assign({}, map[key], { id: key }))
+    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+}
+
+function bearipDmLastReadKey(threadId) {
+  return 'bearip_dm_read_' + threadId;
+}
+
+function bearipMarkDmThreadRead(threadId) {
+  try {
+    localStorage.setItem(bearipScopedKey(bearipDmLastReadKey(threadId)), new Date().toISOString());
+  } catch (e) {
+    /* best-effort */
+  }
+}
+
+function bearipDmLastRead(threadId) {
+  try {
+    return localStorage.getItem(bearipMigrateLegacyKey(bearipDmLastReadKey(threadId))) || '';
+  } catch (e) {
+    return '';
+  }
+}
+
+// Every DM thread the current user is part of, newest activity first —
+// dmThreads has no per-user index, so this scans the (small-friend-group-
+// scale) full collection, same approach bearipMyFollowedIps/
+// bearipMyBookmarkedIps already use for their own reverse lookups.
+function bearipLoadMyDmThreads() {
+  const user = bearipGetUser();
+  if (!user) return [];
+  const myKey = bearipApplicantKey(user.nickname);
+  const threads = [];
+  Object.keys(_bearipDataCache.dmThreads || {}).forEach((threadId) => {
+    const participants = _bearipDmThreadRaw(threadId).participants || {};
+    if (!participants[myKey]) return;
+    const otherKey = Object.keys(participants).find((k) => k !== myKey);
+    const otherNickname = otherKey ? participants[otherKey].name : null;
+    if (!otherNickname) return;
+    const messages = bearipGetDmThreadMessages(threadId);
+    const last = messages[messages.length - 1];
+    const lastRead = bearipDmLastRead(threadId);
+    threads.push({
+      threadId,
+      otherNickname,
+      lastMessage: last ? last.text : '',
+      lastAt: last ? last.createdAt : null,
+      unread: messages.some((m) => m.from !== user.nickname && (!lastRead || m.createdAt > lastRead)),
+    });
+  });
+  threads.sort((a, b) => new Date(b.lastAt || 0) - new Date(a.lastAt || 0));
+  return threads;
+}
+
+function bearipSendDm(toNickname, text) {
+  const user = bearipGetUser();
+  if (!user || !text || !toNickname || toNickname === user.nickname) return null;
+  const threadId = bearipDmThreadId(user.nickname, toNickname);
+  const myKey = bearipApplicantKey(user.nickname);
+  const otherKey = bearipApplicantKey(toNickname);
+  const now = new Date().toISOString();
+  const id = 'dm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  const record = { from: user.nickname, text, createdAt: now };
+
+  const thread = (_bearipDataCache.dmThreads[threadId] = _bearipDataCache.dmThreads[threadId] || {});
+  thread.participants = thread.participants || {};
+  thread.participants[myKey] = { name: user.nickname, joinedAt: thread.participants[myKey] ? thread.participants[myKey].joinedAt : now };
+  thread.participants[otherKey] = { name: toNickname, joinedAt: thread.participants[otherKey] ? thread.participants[otherKey].joinedAt : now };
+  thread.messages = thread.messages || {};
+  thread.messages[id] = record;
+
+  if (bearipFirebaseReady()) {
+    _bearipFirebaseWrite(() => {
+      const base = firebase.database().ref('dmThreads/' + threadId);
+      base.child('participants/' + myKey).set(bearipFirebaseSafe(thread.participants[myKey]));
+      base.child('participants/' + otherKey).set(bearipFirebaseSafe(thread.participants[otherKey]));
+      base.child('messages/' + id).set(bearipFirebaseSafe(record));
+    });
+  }
+
+  bearipAddNotification(
+    { type: 'dm', title: '새 쪽지가 왔어요', message: `${user.nickname}님이 쪽지를 보냈어요: "${text}"`, link: 'messages.html' },
+    toNickname
+  );
+  bearipMarkDmThreadRead(threadId);
+  return record;
+}
+
 function bearipGetEpisodeComments(ipId, episodeId) {
   const map = ((_bearipDataCache.episodeComments[ipId] || {})[episodeId]) || {};
   return Object.keys(map)
@@ -1336,6 +1501,7 @@ function bearipScanOrphans() {
     episodeComments: Object.keys(_bearipDataCache.episodeComments || {}).filter((id) => !idSet.has(id)),
     episodeViews: Object.keys(_bearipDataCache.episodeViews || {}).filter((id) => !idSet.has(id)),
     ipViews: Object.keys(_bearipDataCache.ipViews || {}).filter((id) => !idSet.has(id)),
+    crewChat: Object.keys(_bearipDataCache.crewChat || {}).filter((id) => !idSet.has(id)),
   };
 }
 
@@ -1371,6 +1537,7 @@ function bearipCleanupOrphans(report) {
     Object.keys((_bearipDataCache.episodeViews || {})[ipId] || {}).forEach((episodeId) => bearipDeleteEpisodeViews(ipId, episodeId));
   });
   report.ipViews.forEach((ipId) => bearipDeleteIpViews(ipId));
+  report.crewChat.forEach((ipId) => bearipDeleteCrewChat(ipId));
 }
 
 // ---- Firebase-backed cross-device data ----
@@ -1404,8 +1571,8 @@ function bearipSafePathSegment(str) {
   return String(str || '').replace(/[.#$[\]/]/g, '_') || '_guest';
 }
 
-const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {}, ipJoinRequests: {}, ipFollowers: {}, episodeLikes: {}, episodeComments: {}, episodeViews: {}, ipViews: {} };
-const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [], ipJoinRequests: [], ipFollowers: [], episodeLikes: [], episodeComments: [], episodeViews: [], ipViews: [] };
+const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {}, ipJoinRequests: {}, ipFollowers: {}, episodeLikes: {}, episodeComments: {}, episodeViews: {}, ipViews: {}, dmThreads: {}, crewChat: {} };
+const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [], ipJoinRequests: [], ipFollowers: [], episodeLikes: [], episodeComments: [], episodeViews: [], ipViews: [], dmThreads: [], crewChat: [] };
 // Firebase's first 'value' callback for a watched path can take a real
 // moment to arrive (network round-trip, larger the more attachments have
 // piled up) — until then _bearipDataCache[kind] is just its empty starting
@@ -1413,7 +1580,7 @@ const _bearipDataListeners = { notifications: [], productionRequests: [], ipRevi
 // bearipLoadProductionRequests()/bearipLoadIpReviews() etc. before this
 // flips true and shows a flat "없어요" empty state ends up lying to GM —
 // looking permanently broken instead of just still loading.
-const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false, ipJoinRequests: false, ipFollowers: false, episodeLikes: false, episodeComments: false, episodeViews: false, ipViews: false };
+const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false, ipJoinRequests: false, ipFollowers: false, episodeLikes: false, episodeComments: false, episodeViews: false, ipViews: false, dmThreads: false, crewChat: false };
 
 function bearipIsDataLoaded(kind) {
   return !!_bearipDataLoaded[kind];
@@ -2179,6 +2346,8 @@ function _bearipStartFirebaseWatchers() {
   _bearipWatchPath('episodeComments', 'episodeComments');
   _bearipWatchPath('episodeViews', 'episodeViews');
   _bearipWatchPath('ipViews', 'ipViews');
+  _bearipWatchPath('dmThreads', 'dmThreads');
+  _bearipWatchPath('crewChat', 'crewChat');
   bearipOnDataChange('notifications', bearipPruneOldNotificationsIfDue);
 }
 

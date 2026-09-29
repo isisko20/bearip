@@ -60,6 +60,8 @@
 .ipd-creator-info .n { font-size: 13px; font-weight: 700; }
 .ipd-creator-info .r { font-size: 11px; color: var(--od-ink-soft); }
 .ipd-creator-badge { font-size: 10px; font-weight: 800; color: var(--od-purple); background: var(--od-active-bg); padding: 4px 10px; border-radius: 999px; flex-shrink: 0; }
+.ipd-creator-message-btn { font-size: 10.5px; font-weight: 700; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--od-border); background: transparent; color: var(--od-ink-soft); cursor: pointer; flex-shrink: 0; }
+.ipd-creator-message-btn:hover { color: var(--od-purple); border-color: var(--od-purple); }
 
 /* Episodes */
 .ipd-ep-list { display: flex; flex-direction: column; gap: 10px; }

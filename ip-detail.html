@@ -101,6 +101,16 @@
           </div>
         </section>
 
+        <!-- 크루 채팅 (크루만 보여요) -->
+        <section class="ipd-panel" id="ipdCrewChatPanel" style="display:none">
+          <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg>크루 채팅</h2>
+          <div class="ipd-chat-list" id="ipdChatList"></div>
+          <div class="ipd-chat-composer">
+            <input type="text" id="ipdChatInput" placeholder="크루에게 메시지를 남겨보세요" maxlength="500">
+            <button type="button" id="ipdChatSendBtn">보내기</button>
+          </div>
+        </section>
+
         <!-- 콘텐츠/회차 -->
         <section class="ipd-panel">
           <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>콘텐츠 (<span id="ipdEpCount">0</span>화)</h2>
