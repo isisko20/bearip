@@ -2186,42 +2186,6 @@ async function openAssetPreview(index) {
   }
 }
 
-function renderDiscussion() {
-  const list = document.getElementById('discussList');
-  if (!list) return;
-  list.innerHTML = '';
-
-  const posts = currentIP.discussion || [];
-  if (posts.length === 0) {
-    list.innerHTML = '<div class="md-discuss-empty">아직 올라온 이야기가 없어요. 첫 소식을 남겨보세요.</div>';
-    return;
-  }
-
-  posts.forEach((post) => {
-    const el = document.createElement('div');
-    el.className = 'md-discuss-item';
-    const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
-    el.innerHTML = `
-      <div class="md-discuss-avatar ${post.thumb || 'thumb-1'}"></div>
-      <div class="md-discuss-body">
-        <div class="md-discuss-head"><span class="n">${esc(post.name)}</span><span class="r">${esc(post.role)}</span><span class="d">${mdFormatRelativeTime(post.createdAt)}</span></div>
-        <div class="md-discuss-text">${esc(post.text)}</div>
-        <div class="md-discuss-meta">
-          <button class="md-discuss-reply" data-id="${post.id}">답글</button>
-          <button class="md-discuss-like${post.likedByMe ? ' liked' : ''}" data-id="${post.id}">좋아요 ${post.likes}</button>
-        </div>
-      </div>
-    `;
-    list.appendChild(el);
-  });
-}
-
-function persistDiscussion() {
-  if (currentIP.id !== 'demo' && typeof bearipUpdateIP === 'function') {
-    bearipUpdateIP(currentIP.id, { discussion: currentIP.discussion });
-  }
-}
-
 function renderAll() {
   renderHeader();
   renderPublishButton();
@@ -2231,7 +2195,6 @@ function renderAll() {
   renderRoadmap();
   renderFolderRow();
   renderAssets();
-  renderDiscussion();
   renderProductionRequestsList();
 }
 

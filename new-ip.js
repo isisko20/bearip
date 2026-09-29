@@ -500,8 +500,6 @@ function createIP() {
     productionProgress: null,
     roadmap,
     assets,
-    discussion: [],
-    views: 0,
     likes: 0,
   };
   bearipAddIP(ip);
