@@ -12,6 +12,13 @@ function ipdRenderFollowButton() {
   if (countEl) countEl.textContent = bearipFollowerCount(ipdCurrentIp.id);
 }
 
+// 활동 — episode comments + crew chat messages (bearipIpActivityCount).
+function ipdRenderActivityCount() {
+  const el = document.getElementById('ipdActivityCount');
+  if (!el || !ipdCurrentIp) return;
+  el.textContent = bearipFormatCount(bearipIpActivityCount(ipdCurrentIp));
+}
+
 // 응원(좋아요) — real per-unique-cheerer count (storage.js's ipCheers), same
 // shape as the follow button above. Used to persist into ip.likes via
 // bearipUpdateIP, which only ever actually saved when the clicker happened
@@ -277,10 +284,9 @@ function ipdApplyDynamicIP() {
   followBtn.dataset.ip = ip.id;
   followBtn.dataset.ipTitle = ip.title;
 
-  // No real activity tracking for user IPs yet — an honest zero rather than
-  // carrying over the demo's fixed number. 좋아요 is real, though: it's the
-  // same count CONTENT ROOM and TOP 100 read; 팔로워 is set below.
-  document.getElementById('ipdActivityCount').textContent = '0';
+  // 활동/좋아요/팔로워 are all real counts now (storage.js), same ones
+  // OPEN DNA's cards and TOP 100 read.
+  ipdRenderActivityCount();
   const cheerBtn = document.getElementById('ipdCheerBtn');
   cheerBtn.dataset.ip = ip.id;
   cheerBtn.dataset.ipTitle = ip.title;
@@ -506,6 +512,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (typeof bearipOnDataChange === 'function') {
     bearipOnDataChange('ipCheers', ipdRenderCheerButton);
+    bearipOnDataChange('episodeComments', ipdRenderActivityCount);
+    bearipOnDataChange('crewChat', ipdRenderActivityCount);
     bearipOnDataChange('positions', ipdRenderRecruitPanel);
     bearipOnDataChange('positionApplicants', ipdRenderRecruitPanel);
     bearipOnDataChange('positionApplicants', ipdRenderCrewChatPanel);

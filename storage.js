@@ -1373,6 +1373,15 @@ function bearipSendCrewChatMessage(ipId, text) {
   return record;
 }
 
+// "활동" on IP 상세 / OPEN DNA cards — everything people have actually said
+// on this IP: comments under its episodes plus its crew chat messages.
+// Counts only; the crew chat's content stays crew-only.
+function bearipIpActivityCount(ip) {
+  if (!ip || !ip.id) return 0;
+  const comments = (ip.episodes || []).reduce((sum, ep) => sum + bearipGetEpisodeComments(ip.id, ep.id).length, 0);
+  return comments + bearipGetCrewChatMessages(ip.id).length;
+}
+
 function bearipDeleteCrewChat(ipId) {
   bearipGetCrewChatMessages(ipId).forEach((m) => {
     if (bearipFirebaseReady()) firebase.database().ref('crewChat/' + ipId + '/' + m.id).remove();
