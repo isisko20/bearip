@@ -124,6 +124,9 @@ function cmRenderSavedCreators() {
   });
 
   if (empty) empty.hidden = creators.length > 0;
+  // Fresh cards start unfiltered — crew-match-filter.js re-applies the
+  // current 역할 탭/검색 so a live update doesn't silently undo it.
+  document.dispatchEvent(new CustomEvent('cm:creators-rendered'));
 }
 
 document.addEventListener('DOMContentLoaded', () => {

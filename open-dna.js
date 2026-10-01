@@ -208,21 +208,27 @@ if (odCardsContainer) {
 
 // Sort dropdown — reorders real .od-card elements by real per-card data
 // attributes (set in open-dna-published.js for each published card).
+// 인기순 = 팔로워 + 응원 + 조회수 (card.dataset.popular, open-dna-published.js).
+// Re-runnable: open-dna-published.js rebuilds every card on each live data
+// change, so it calls odApplySort() again afterwards instead of silently
+// falling back to render order.
 const odSortSelect = document.getElementById('odSortSelect');
-if (odSortSelect) {
-  const OD_SORTERS = {
-    latest: (a, b) => (b.dataset.created || '').localeCompare(a.dataset.created || ''),
-    popular: (a, b) => (parseInt(b.dataset.followers, 10) || 0) - (parseInt(a.dataset.followers, 10) || 0),
-    dna: (a, b) => (parseInt(b.dataset.dna, 10) || 0) - (parseInt(a.dataset.dna, 10) || 0),
-    recruiting: (a, b) => (parseInt(b.dataset.recruiting, 10) || 0) - (parseInt(a.dataset.recruiting, 10) || 0),
-  };
-  odSortSelect.addEventListener('change', () => {
-    const container = document.querySelector('.od-cards');
-    const sorter = OD_SORTERS[odSortSelect.value];
-    if (!container || !sorter) return;
-    const cards = [...container.querySelectorAll('.od-card')].sort(sorter);
-    const mocks = [...container.querySelectorAll('.mock-slot')];
-    cards.forEach((c) => container.appendChild(c));
-    mocks.forEach((m) => container.appendChild(m));
-  });
+const OD_SORTERS = {
+  latest: (a, b) => (b.dataset.created || '').localeCompare(a.dataset.created || ''),
+  popular: (a, b) => (parseInt(b.dataset.popular, 10) || 0) - (parseInt(a.dataset.popular, 10) || 0),
+  dna: (a, b) => (parseInt(b.dataset.dna, 10) || 0) - (parseInt(a.dataset.dna, 10) || 0),
+  recruiting: (a, b) => (parseInt(b.dataset.recruiting, 10) || 0) - (parseInt(a.dataset.recruiting, 10) || 0),
+};
+
+function odApplySort() {
+  if (!odSortSelect) return;
+  const container = document.getElementById('odCardsGrid');
+  const sorter = OD_SORTERS[odSortSelect.value];
+  if (!container || !sorter) return;
+  const cards = [...container.querySelectorAll('.od-card')].sort(sorter);
+  const mocks = [...container.querySelectorAll('.mock-slot')];
+  cards.forEach((c) => container.appendChild(c));
+  mocks.forEach((m) => container.appendChild(m));
 }
+
+if (odSortSelect) odSortSelect.addEventListener('change', odApplySort);

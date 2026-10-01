@@ -57,6 +57,10 @@ function odBuildPublishedCard(ip, index) {
   card.dataset.dna = dna;
   const followerCount = typeof bearipFollowerCount === 'function' ? bearipFollowerCount(ip.id) : 0;
   card.dataset.followers = followerCount;
+  card.dataset.popular =
+    followerCount +
+    (typeof bearipIpCheerCount === 'function' ? bearipIpCheerCount(ip.id) : 0) +
+    (typeof bearipIpViewCount === 'function' ? bearipIpViewCount(ip.id) : 0);
   card.dataset.recruiting = isRecruiting ? '1' : '0';
   card.innerHTML = `
     <div class="od-card-banner ${bannerClass}"${bannerStyle}>
@@ -167,8 +171,10 @@ function odRenderPublishedCards() {
       });
     });
   });
-  // Cards were just rebuilt from scratch — reapply whatever 카테고리/검색
-  // filter is active instead of silently resetting it on every live update.
+  // Cards were just rebuilt from scratch — reapply whatever 정렬 and 카테고리/
+  // 검색 filter is active instead of silently resetting them on every live
+  // update.
+  if (typeof odApplySort === 'function') odApplySort();
   if (typeof odApplyFilters === 'function') odApplyFilters();
 }
 
@@ -180,5 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
     bearipOnDataChange('positions', odRenderPublishedCards);
     bearipOnDataChange('ipFollowers', odRenderPublishedCards);
     bearipOnDataChange('ipCheers', odRenderPublishedCards);
+    bearipOnDataChange('ipViews', odRenderPublishedCards);
   }
 });

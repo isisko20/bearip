@@ -50,9 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
     cards.sort((a, b) => {
       if (mode === 'deadline') return a.dataset.deadline.localeCompare(b.dataset.deadline);
       if (mode === 'fewest') return Number(a.dataset.remaining) - Number(b.dataset.remaining);
-      return 0; // "최신순" — keep original document order
+      // "최신순" — sorted explicitly (not "keep document order"), or switching
+      // back from another sort would leave that sort's order in place.
+      return (b.dataset.created || '').localeCompare(a.dataset.created || '');
     });
-    if (mode === 'latest') return; // nothing to reorder
     cards.forEach((card) => positionsList.appendChild(card));
   }
 
@@ -73,6 +74,9 @@ document.addEventListener('DOMContentLoaded', () => {
     applySort();
     applyFilter();
   });
+  // Same for 크리에이터 둘러보기 — those cards are rebuilt on every
+  // publicCreators change (crew-match.js).
+  document.addEventListener('cm:creators-rendered', applyFilter);
 
   // Arriving from a "Creator 찾기" link elsewhere (e.g. MY DNA) pre-selects
   // the matching role tab.

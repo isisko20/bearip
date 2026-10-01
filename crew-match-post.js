@@ -155,7 +155,10 @@ function cmRenderPositionCard(pos) {
   const el = document.createElement('article');
   el.className = 'cm-position-card';
   el.dataset.role = cmGuessRole(pos.tags);
-  el.dataset.deadline = '99-99'; // sorts after dated posts under "마감 임박순"
+  // Real YYYY-MM-DD from the posting form for "마감 임박순"; 상시 모집 (and
+  // postings made before this was stored) sort after every dated one.
+  el.dataset.deadline = pos.deadline || '9999-99-99';
+  el.dataset.created = pos.createdAt || '';
   el.dataset.remaining = String(pos.count - (pos.filled || 0));
   el.dataset.posId = pos.id;
   el.dataset.ipTitle = pos.ipTitle;
@@ -355,6 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tags: selectedSkills.slice(),
       desc,
       deadlineText,
+      deadline: deadlineRaw || undefined,
       thumb,
       createdAt: new Date().toISOString(),
     };
