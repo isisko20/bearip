@@ -487,19 +487,89 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', closeMenu);
   window.addEventListener('scroll', closeMenu, true);
 
-  // Search inputs/buttons that aren't wired to real filtering yet (CREW
-  // MATCH's and OPEN DNA's are — both excluded by id) get honest "준비 중"
-  // feedback instead of silently doing nothing.
+  // Search from any page that doesn't have its own filtering: hands the query
+  // to OPEN DNA (whose search box filters real published IPs by title,
+  // keyword and tag) via the same one-shot sessionStorage handoff pattern the
+  // rest of the app uses — open-dna-search.js consumes it on load. CREW MATCH's,
+  // OPEN DNA's and CONTENT ROOM's own search inputs filter in place and are
+  // excluded by id.
+  function bearipSearchGo(q) {
+    q = (q || '').trim();
+    if (!q) return;
+    sessionStorage.setItem('bearip_open_dna_query', q);
+    location.href = 'open-dna.html';
+  }
+
+  const SELF_FILTERING_SEARCH_IDS = ['cmSearchInput', 'odSearchInput', 'crSearchInput', 'crHeaderSearchInput'];
   document.querySelectorAll('.od-search input, .cr-search input').forEach((input) => {
-    if (input.id === 'cmSearchInput' || input.id === 'odSearchInput') return;
+    if (SELF_FILTERING_SEARCH_IDS.includes(input.id)) return;
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        bearipShowToast('검색 기능은 아직 준비 중이에요');
+        bearipSearchGo(input.value);
       }
     });
   });
+
+  // The dr-* pages only have a magnifier icon, no input — open a small
+  // search box under it.
+  function bearipInjectSearchPopStyles() {
+    if (document.getElementById('bearipSearchPopStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'bearipSearchPopStyles';
+    style.textContent = `
+      .bearip-search-pop { position: fixed; z-index: 9999; display: flex; gap: 8px; padding: 10px;
+        background: var(--dr-panel, var(--od-panel, #fff)); border: 1px solid var(--dr-border, var(--od-border, #e9e7f3));
+        border-radius: 14px; box-shadow: 0 12px 34px rgba(43,32,92,0.18); }
+      .bearip-search-pop input { width: 220px; padding: 9px 13px; border-radius: 999px; font-size: 13px; font-family: inherit;
+        border: 1px solid var(--dr-border, var(--od-border, #e9e7f3)); background: var(--dr-bg-soft, var(--od-bg, #f6f5fb));
+        color: var(--dr-ink, var(--od-ink, #1c1830)); outline: none; }
+      .bearip-search-pop input:focus { border-color: var(--dr-purple, var(--od-purple, #6d4de6)); }
+      .bearip-search-pop button { padding: 9px 16px; border-radius: 999px; border: none; font-size: 12.5px; font-weight: 700;
+        background: var(--dr-purple, var(--od-purple, #6d4de6)); color: #fff; cursor: pointer; font-family: inherit; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function bearipToggleSearchPop(anchor) {
+    const existing = document.getElementById('bearipSearchPop');
+    if (existing) {
+      existing.remove();
+      return;
+    }
+    bearipInjectSearchPopStyles();
+    const pop = document.createElement('div');
+    pop.id = 'bearipSearchPop';
+    pop.className = 'bearip-search-pop';
+    pop.innerHTML = '<input type="text" placeholder="프로젝트, 키워드, 태그 검색" maxlength="40"><button type="button">검색</button>';
+    document.body.appendChild(pop);
+
+    const rect = anchor.getBoundingClientRect();
+    pop.style.top = rect.bottom + 8 + 'px';
+    pop.style.right = Math.max(12, window.innerWidth - rect.right) + 'px';
+
+    const input = pop.querySelector('input');
+    const close = () => {
+      pop.remove();
+      document.removeEventListener('click', onOutside, true);
+      document.removeEventListener('keydown', onKey);
+    };
+    const onOutside = (e) => {
+      if (!pop.contains(e.target) && !anchor.contains(e.target)) close();
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') close();
+    };
+    input.focus();
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') bearipSearchGo(input.value);
+    });
+    pop.querySelector('button').addEventListener('click', () => bearipSearchGo(input.value));
+    document.addEventListener('click', onOutside, true);
+    document.addEventListener('keydown', onKey);
+  }
+
   document.querySelectorAll('.dr-icon-btn[aria-label="검색"]').forEach((btn) => {
-    btn.addEventListener('click', () => bearipShowToast('검색 기능은 아직 준비 중이에요'));
+    btn.addEventListener('click', () => bearipToggleSearchPop(btn));
   });
 });

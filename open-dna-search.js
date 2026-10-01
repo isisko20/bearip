@@ -49,6 +49,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // A search typed into another page's header (auth-ui.js's bearipSearchGo)
+  // arrives here as a one-shot sessionStorage value, same handoff pattern
+  // the rest of the app uses instead of a query string.
+  const incomingQuery = sessionStorage.getItem('bearip_open_dna_query');
+  sessionStorage.removeItem('bearip_open_dna_query');
+  if (incomingQuery && input) input.value = incomingQuery;
+
   // Runs once on load too (not just on the next click/keystroke) so the empty
   // state is correct even before any filter — nothing to show fake demo
   // cards for anymore when there are no real published IPs yet.
