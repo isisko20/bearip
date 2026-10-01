@@ -52,6 +52,7 @@ function odBuildPublishedCard(ip, index) {
   const card = document.createElement('article');
   card.className = 'od-card';
   card.dataset.ipId = ip.id;
+  card.dataset.goal = ip.goal || '';
   card.dataset.created = (ip.createdAt || '').slice(0, 10) || '1970-01-01';
   card.dataset.dna = dna;
   const followerCount = typeof bearipFollowerCount === 'function' ? bearipFollowerCount(ip.id) : 0;
@@ -144,7 +145,10 @@ function odRenderPublishedCards() {
   container.querySelectorAll('.od-card[data-published="1"]').forEach((el) => el.remove());
 
   const publicIPs = bearipLoadBrowsableIPs();
-  if (!publicIPs.length) return;
+  if (!publicIPs.length) {
+    if (typeof odApplyFilters === 'function') odApplyFilters();
+    return;
+  }
 
   const firstMock = container.querySelector('.mock-slot');
   publicIPs.forEach((ip, i) => {
@@ -163,6 +167,9 @@ function odRenderPublishedCards() {
       });
     });
   });
+  // Cards were just rebuilt from scratch — reapply whatever 카테고리/검색
+  // filter is active instead of silently resetting it on every live update.
+  if (typeof odApplyFilters === 'function') odApplyFilters();
 }
 
 document.addEventListener('DOMContentLoaded', () => {

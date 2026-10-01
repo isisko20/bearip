@@ -100,11 +100,11 @@
     <!-- Filter row -->
     <section class="od-filter-row">
       <div class="od-tabs" id="odCategoryTabs">
-        <button class="od-tab active">전체</button>
-        <button class="od-tab disabled" data-theme-label="웹소설">웹소설</button>
-        <button class="od-tab disabled" data-theme-label="웹툰">웹툰</button>
-        <button class="od-tab disabled" data-theme-label="영상">영상</button>
-        <button class="od-tab disabled" data-theme-label="멀티포맷">멀티포맷</button>
+        <button class="od-tab active" data-goal="all">전체</button>
+        <button class="od-tab" data-goal="webnovel">웹소설</button>
+        <button class="od-tab" data-goal="webtoon">웹툰</button>
+        <button class="od-tab" data-goal="video">영상</button>
+        <button class="od-tab" data-goal="multi">멀티포맷</button>
       </div>
 
       <div class="od-legend">
@@ -136,8 +136,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
       </div>
     </section>
-
-    <div class="od-tab-note" id="odTabNote"></div>
 
     <!-- 지금 성장 중인 OPEN DNA -->
     <section>
@@ -215,16 +213,5 @@
 <script src="open-dna-published.js"></script>
 <script src="open-dna-bookmarks.js"></script>
 <script src="open-dna-search.js"></script>
-<script>
-  let odTabNoteTimer = null;
-  function onDisabledTabClick(tab) {
-    const note = document.getElementById('odTabNote');
-    const label = tab.dataset.themeLabel || tab.textContent.trim();
-    note.textContent = `'${label}' 카테고리는 아직 준비 중이에요 — 지금은 전체 보기만 이용할 수 있어요.`;
-    note.classList.add('show');
-    clearTimeout(odTabNoteTimer);
-    odTabNoteTimer = setTimeout(() => note.classList.remove('show'), 3000);
-  }
-</script>
 </body>
 </html>
