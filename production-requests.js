@@ -20,6 +20,8 @@ function prShowGmLocked() {
   const cleanup = document.getElementById('prCleanupPanel');
   const reportPanel = document.getElementById('prReportPanel');
   if (reportPanel) reportPanel.style.display = 'none';
+  const aiPanel = document.getElementById('prAiPanel');
+  if (aiPanel) aiPanel.style.display = 'none';
   if (filterRow) filterRow.style.display = 'none';
   if (list) list.style.display = 'none';
   if (empty) empty.style.display = 'none';
@@ -164,6 +166,41 @@ document.addEventListener('click', (e) => {
     bearipShowToast('신고 기록을 삭제했어요');
   }
 });
+
+// AI 시나리오 도우미 설정 — 서버(aiAdmin)가 GM PIN을 직접 확인하므로 화면에서
+// GM인 척해도 바꿀 수 없어요. PIN은 저장하지 않고 요청 한 번에만 실어 보내요.
+function prAiRender(data) {
+  document.getElementById('prAiEnabled').checked = !!data.config.enabled;
+  document.getElementById('prAiPerUser').value = data.config.dailyPerUser;
+  document.getElementById('prAiGlobal').value = data.config.globalDaily;
+  document.getElementById('prAiState').textContent = `· ${data.config.enabled ? '켜짐' : '꺼짐'} · 오늘 ${data.usedToday}/${data.config.globalDaily}회 사용 · ${data.model}`;
+}
+
+async function prAiRequest(action) {
+  const msg = document.getElementById('prAiMsg');
+  const pinInput = document.getElementById('prAiPin');
+  if (!pinInput.value) {
+    msg.textContent = 'GM PIN을 입력해주세요.';
+    pinInput.focus();
+    return;
+  }
+  msg.textContent = '확인 중...';
+  const body = { action, pin: pinInput.value };
+  if (action === 'set') {
+    body.enabled = document.getElementById('prAiEnabled').checked;
+    body.dailyPerUser = Number(document.getElementById('prAiPerUser').value);
+    body.globalDaily = Number(document.getElementById('prAiGlobal').value);
+  }
+  try {
+    const data = await bearipAiCall('admin', body);
+    prAiRender(data);
+    msg.textContent = action === 'set' ? '저장했어요.' : '불러왔어요.';
+  } catch (e) {
+    msg.textContent = e.message;
+  } finally {
+    pinInput.value = '';
+  }
+}
 
 let prActiveFilter = 'all';
 
@@ -450,6 +487,9 @@ document.addEventListener('DOMContentLoaded', () => {
     bearipOnDataChange('productionRequests', prRenderList);
     bearipOnDataChange('reports', prRenderReports);
   }
+
+  document.getElementById('prAiLoad').addEventListener('click', () => prAiRequest('get'));
+  document.getElementById('prAiSave').addEventListener('click', () => prAiRequest('set'));
 
   const scanBtn = document.getElementById('prCleanupScanBtn');
   if (scanBtn) scanBtn.addEventListener('click', () => prRenderCleanupResult(bearipScanOrphans()));

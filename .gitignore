@@ -1,0 +1,5 @@
+# 공개 저장소이므로 비공개 자료(AI 매뉴얼 등)는 절대 올리지 않아요
+첨부/
+functions/manuals/
+functions/node_modules/
+functions/.env*

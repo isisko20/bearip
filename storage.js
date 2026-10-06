@@ -2169,6 +2169,42 @@ function _bearipAccountRef(nickname) {
   return firebase.database().ref('accounts/' + bearipSafePathSegment(nickname));
 }
 
+// ---- AI 시나리오 도우미 (서버 함수 호출) ----
+// API 키는 브라우저에 둘 수 없어서 Firebase 함수(functions/index.js)가 대신
+// 호출해요. 여기서는 로그인 토큰을 실어 보내고, 서버가 준 한국어 오류 문구를
+// 그대로 Error.message로 던져서 화면이 바로 보여줄 수 있게 해요.
+const BEARIP_AI_ENDPOINTS = {
+  assist: 'https://asia-northeast3-thinkit-ccb2e.cloudfunctions.net/aiAssist',
+  admin: 'https://asia-northeast3-thinkit-ccb2e.cloudfunctions.net/aiAdmin',
+};
+
+async function bearipAiCall(kind, body) {
+  const url = BEARIP_AI_ENDPOINTS[kind];
+  if (!url) throw Object.assign(new Error('AI 서버가 아직 연결되지 않았어요.'), { code: 'not_configured' });
+  await _bearipWhenFirebaseAuthed();
+  const token = await firebase.auth().currentUser.getIdToken();
+  let resp;
+  try {
+    resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    throw Object.assign(new Error('서버에 연결하지 못했어요. 잠시 후 다시 시도해주세요.'), { code: 'network' });
+  }
+  let data = {};
+  try {
+    data = await resp.json();
+  } catch (e) {
+    /* 본문이 JSON이 아니면 아래에서 일반 오류로 처리 */
+  }
+  if (!resp.ok || data.ok === false) {
+    throw Object.assign(new Error(data.message || 'AI 요청에 실패했어요. 잠시 후 다시 시도해주세요.'), { code: data.error || 'error' });
+  }
+  return data;
+}
+
 // 계정이 있으면 기록을, 없으면 null을, 서버에 닿지 못하면 예외를 던져요
 // (실패했을 때 "없음"으로 착각해 남의 닉네임을 덮어쓰지 않게 구분해요).
 async function bearipFetchAccount(nickname) {

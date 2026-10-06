@@ -61,6 +61,21 @@
 .pr-report-actions button[data-act="resolve"] { background: var(--dr-purple); border-color: var(--dr-purple); color: #fff; }
 .pr-report-done { font-size: 11.5px; color: var(--dr-ink-soft); }
 
+/* ---- AI 시나리오 도우미 설정 ---- */
+.pr-ai-form { display: flex; flex-direction: column; gap: 8px; }
+.pr-ai-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--dr-ink); }
+.pr-ai-row input[type="number"], .pr-ai-row input[type="password"] {
+  width: 90px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--dr-border);
+  background: var(--dr-bg-soft); color: var(--dr-ink); font-family: inherit; font-size: 12.5px;
+}
+.pr-ai-actions { display: flex; gap: 8px; margin-top: 4px; }
+.pr-ai-actions button {
+  padding: 8px 16px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit;
+  border: 1px solid var(--dr-border); background: var(--dr-panel); color: var(--dr-ink);
+}
+.pr-ai-actions button.primary { background: var(--dr-purple); border-color: var(--dr-purple); color: #fff; }
+.pr-ai-msg { font-size: 12px; color: var(--dr-ink-soft); min-height: 16px; }
+
 .pr-filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
 .pr-filter-btn {
   padding: 8px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 700;

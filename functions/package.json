@@ -1,0 +1,14 @@
+{
+  "name": "thinkit-functions",
+  "private": true,
+  "description": "Thinkit AI 시나리오 도우미 서버 함수",
+  "main": "index.js",
+  "engines": { "node": "22" },
+  "scripts": {
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.0.0"
+  }
+}

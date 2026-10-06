@@ -45,7 +45,15 @@ document.querySelectorAll('.md-need-actions .md-pill-btn').forEach((btn) => {
       return;
     }
     if (btn.classList.contains('ai')) {
-      bearipShowToast('AI와 만들기 기능은 아직 준비 중이에요');
+      // 매뉴얼이 세계관·스토리를 다루므로 이 두 카드만 AI 시나리오 도움으로 연결해요.
+      // 레터링처럼 매뉴얼에 없는 항목은 솔직하게 준비 중이라고 알려줘요.
+      const needCard = btn.closest('.md-need-card');
+      const type = needCard ? needCard.dataset.assetType : '';
+      if (type === 'world' || type === 'story') {
+        bearipOpenAiAssist({ preset: type });
+      } else {
+        bearipShowToast('이 항목의 AI 도움은 아직 준비 중이에요');
+      }
       return;
     }
     // "내가 직접" — jump to ASSETS and open the upload form, pre-filled with
