@@ -635,7 +635,9 @@ html[data-theme="dark"] .dna-app {
 .dr-rank.r1 { background: #f5b301; }
 .dr-rank.r2 { background: #9aa0ab; }
 .dr-rank.r3 { background: #e08a3c; }
-.dr-top3-card .title { font-size: 12px; font-weight: 700; margin-top: 8px; }
+.dr-top3-sub { font-size: 11px; font-weight: 600; color: var(--dr-ink-soft); }
+.dr-top3-card .title { font-size: 12px; font-weight: 700; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dr-top3-card .sub { font-size: 10.5px; color: var(--dr-ink-soft); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dr-top3-card .meta { display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: var(--dr-ink-soft); margin-top: 3px; }
 .dr-top3-card .meta .heart { display: flex; align-items: center; gap: 3px; }
 .dr-top3-card .meta .heart svg { width: 11px; height: 11px; color: #ff5470; }

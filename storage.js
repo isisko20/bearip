@@ -584,10 +584,6 @@ function bearipFormatCount(n) {
   return (n || 0).toLocaleString('ko-KR');
 }
 
-function bearipParseCount(text) {
-  return parseInt(String(text).replace(/,/g, ''), 10) || 0;
-}
-
 function bearipGetCurrentIP() {
   const id = localStorage.getItem(bearipMigrateLegacyKey(BEARIP_CURRENT_KEY));
   if (!id) return null;
@@ -860,6 +856,26 @@ function bearipMyJoinRequests() {
     .sort((a, b) => new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0));
 }
 
+// Someone else's IPs I'm actually crew on — an accepted 참여하기 request OR
+// an accepted CREW MATCH posting application (one IP counted once even if
+// both happened). Postings made before ipId was recorded fall back to their
+// IP title as the key.
+function bearipMyCrewIpKeys() {
+  const user = bearipGetUser();
+  if (!user) return [];
+  const keys = new Set();
+  bearipMyJoinRequests()
+    .filter((r) => r.status === 'accepted')
+    .forEach((r) => keys.add(r.ipId));
+  const myKey = bearipApplicantKey(user.nickname);
+  Object.keys(_bearipDataCache.positionApplicants).forEach((posId) => {
+    const rec = (_bearipDataCache.positionApplicants[posId] || {})[myKey];
+    const pos = _bearipDataCache.positions[posId];
+    if (rec && rec.status === 'accepted' && pos) keys.add(pos.ipId || 'title:' + pos.ipTitle);
+  });
+  return Array.from(keys);
+}
+
 function _bearipJoinRef(ipId, key) {
   return firebase.database().ref('ipJoinRequests/' + ipId + '/' + key);
 }
@@ -998,6 +1014,24 @@ function bearipMyBookmarkedEpisodes() {
     });
   });
   return found;
+}
+
+// The most engaged episodes among the given IPs, for the home dashboard's
+// 우수 콘텐츠 TOP 3 — ranked by 좋아요 + 조회수 (the same two real
+// per-visitor collections the rest of the site ranks by), ties broken by
+// likes. Episodes nobody has reacted to yet are left out instead of padding
+// the list with arbitrary 0-engagement picks.
+function bearipTopEpisodes(ips, limit) {
+  const scored = [];
+  (ips || []).forEach((ip) => {
+    (ip.episodes || []).forEach((episode) => {
+      const likes = bearipEpisodeLikeCount(ip.id, episode.id);
+      const views = bearipEpisodeViewCount(ip.id, episode.id);
+      if (likes + views > 0) scored.push({ ip, episode, likes, views });
+    });
+  });
+  scored.sort((a, b) => (b.likes + b.views) - (a.likes + a.views) || b.likes - a.likes);
+  return scored.slice(0, limit || 3);
 }
 
 // Every IP this browser bookmarked (open-dna.js's 북마크 button —
@@ -1389,6 +1423,81 @@ function bearipDeleteCrewChat(ipId) {
   delete _bearipDataCache.crewChat[ipId];
 }
 
+// ---- 차단 / 신고 ----
+// 차단 목록은 계정(닉네임)별 localStorage에만 둬요 — 누가 누구를 차단했는지가
+// 모두가 읽을 수 있는 Firebase에 노출되지 않게 하려는 의도적인 선택이에요.
+// 차단하면 그 사람의 쪽지·크루 채팅·댓글·관련 알림이 내 화면에서만 사라지고,
+// 상대는 차단당했는지 알 수 없어요.
+const BEARIP_BLOCKED_KEY = 'bearip_blocked_users';
+
+function bearipBlockedUsers() {
+  return bearipSetList(BEARIP_BLOCKED_KEY);
+}
+
+function bearipIsBlocked(nickname) {
+  return !!nickname && bearipSetHas(BEARIP_BLOCKED_KEY, nickname);
+}
+
+function bearipBlockUser(nickname) {
+  const user = bearipGetUser();
+  if (!user || !nickname || nickname === user.nickname) return false;
+  if (!bearipIsBlocked(nickname)) bearipSetToggle(BEARIP_BLOCKED_KEY, nickname);
+  return true;
+}
+
+function bearipUnblockUser(nickname) {
+  if (bearipIsBlocked(nickname)) bearipSetToggle(BEARIP_BLOCKED_KEY, nickname);
+}
+
+const BEARIP_REPORTED_KEY = 'bearip_reported_ids';
+const BEARIP_REPORT_REASONS =['욕설·비하', '스팸·광고', '불쾌하거나 부적절한 내용', '기타'];
+
+// 신고 한 건 = reports/<reporter>_<대상 메시지 id> — 같은 사람이 같은 메시지를
+// 여러 번 신고해도 한 건으로 합쳐져요. 신고 시점의 글 내용을 그대로 복사해두기
+// 때문에 이후 작성자가 지우거나 고쳐도 GM이 원본 그대로 확인할 수 있어요.
+function bearipSubmitReport({ type, targetNickname, targetId, text, contextLabel, reason, note }) {
+  const user = bearipGetUser();
+  if (!user || !targetNickname || !targetId || targetNickname === user.nickname) return null;
+  const id = bearipSafePathSegment(user.nickname + '_' + targetId);
+  // 이미 신고한 글을 또 신고하면 GM 알림이 쌓이고, 처리 끝난 신고가 다시
+  // '대기'로 되살아나니까 이 계정에서 신고한 글 id를 기억해뒀다가 막아요.
+  if (bearipSetHas(BEARIP_REPORTED_KEY, id)) return 'duplicate';
+  const record = {
+    type,
+    reporter: user.nickname,
+    targetNickname,
+    targetId,
+    text: String(text || '').slice(0, 500),
+    contextLabel: contextLabel || '',
+    reason: reason || BEARIP_REPORT_REASONS[3],
+    note: String(note || '').slice(0, 200),
+    status: 'open',
+    createdAt: new Date().toISOString(),
+  };
+  if (!bearipFirebaseReady()) return null;
+  _bearipFirebaseWrite(() => firebase.database().ref('reports/' + id).set(bearipFirebaseSafe(record)));
+  bearipSetToggle(BEARIP_REPORTED_KEY, id);
+  bearipAddNotification(
+    { type: 'system', title: '새 신고가 접수됐어요', message: `${user.nickname}님이 ${targetNickname}님의 ${contextLabel || '글'}을(를) 신고했어요 (${record.reason})`, link: 'production-requests.html' },
+    'GM'
+  );
+  return Object.assign({ id }, record);
+}
+
+function bearipLoadReports() {
+  return _bearipMapToArray(_bearipDataCache.reports, 'createdAt');
+}
+
+function bearipResolveReport(id) {
+  if (!bearipFirebaseReady() || !id) return;
+  _bearipFirebaseWrite(() => firebase.database().ref('reports/' + id + '/status').set('resolved'));
+}
+
+function bearipDeleteReport(id) {
+  if (!bearipFirebaseReady() || !id) return;
+  _bearipFirebaseWrite(() => firebase.database().ref('reports/' + id).remove());
+}
+
 // ---- 쪽지 (1:1 DM) ----
 // dmThreads/<threadId>/participants/<nickname> names who's in the thread —
 // reading it beats parsing threadId apart, so a nickname containing the
@@ -1444,7 +1553,7 @@ function bearipLoadMyDmThreads() {
     if (!participants[myKey]) return;
     const otherKey = Object.keys(participants).find((k) => k !== myKey);
     const otherNickname = otherKey ? participants[otherKey].name : null;
-    if (!otherNickname) return;
+    if (!otherNickname || bearipIsBlocked(otherNickname)) return;
     const messages = bearipGetDmThreadMessages(threadId);
     const last = messages[messages.length - 1];
     const lastRead = bearipDmLastRead(threadId);
@@ -1487,7 +1596,7 @@ function bearipSendDm(toNickname, text) {
   }
 
   bearipAddNotification(
-    { type: 'dm', title: '새 쪽지가 왔어요', message: `${user.nickname}님이 쪽지를 보냈어요: "${text}"`, link: 'messages.html' },
+    { type: 'dm', title: '새 쪽지가 왔어요', message: `${user.nickname}님이 쪽지를 보냈어요: "${text}"`, link: 'messages.html', fromNickname: user.nickname },
     toNickname
   );
   bearipMarkDmThreadRead(threadId);
@@ -1515,7 +1624,7 @@ function bearipAddEpisodeComment(ipId, episodeId, text) {
   const { ip, episode } = _bearipFindEpisodeIp(ipId, episodeId);
   if (ip && ip.ownerNickname && ip.ownerNickname !== user.nickname) {
     bearipAddNotification(
-      { type: 'ip', title: '회차에 댓글이 달렸어요', message: `${user.nickname}님이 '${episode ? episode.title || '회차' : '회차'}'에 댓글을 남겼어요: "${text}"`, link: 'my-dna.html' },
+      { type: 'ip', title: '회차에 댓글이 달렸어요', message: `${user.nickname}님이 '${episode ? episode.title || '회차' : '회차'}'에 댓글을 남겼어요: "${text}"`, link: 'my-dna.html', fromNickname: user.nickname },
       ip.ownerNickname
     );
   }
@@ -1635,8 +1744,8 @@ function bearipSafePathSegment(str) {
   return String(str || '').replace(/[.#$[\]/]/g, '_') || '_guest';
 }
 
-const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {}, ipJoinRequests: {}, ipFollowers: {}, episodeLikes: {}, episodeComments: {}, episodeViews: {}, ipViews: {}, dmThreads: {}, crewChat: {}, ipCheers: {} };
-const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [], ipJoinRequests: [], ipFollowers: [], episodeLikes: [], episodeComments: [], episodeViews: [], ipViews: [], dmThreads: [], crewChat: [], ipCheers: [] };
+const _bearipDataCache = { notifications: {}, productionRequests: {}, ipReviews: {}, ipOverallComments: {}, publicIPs: {}, allIPs: {}, publicCreators: {}, positions: {}, positionApplicants: {}, ipJoinRequests: {}, ipFollowers: {}, episodeLikes: {}, episodeComments: {}, episodeViews: {}, ipViews: {}, dmThreads: {}, crewChat: {}, ipCheers: {}, reports: {} };
+const _bearipDataListeners = { notifications: [], productionRequests: [], ipReviews: [], ipOverallComments: [], publicIPs: [], allIPs: [], publicCreators: [], positions: [], positionApplicants: [], ipJoinRequests: [], ipFollowers: [], episodeLikes: [], episodeComments: [], episodeViews: [], ipViews: [], dmThreads: [], crewChat: [], ipCheers: [], reports: [] };
 // Firebase's first 'value' callback for a watched path can take a real
 // moment to arrive (network round-trip, larger the more attachments have
 // piled up) — until then _bearipDataCache[kind] is just its empty starting
@@ -1644,7 +1753,7 @@ const _bearipDataListeners = { notifications: [], productionRequests: [], ipRevi
 // bearipLoadProductionRequests()/bearipLoadIpReviews() etc. before this
 // flips true and shows a flat "없어요" empty state ends up lying to GM —
 // looking permanently broken instead of just still loading.
-const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false, ipJoinRequests: false, ipFollowers: false, episodeLikes: false, episodeComments: false, episodeViews: false, ipViews: false, dmThreads: false, crewChat: false, ipCheers: false };
+const _bearipDataLoaded = { notifications: false, productionRequests: false, ipReviews: false, ipOverallComments: false, publicIPs: false, allIPs: false, publicCreators: false, positions: false, positionApplicants: false, ipJoinRequests: false, ipFollowers: false, episodeLikes: false, episodeComments: false, episodeViews: false, ipViews: false, dmThreads: false, crewChat: false, ipCheers: false, reports: false };
 
 function bearipIsDataLoaded(kind) {
   return !!_bearipDataLoaded[kind];
@@ -2123,7 +2232,8 @@ function bearipNotificationsPath(nickname) {
 }
 
 function bearipLoadNotifications() {
-  return _bearipMapToArray(_bearipDataCache.notifications, 'createdAt');
+  // 차단한 사용자가 보낸 쪽지/댓글 알림은 숨겨요 (fromNickname이 붙은 알림만).
+  return _bearipMapToArray(_bearipDataCache.notifications, 'createdAt').filter((n) => !(n.fromNickname && bearipIsBlocked(n.fromNickname)));
 }
 
 // targetNickname defaults to whoever's currently logged in (self-notifying
@@ -2400,7 +2510,11 @@ function _bearipStartFirebaseWatchers() {
   // Only GM's own client pulls the full every-IP feed — everyone else's
   // gallery views only ever need (and only ever subscribe to) publicIPs.
   const _u = bearipGetUser();
-  if (_u && _u.nickname === 'GM') _bearipWatchPath('allIPs', 'allIPs');
+  if (_u && _u.nickname === 'GM') {
+    _bearipWatchPath('allIPs', 'allIPs');
+    // 신고 접수 목록도 GM만 구독 — 일반 사용자는 신고를 올리기만 하고 읽지 않아요.
+    _bearipWatchPath('reports', 'reports');
+  }
   _bearipWatchPath('publicCreators', 'publicCreators');
   _bearipWatchPath('positions', 'positions');
   _bearipWatchPath('positionApplicants', 'positionApplicants');

@@ -12,7 +12,9 @@ function cmPositionLabel(id) {
 function cmRenderMatchStatus() {
   const applied = bearipMyAppliedPositionIds();
   const proposed = bearipSetList('bearip_proposed_creators');
-  const joined = bearipMyJoinRequests().filter((r) => r.status === 'accepted');
+  // 참여 중인 IP — accepted 참여하기 OR accepted posting application (the
+  // latter used to be missed, so landing a 모집글 position didn't count).
+  const joined = bearipMyCrewIpKeys();
 
   document.getElementById('cmStatApplied').textContent = applied.length;
   document.getElementById('cmStatProposed').textContent = proposed.length;

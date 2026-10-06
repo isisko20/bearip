@@ -121,7 +121,11 @@ function renderHeader(user) {
 
 function renderStats() {
   const ips = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
-  document.getElementById('pfStatIps').textContent = ips.length;
+  // 참여한 IP = ones I made + ones I'm crew on (accepted 참여하기 or CREW
+  // MATCH posting) — same crew definition CREW MATCH's own "참여 중인 IP" uses.
+  const ownIds = new Set(ips.map((ip) => ip.id));
+  const crewCount = typeof bearipMyCrewIpKeys === 'function' ? bearipMyCrewIpKeys().filter((k) => !ownIds.has(k)).length : 0;
+  document.getElementById('pfStatIps').textContent = ips.length + crewCount;
   const appliedEl = document.getElementById('pfStatApplied');
   if (appliedEl) appliedEl.textContent = bearipMyAppliedPositionIds().length;
   // 받은 제안 — CREW MATCH's "매치 제안" delivers a real notification to the

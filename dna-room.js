@@ -7,13 +7,3 @@ document.querySelectorAll('.dr-carousel').forEach((carousel) => {
   prev.addEventListener('click', () => track.scrollBy({ left: -step(), behavior: 'smooth' }));
   next.addEventListener('click', () => track.scrollBy({ left: step(), behavior: 'smooth' }));
 });
-
-// Top-3 tab switching (visual state only)
-document.querySelectorAll('.dr-tabs').forEach((tabs) => {
-  tabs.querySelectorAll('.dr-tab').forEach((tab) => {
-    tab.addEventListener('click', () => {
-      tabs.querySelectorAll('.dr-tab').forEach((t) => t.classList.remove('active'));
-      tab.classList.add('active');
-    });
-  });
-});

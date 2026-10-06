@@ -18,6 +18,8 @@ function prShowGmLocked() {
   const empty = document.getElementById('prEmpty');
   const locked = document.getElementById('prGmLocked');
   const cleanup = document.getElementById('prCleanupPanel');
+  const reportPanel = document.getElementById('prReportPanel');
+  if (reportPanel) reportPanel.style.display = 'none';
   if (filterRow) filterRow.style.display = 'none';
   if (list) list.style.display = 'none';
   if (empty) empty.style.display = 'none';
@@ -109,6 +111,59 @@ function prFormatRelativeTime(iso) {
   if (hr < 24) return `${hr}시간 전`;
   return `${Math.floor(hr / 24)}일 전`;
 }
+
+// 신고 접수 — 쪽지/크루 채팅/댓글 신고(reports, storage.js). 처리 대기 건이
+// 위로, 처리 완료는 흐리게 아래로. 처리하면 "처리 완료", 기록이 필요 없으면 삭제.
+const PR_REPORT_TYPE_LABEL = { dm: '쪽지', crew: '크루 채팅', comment: '댓글' };
+
+function prRenderReports() {
+  const panel = document.getElementById('prReportPanel');
+  const listEl = document.getElementById('prReportList');
+  if (!panel || !listEl || typeof bearipLoadReports !== 'function') return;
+  const reports = bearipLoadReports().sort((a, b) => (a.status === 'open' ? 0 : 1) - (b.status === 'open' ? 0 : 1));
+  const openCount = reports.filter((r) => r.status === 'open').length;
+  document.getElementById('prReportOpenCount').textContent = openCount ? `· 처리 대기 ${openCount}건` : '';
+
+  if (!reports.length) {
+    const loading = typeof bearipIsDataLoaded === 'function' && !bearipIsDataLoaded('reports');
+    listEl.innerHTML = `<div class="pr-report-empty">${loading ? '불러오는 중이에요...' : '접수된 신고가 없어요.'}</div>`;
+    return;
+  }
+  const esc = bearipEscapeHtml;
+  listEl.innerHTML = reports
+    .map(
+      (r) => `
+    <div class="pr-report-row${r.status === 'open' ? '' : ' resolved'}">
+      <div class="pr-report-top">
+        <span class="pr-report-who"><b>${esc(r.reporter)}</b> → <b>${esc(r.targetNickname)}</b></span>
+        <span class="pr-report-type">${esc(PR_REPORT_TYPE_LABEL[r.type] || r.type)} · ${esc(r.reason)}</span>
+        <span class="pr-report-time">${prFormatRelativeTime(r.createdAt)}</span>
+      </div>
+      <div class="pr-report-ctx">${esc(r.contextLabel || '')}</div>
+      <div class="pr-report-text">"${esc(r.text || '')}"</div>
+      ${r.note ? `<div class="pr-report-note">신고 메모: ${esc(r.note)}</div>` : ''}
+      <div class="pr-report-actions">
+        ${r.status === 'open' ? `<button type="button" data-act="resolve" data-id="${bearipEscapeAttr(r.id)}">처리 완료</button>` : '<span class="pr-report-done">처리됨</span>'}
+        <button type="button" data-act="delete" data-id="${bearipEscapeAttr(r.id)}">삭제</button>
+      </div>
+    </div>
+  `
+    )
+    .join('');
+}
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('#prReportList button[data-act]');
+  if (!btn) return;
+  if (btn.dataset.act === 'resolve') {
+    bearipResolveReport(btn.dataset.id);
+    bearipShowToast('처리 완료로 표시했어요');
+  } else {
+    if (!confirm('이 신고 기록을 삭제할까요?')) return;
+    bearipDeleteReport(btn.dataset.id);
+    bearipShowToast('신고 기록을 삭제했어요');
+  }
+});
 
 let prActiveFilter = 'all';
 
@@ -390,7 +445,11 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
   prRenderList();
-  if (typeof bearipOnDataChange === 'function') bearipOnDataChange('productionRequests', prRenderList);
+  prRenderReports();
+  if (typeof bearipOnDataChange === 'function') {
+    bearipOnDataChange('productionRequests', prRenderList);
+    bearipOnDataChange('reports', prRenderReports);
+  }
 
   const scanBtn = document.getElementById('prCleanupScanBtn');
   if (scanBtn) scanBtn.addEventListener('click', () => prRenderCleanupResult(bearipScanOrphans()));

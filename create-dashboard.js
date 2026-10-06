@@ -91,6 +91,62 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// 우수 콘텐츠 TOP 3 — the three most engaged episodes (좋아요 + 조회수, real
+// per-visitor counts) among the IPs each panel is about: MY DNA ranks the
+// user's own IPs, OPEN DNA ranks everything publicly browsable. Re-rendered
+// on every live change to likes/views/the IP lists, since all of those
+// arrive after first paint. Clicking a card hands the IP snapshot + episode
+// id to content-detail.html, same one-shot handoff the other lists use.
+function drRenderTop3(gridId, ips) {
+  const grid = document.getElementById(gridId);
+  if (!grid || typeof bearipTopEpisodes !== 'function') return;
+
+  const top = bearipTopEpisodes(ips, 3);
+  if (!top.length) {
+    grid.innerHTML = '<div class="dr-empty-state">아직 반응이 있는 회차가 없어요.</div>';
+    return;
+  }
+
+  const thumbClasses = ['thumb-1', 'thumb-3', 'thumb-6', 'thumb-4', 'thumb-2'];
+  const heartSvg = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.7 5 6 5c2 0 3.4 1.1 4 2.2h4C14.6 6.1 16 5 18 5c3.3 0 5.1 3.4 3.6 6.8C19.5 16.4 12 21 12 21z"/></svg>';
+  grid.innerHTML = top
+    .map(({ ip, episode, likes, views }, i) => {
+      const style = episode.imageData
+        ? ` style="background-image:url('${episode.imageData}');background-size:cover;background-position:center"`
+        : '';
+      const thumbClass = episode.imageData ? '' : thumbClasses[i % thumbClasses.length];
+      return `
+        <article class="dr-top3-card" data-ip-id="${bearipEscapeAttr(ip.id)}" data-episode-id="${bearipEscapeAttr(episode.id)}" style="cursor:pointer">
+          <div class="thumb ${thumbClass}"${style}><span class="dr-rank r${i + 1}">${i + 1}</span></div>
+          <div class="title">${bearipEscapeHtml(episode.title || '제목 없는 회차')}</div>
+          <div class="sub">${bearipEscapeHtml(ip.title || '제목 없는 IP')}</div>
+          <div class="meta"><span class="heart">${heartSvg}${bearipFormatCount(likes)}</span><span>조회 ${bearipFormatCount(views)}</span></div>
+        </article>
+      `;
+    })
+    .join('');
+
+  grid.querySelectorAll('.dr-top3-card').forEach((card, i) => {
+    card.addEventListener('click', () => {
+      sessionStorage.setItem('bearip_view_ip_snapshot', JSON.stringify(top[i].ip));
+      sessionStorage.setItem('bearip_view_episode_id', top[i].episode.id);
+      location.href = 'content-detail.html';
+    });
+  });
+}
+
+function drRenderAllTop3() {
+  drRenderTop3('myDnaTop3', typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : []);
+  drRenderTop3('openDnaTop3', typeof bearipLoadBrowsableIPs === 'function' ? bearipLoadBrowsableIPs() : []);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  drRenderAllTop3();
+  if (typeof bearipOnDataChange === 'function') {
+    ['episodeLikes', 'episodeViews', 'publicIPs', 'allIPs'].forEach((kind) => bearipOnDataChange(kind, drRenderAllTop3));
+  }
+});
+
 // Hero "상상력 구체화하기" CTA — jumps into the most recently touched real
 // IP (bearipAddIP unshifts, so index 0 is most recent). With no real IP yet
 // there's nothing to continue, so it's an honest toast instead of a dead click.
@@ -296,7 +352,7 @@ function renderBottomStats() {
   if (!ipsEl || typeof bearipLoadIPs !== 'function') return;
 
   const ips = bearipLoadIPs();
-  const joined = typeof bearipMyJoinRequests === 'function' ? bearipMyJoinRequests().filter((r) => r.status === 'accepted') : [];
+  const joined = typeof bearipMyCrewIpKeys === 'function' ? bearipMyCrewIpKeys() : [];
   const applied = typeof bearipMyAppliedPositionIds === 'function' ? bearipMyAppliedPositionIds() : [];
   const positions = typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : [];
   const likesTotal = ips.reduce((sum, ip) => sum + (typeof bearipIpCheerCount === 'function' ? bearipIpCheerCount(ip.id) : 0), 0);

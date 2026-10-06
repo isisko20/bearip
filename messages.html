@@ -122,6 +122,10 @@
         </div>
         <div class="msg-thread-list" id="msgThreadList"></div>
         <div class="msg-thread-empty" id="msgThreadEmpty">아직 주고받은 쪽지가 없어요.</div>
+        <div class="msg-blocked" id="msgBlocked" style="display:none">
+          <button type="button" class="msg-blocked-toggle" id="msgBlockedToggle">차단한 사용자 <span id="msgBlockedCount">0</span>명</button>
+          <div class="msg-blocked-list" id="msgBlockedList" hidden></div>
+        </div>
       </div>
 
       <div class="msg-panel-col">
@@ -130,6 +134,7 @@
           <div class="msg-panel-head">
             <div class="msg-panel-avatar" id="msgPanelAvatar"></div>
             <div class="msg-panel-name" id="msgPanelName"></div>
+            <button type="button" class="msg-block-btn" id="msgBlockBtn">차단</button>
           </div>
           <div class="msg-list" id="msgList"></div>
           <div class="msg-composer">

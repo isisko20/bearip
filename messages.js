@@ -62,22 +62,59 @@ function msgRenderMessages() {
   if (!listEl || !msgActiveOther) return;
   const user = bearipGetUser();
   const threadId = msgThreadIdFor(msgActiveOther);
-  const messages = threadId ? bearipGetDmThreadMessages(threadId) : [];
+  const blocked = bearipIsBlocked(msgActiveOther);
+  const messages = threadId && !blocked ? bearipGetDmThreadMessages(threadId) : [];
   const esc = bearipEscapeHtml;
 
+  // 차단한 상대는 지난 대화도 보여주지 않고 입력창도 막아요 — 해제하면 그대로 돌아와요.
+  document.querySelector('.msg-composer').style.display = blocked ? 'none' : '';
+  const blockBtn = document.getElementById('msgBlockBtn');
+  blockBtn.textContent = blocked ? '차단 해제' : '차단';
+  blockBtn.classList.toggle('is-blocked', blocked);
+
+  if (blocked) {
+    listEl.innerHTML = '<div class="msg-thread-empty">차단한 사용자예요. 차단을 해제하면 다시 대화할 수 있어요.</div>';
+    return;
+  }
+
   listEl.innerHTML = messages
-    .map(
-      (m) => `
-      <div class="msg-bubble-row${m.from === user.nickname ? ' mine' : ''}">
+    .map((m) => {
+      const mine = m.from === user.nickname;
+      const reportBtn = mine ? '' : `<button type="button" class="bearip-report-link" data-msg-id="${bearipEscapeAttr(m.id)}">신고</button>`;
+      return `
+      <div class="msg-bubble-row${mine ? ' mine' : ''}">
         <div>
           <div class="msg-bubble">${esc(m.text)}</div>
-          <div class="msg-bubble-time">${msgFormatTime(m.createdAt)}</div>
+          <div class="msg-bubble-time">${msgFormatTime(m.createdAt)}${reportBtn}</div>
         </div>
       </div>
-    `
-    )
+    `;
+    })
     .join('') || '<div class="msg-thread-empty">아직 메시지가 없어요. 첫 메시지를 보내보세요.</div>';
   listEl.scrollTop = listEl.scrollHeight;
+}
+
+// 차단한 사용자 목록 — 차단하면 쪽지 목록에서도 사라지므로, 해제할 수 있는
+// 진입점이 따로 필요해요.
+function msgRenderBlocked() {
+  const box = document.getElementById('msgBlocked');
+  const listEl = document.getElementById('msgBlockedList');
+  if (!box || !listEl) return;
+  const names = bearipBlockedUsers();
+  box.style.display = names.length ? '' : 'none';
+  document.getElementById('msgBlockedCount').textContent = names.length;
+  if (!names.length) listEl.hidden = true;
+  listEl.innerHTML = names
+    .map(
+      (n) => `<div class="msg-blocked-row"><span>${bearipEscapeHtml(n)}</span><button type="button" data-nickname="${bearipEscapeAttr(n)}">해제</button></div>`
+    )
+    .join('');
+}
+
+function msgCloseThread() {
+  msgActiveOther = null;
+  document.getElementById('msgPanel').style.display = 'none';
+  document.getElementById('msgPanelEmpty').style.display = '';
 }
 
 function msgOpenThread(otherNickname) {
@@ -98,7 +135,7 @@ function msgOpenThread(otherNickname) {
 function msgSend() {
   const input = document.getElementById('msgComposerInput');
   const text = input.value.trim();
-  if (!text || !msgActiveOther) return;
+  if (!text || !msgActiveOther || bearipIsBlocked(msgActiveOther)) return;
   bearipSendDm(msgActiveOther, text);
   input.value = '';
   msgRenderMessages();
@@ -109,6 +146,58 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!bearipRequireLogin('messages.html')) return;
 
   msgRenderThreadList();
+  msgRenderBlocked();
+
+  // 상대 메시지 신고 — 신고 시점의 글 내용을 그대로 담아 보내요.
+  document.getElementById('msgList').addEventListener('click', (e) => {
+    const btn = e.target.closest('.bearip-report-link');
+    if (!btn || !msgActiveOther) return;
+    const msg = bearipGetDmThreadMessages(msgThreadIdFor(msgActiveOther)).find((m) => m.id === btn.dataset.msgId);
+    if (!msg) return;
+    bearipOpenReportModal({
+      type: 'dm',
+      targetNickname: msg.from,
+      targetId: msg.id,
+      text: msg.text,
+      contextLabel: '쪽지',
+      onDone: () => {
+        // 신고하면서 차단까지 했다면 이 대화를 바로 닫아요.
+        if (msgActiveOther && bearipIsBlocked(msgActiveOther)) msgCloseThread();
+        msgRenderThreadList();
+        msgRenderBlocked();
+      },
+    });
+  });
+
+  document.getElementById('msgBlockBtn').addEventListener('click', () => {
+    if (!msgActiveOther) return;
+    if (bearipIsBlocked(msgActiveOther)) {
+      bearipUnblockUser(msgActiveOther);
+      bearipShowToast(`${msgActiveOther}님 차단을 해제했어요`);
+      msgRenderMessages();
+    } else {
+      if (!confirm(`${msgActiveOther}님을 차단할까요?\n이 사람의 쪽지·댓글·크루 채팅이 내 화면에서 사라져요. 상대에게는 알려지지 않아요.`)) return;
+      bearipBlockUser(msgActiveOther);
+      bearipShowToast(`${msgActiveOther}님을 차단했어요`);
+      msgCloseThread();
+    }
+    msgRenderThreadList();
+    msgRenderBlocked();
+  });
+
+  document.getElementById('msgBlockedToggle').addEventListener('click', () => {
+    const listEl = document.getElementById('msgBlockedList');
+    listEl.hidden = !listEl.hidden;
+  });
+  document.getElementById('msgBlockedList').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-nickname]');
+    if (!btn) return;
+    bearipUnblockUser(btn.dataset.nickname);
+    bearipShowToast(`${btn.dataset.nickname}님 차단을 해제했어요`);
+    msgRenderBlocked();
+    msgRenderThreadList();
+    if (msgActiveOther) msgRenderMessages();
+  });
 
   document.getElementById('msgNewBtn').addEventListener('click', () => {
     const input = document.getElementById('msgNewNickname');

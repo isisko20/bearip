@@ -382,19 +382,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = document.createElement('div');
     el.className = 'cd-comment';
     el.dataset.commentId = c.id;
+    const me = bearipGetUser();
+    const reportBtn = me && c.name !== me.nickname ? '<button type="button" class="bearip-report-link">신고</button>' : '';
     el.innerHTML = `
       <div class="av ${CD_THUMBS[index % CD_THUMBS.length]}"></div>
       <div class="body">
         <div class="n">${bearipEscapeHtml(c.name)}</div>
         <div class="t">${bearipEscapeHtml(c.text)}</div>
-        <div class="m"><span>${cdFormatRelativeTime(c.createdAt)}</span><button class="cd-comment-like">좋아요</button></div>
+        <div class="m"><span>${cdFormatRelativeTime(c.createdAt)}</span><button class="cd-comment-like">좋아요</button>${reportBtn}</div>
       </div>
     `;
     return el;
   }
 
   function renderComments() {
-    const comments = bearipGetEpisodeComments(ip.id, episode.id);
+    // 차단한 사용자의 댓글은 내 화면에서만 숨겨요.
+    const comments = bearipGetEpisodeComments(ip.id, episode.id).filter((c) => !bearipIsBlocked(c.name));
     commentList.innerHTML = '';
     comments.forEach((c, i) => commentList.appendChild(buildCommentEl(c, i)));
     commentCountEl.textContent = cdFormatCount(comments.length);
@@ -423,6 +426,22 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   commentList.addEventListener('click', (e) => {
+    const reportBtn = e.target.closest('.bearip-report-link');
+    if (reportBtn) {
+      const commentId = reportBtn.closest('.cd-comment').dataset.commentId;
+      const comment = bearipGetEpisodeComments(ip.id, episode.id).find((c) => c.id === commentId);
+      if (comment) {
+        bearipOpenReportModal({
+          type: 'comment',
+          targetNickname: comment.name,
+          targetId: comment.id,
+          text: comment.text,
+          contextLabel: `댓글 (${ip.title || 'IP'} · ${episode.title || '회차'})`,
+          onDone: renderComments,
+        });
+      }
+      return;
+    }
     const btn = e.target.closest('.cd-comment-like');
     if (!btn) return;
     if (!bearipRequireLogin('content-detail.html')) return;

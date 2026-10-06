@@ -214,6 +214,21 @@
       }
     },
 
+    "reports": {
+      ".read": "auth != null",
+      "$reportId": {
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['type', 'reporter', 'targetNickname', 'targetId', 'reason', 'status', 'createdAt'])",
+        "type": { ".validate": "newData.isString()" },
+        "reporter": { ".validate": "newData.isString()" },
+        "targetNickname": { ".validate": "newData.isString()" },
+        "targetId": { ".validate": "newData.isString()" },
+        "reason": { ".validate": "newData.isString()" },
+        "status": { ".validate": "newData.isString()" },
+        "createdAt": { ".validate": "newData.isString()" }
+      }
+    },
+
     "crewChat": {
       ".read": "auth != null",
       "$ipId": {

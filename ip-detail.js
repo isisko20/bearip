@@ -105,17 +105,22 @@ function ipdRenderCrewChatPanel() {
   if (!isCrew) return;
 
   const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
-  const messages = typeof bearipGetCrewChatMessages === 'function' ? bearipGetCrewChatMessages(ipdCurrentIp.id) : [];
+  const me = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
+  // 차단한 크루원의 메시지는 내 화면에서만 숨겨요.
+  const messages = (typeof bearipGetCrewChatMessages === 'function' ? bearipGetCrewChatMessages(ipdCurrentIp.id) : []).filter(
+    (m) => !bearipIsBlocked(m.name)
+  );
   list.innerHTML =
     messages
-      .map(
-        (m) => `
+      .map((m) => {
+        const reportBtn = me && m.name !== me.nickname ? `<button type="button" class="bearip-report-link" data-msg-id="${esc(m.id)}">신고</button>` : '';
+        return `
       <div class="ipd-chat-msg">
-        <div class="head"><span class="name">${esc(m.name)}</span><span class="time">${ipdFormatRelativeTime(m.createdAt)}</span></div>
+        <div class="head"><span class="name">${esc(m.name)}</span><span class="time">${ipdFormatRelativeTime(m.createdAt)}</span>${reportBtn}</div>
         <div class="text">${esc(m.text)}</div>
       </div>
-    `
-      )
+    `;
+      })
       .join('') || '<div class="ipd-chat-empty">아직 대화가 없어요. 크루에게 첫 메시지를 남겨보세요.</div>';
   list.scrollTop = list.scrollHeight;
 }
@@ -536,6 +541,23 @@ document.addEventListener('DOMContentLoaded', () => {
     ipdRenderCrewChatPanel();
   }
   if (chatSendBtn) chatSendBtn.addEventListener('click', ipdSendChat);
+  const chatListEl = document.getElementById('ipdChatList');
+  if (chatListEl) {
+    chatListEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.bearip-report-link');
+      if (!btn || !ipdCurrentIp) return;
+      const msg = bearipGetCrewChatMessages(ipdCurrentIp.id).find((m) => m.id === btn.dataset.msgId);
+      if (!msg) return;
+      bearipOpenReportModal({
+        type: 'crew',
+        targetNickname: msg.name,
+        targetId: msg.id,
+        text: msg.text,
+        contextLabel: `크루 채팅 (${ipdCurrentIp.title || 'IP'})`,
+        onDone: ipdRenderCrewChatPanel,
+      });
+    });
+  }
   if (chatInput) {
     chatInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') ipdSendChat();

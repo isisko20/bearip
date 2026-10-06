@@ -38,6 +38,29 @@
 }
 .pr-cleanup-purge-btn:hover { background: rgba(214,69,69,0.1); }
 
+/* ---- 신고 접수 ---- */
+.pr-report-panel {
+  background: var(--dr-panel); border: 1px solid var(--dr-border); border-radius: var(--dr-radius);
+  padding: 16px 18px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;
+}
+.pr-report-list { display: flex; flex-direction: column; gap: 10px; max-height: 420px; overflow-y: auto; }
+.pr-report-empty { font-size: 12.5px; color: var(--dr-ink-soft); padding: 4px 0; }
+.pr-report-row { border: 1px solid var(--dr-border); border-radius: 12px; padding: 12px 14px; background: var(--dr-bg-soft); }
+.pr-report-row.resolved { opacity: 0.55; }
+.pr-report-top { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12px; color: var(--dr-ink); }
+.pr-report-type { color: #d64545; font-weight: 700; }
+.pr-report-time { margin-left: auto; color: var(--dr-ink-soft); font-size: 11px; }
+.pr-report-ctx { font-size: 11px; color: var(--dr-ink-soft); margin-top: 4px; }
+.pr-report-text { font-size: 12.5px; margin-top: 6px; line-height: 1.5; word-break: break-word; }
+.pr-report-note { font-size: 11.5px; color: var(--dr-ink-soft); margin-top: 6px; }
+.pr-report-actions { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.pr-report-actions button {
+  padding: 6px 13px; border-radius: 999px; font-size: 11.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+  border: 1px solid var(--dr-border); background: var(--dr-panel); color: var(--dr-ink);
+}
+.pr-report-actions button[data-act="resolve"] { background: var(--dr-purple); border-color: var(--dr-purple); color: #fff; }
+.pr-report-done { font-size: 11.5px; color: var(--dr-ink-soft); }
+
 .pr-filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
 .pr-filter-btn {
   padding: 8px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 700;

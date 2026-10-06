@@ -241,6 +241,124 @@ function bearipShowToast(message) {
   bearipToastTimer = setTimeout(() => bearipToastEl.classList.remove('show'), 2200);
 }
 
+// ---- 신고하기 모달 (쪽지·크루 채팅·댓글 공용) ----
+// 신고 사유 + 선택 메모, 그리고 "이 사용자 차단하기" 체크박스 하나로 신고와
+// 차단을 한 번에 처리해요. 접수는 storage.js의 bearipSubmitReport가 맡고
+// (같은 글 중복 신고는 한 건으로 합쳐짐), 끝나면 onDone으로 호출한 화면이
+// 다시 그려지게 해요 — 차단하면 그 사람 글이 바로 사라져야 하니까요.
+function bearipInjectReportStyles() {
+  if (document.getElementById('bearip-report-style')) return;
+  const style = document.createElement('style');
+  style.id = 'bearip-report-style';
+  style.textContent = `
+    .bearip-report-overlay {
+      --rp-panel: var(--dr-panel, var(--od-panel, var(--cr-bg-elev, var(--panel, #ffffff))));
+      --rp-border: var(--dr-border, var(--od-border, var(--cr-border, var(--line, #e5e2f0))));
+      --rp-ink: var(--dr-ink, var(--od-ink, var(--cr-ink, var(--ink, #201d33))));
+      --rp-ink-soft: var(--dr-ink-soft, var(--od-ink-soft, var(--cr-ink-soft, var(--ink-soft, #8b879c))));
+      --rp-purple: var(--dr-purple, var(--od-purple, var(--cr-purple, var(--purple-1, #6d4de6))));
+      position: fixed; inset: 0; z-index: 1100; display: flex; align-items: center; justify-content: center;
+      background: rgba(10, 8, 24, 0.55); padding: 16px; font-family: 'Noto Sans KR', sans-serif;
+    }
+    .bearip-report-box {
+      width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto;
+      background: var(--rp-panel); color: var(--rp-ink); border: 1px solid var(--rp-border);
+      border-radius: 18px; padding: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    }
+    .bearip-report-box h3 { margin: 0 0 4px; font-size: 16px; font-weight: 800; }
+    .bearip-report-box .rp-sub { font-size: 12px; color: var(--rp-ink-soft); margin-bottom: 12px; }
+    .bearip-report-box .rp-quote {
+      font-size: 12px; line-height: 1.5; padding: 9px 11px; margin-bottom: 14px; border-radius: 10px;
+      border: 1px solid var(--rp-border); color: var(--rp-ink-soft); word-break: break-word;
+      max-height: 78px; overflow: hidden;
+    }
+    .bearip-report-box .rp-label { font-size: 12px; font-weight: 800; margin-bottom: 6px; }
+    .bearip-report-box .rp-reason { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 5px 0; cursor: pointer; }
+    .bearip-report-box .rp-reason input { accent-color: var(--rp-purple); }
+    .bearip-report-box textarea {
+      width: 100%; box-sizing: border-box; margin-top: 8px; min-height: 58px; resize: vertical;
+      border: 1px solid var(--rp-border); border-radius: 10px; padding: 9px 11px; font: inherit; font-size: 12.5px;
+      background: transparent; color: var(--rp-ink);
+    }
+    .bearip-report-box .rp-block { display: flex; align-items: center; gap: 8px; font-size: 12.5px; margin: 12px 0 16px; cursor: pointer; }
+    .bearip-report-box .rp-block input { accent-color: var(--rp-purple); }
+    .bearip-report-box .rp-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .bearip-report-box .rp-actions button {
+      padding: 9px 16px; border-radius: 999px; font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer;
+      border: 1px solid var(--rp-border); background: transparent; color: var(--rp-ink);
+    }
+    .bearip-report-box .rp-actions .rp-submit { background: var(--rp-purple); border-color: var(--rp-purple); color: #fff; }
+    .bearip-report-link {
+      border: none; background: none; padding: 0; margin-left: 8px; font: inherit; font-size: 11px;
+      color: inherit; opacity: 0.55; cursor: pointer; text-decoration: underline;
+    }
+    .bearip-report-link:hover { color: #e5484d; opacity: 1; }
+  `;
+  document.head.appendChild(style);
+}
+
+function bearipOpenReportModal(opts) {
+  const user = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
+  if (!user || !opts || !opts.targetNickname || opts.targetNickname === user.nickname) return;
+  bearipInjectReportStyles();
+  const esc = bearipEscapeHtml;
+  const root = document.querySelector('.dna-app, .od-app, .cr-app, .lg-app, .ni-app') || document.body;
+  const overlay = document.createElement('div');
+  overlay.className = 'bearip-report-overlay';
+  overlay.innerHTML = `
+    <div class="bearip-report-box" role="dialog" aria-label="신고하기">
+      <h3>신고하기</h3>
+      <div class="rp-sub">${esc(opts.targetNickname)}님의 ${esc(opts.contextLabel || '글')}</div>
+      <div class="rp-quote">${esc(opts.text || '')}</div>
+      <div class="rp-label">신고 사유</div>
+      ${BEARIP_REPORT_REASONS.map((r, i) => `<label class="rp-reason"><input type="radio" name="bearipRpReason" value="${esc(r)}"${i === 0 ? ' checked' : ''}>${esc(r)}</label>`).join('')}
+      <textarea maxlength="200" placeholder="추가로 알려주실 내용이 있다면 적어주세요 (선택)"></textarea>
+      <label class="rp-block"><input type="checkbox" id="bearipRpBlock"> 이 사용자 차단하기 (쪽지·댓글·크루 채팅이 내 화면에서 사라져요)</label>
+      <div class="rp-actions">
+        <button type="button" class="rp-cancel">취소</button>
+        <button type="button" class="rp-submit">신고하기</button>
+      </div>
+    </div>
+  `;
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener('keydown', onKey);
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape') close();
+  };
+  document.addEventListener('keydown', onKey);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close();
+  });
+  overlay.querySelector('.rp-cancel').addEventListener('click', close);
+  overlay.querySelector('.rp-submit').addEventListener('click', () => {
+    const reason = (overlay.querySelector('input[name="bearipRpReason"]:checked') || {}).value;
+    const note = overlay.querySelector('textarea').value.trim();
+    const blockToo = overlay.querySelector('#bearipRpBlock').checked;
+    const filed = bearipSubmitReport({
+      type: opts.type,
+      targetNickname: opts.targetNickname,
+      targetId: opts.targetId,
+      text: opts.text,
+      contextLabel: opts.contextLabel,
+      reason,
+      note,
+    });
+    if (blockToo) bearipBlockUser(opts.targetNickname);
+    close();
+    bearipShowToast(
+      filed === 'duplicate'
+        ? blockToo ? '이미 신고한 글이에요. 차단은 적용했어요' : '이미 신고한 글이에요'
+        : !filed
+          ? '신고를 접수하지 못했어요. 잠시 후 다시 시도해주세요'
+          : blockToo ? '신고를 접수하고 차단했어요' : '신고를 접수했어요'
+    );
+    if (typeof opts.onDone === 'function') opts.onDone();
+  });
+  root.appendChild(overlay);
+}
+
 document.addEventListener('click', (e) => {
   const soon = e.target.closest('.bearip-soon');
   if (soon) {
