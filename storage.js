@@ -1416,6 +1416,18 @@ function bearipIpActivityCount(ip) {
   return comments + bearipGetCrewChatMessages(ip.id).length;
 }
 
+// 내가 쓴 크루 채팅 메시지 삭제 (작성자 본인만).
+function bearipDeleteOwnCrewChatMessage(ipId, msgId) {
+  const user = bearipGetUser();
+  const msg = (_bearipDataCache.crewChat[ipId] || {})[msgId];
+  if (!user || !msg || msg.name !== user.nickname) return false;
+  delete _bearipDataCache.crewChat[ipId][msgId];
+  if (bearipFirebaseReady()) {
+    _bearipFirebaseWrite(() => firebase.database().ref('crewChat/' + ipId + '/' + msgId).remove());
+  }
+  return true;
+}
+
 function bearipDeleteCrewChat(ipId) {
   bearipGetCrewChatMessages(ipId).forEach((m) => {
     if (bearipFirebaseReady()) firebase.database().ref('crewChat/' + ipId + '/' + m.id).remove();
@@ -1603,6 +1615,27 @@ function bearipSendDm(toNickname, text) {
   return record;
 }
 
+// 내가 보낸 쪽지 삭제 (보낸 사람 본인만) — 상대 화면에서도 같이 사라져요.
+// 마지막 메시지까지 지우면 빈 대화방이 남지 않도록 참여자 기록도 정리해요.
+function bearipDeleteOwnDmMessage(threadId, msgId) {
+  const user = bearipGetUser();
+  const thread = _bearipDataCache.dmThreads[threadId];
+  const msg = thread && thread.messages && thread.messages[msgId];
+  if (!user || !msg || msg.from !== user.nickname) return false;
+  delete thread.messages[msgId];
+  const empty = !Object.keys(thread.messages).length;
+  const participantKeys = Object.keys(thread.participants || {});
+  if (empty) delete _bearipDataCache.dmThreads[threadId];
+  if (bearipFirebaseReady()) {
+    _bearipFirebaseWrite(() => {
+      const base = firebase.database().ref('dmThreads/' + threadId);
+      base.child('messages/' + msgId).remove();
+      if (empty) participantKeys.forEach((k) => base.child('participants/' + k).remove());
+    });
+  }
+  return true;
+}
+
 function bearipGetEpisodeComments(ipId, episodeId) {
   const map = ((_bearipDataCache.episodeComments[ipId] || {})[episodeId]) || {};
   return Object.keys(map)
@@ -1636,6 +1669,19 @@ function bearipDeleteEpisodeComments(ipId, episodeId) {
     if (bearipFirebaseReady()) firebase.database().ref('episodeComments/' + ipId + '/' + episodeId + '/' + c.id).remove();
   });
   if (_bearipDataCache.episodeComments[ipId]) delete _bearipDataCache.episodeComments[ipId][episodeId];
+}
+
+// 내가 쓴 댓글 삭제 — 작성자 본인(닉네임 일치)만. 규칙상 누구나 쓸 수 있는
+// 경로라서 "내 글인지"는 여기서 확인해요.
+function bearipDeleteOwnEpisodeComment(ipId, episodeId, commentId) {
+  const user = bearipGetUser();
+  const comment = ((_bearipDataCache.episodeComments[ipId] || {})[episodeId] || {})[commentId];
+  if (!user || !comment || comment.name !== user.nickname) return false;
+  delete _bearipDataCache.episodeComments[ipId][episodeId][commentId];
+  if (bearipFirebaseReady()) {
+    _bearipFirebaseWrite(() => firebase.database().ref('episodeComments/' + ipId + '/' + episodeId + '/' + commentId).remove());
+  }
+  return true;
 }
 
 // ---- 고아 데이터 점검 (GM) ----

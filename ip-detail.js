@@ -113,7 +113,11 @@ function ipdRenderCrewChatPanel() {
   list.innerHTML =
     messages
       .map((m) => {
-        const reportBtn = me && m.name !== me.nickname ? `<button type="button" class="bearip-report-link" data-msg-id="${esc(m.id)}">신고</button>` : '';
+        const reportBtn = !me
+          ? ''
+          : m.name === me.nickname
+            ? `<button type="button" class="bearip-delete-link" data-msg-id="${esc(m.id)}">삭제</button>`
+            : `<button type="button" class="bearip-report-link" data-msg-id="${esc(m.id)}">신고</button>`;
         return `
       <div class="ipd-chat-msg">
         <div class="head"><span class="name">${esc(m.name)}</span><span class="time">${ipdFormatRelativeTime(m.createdAt)}</span>${reportBtn}</div>
@@ -544,6 +548,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const chatListEl = document.getElementById('ipdChatList');
   if (chatListEl) {
     chatListEl.addEventListener('click', (e) => {
+      const delBtn = e.target.closest('.bearip-delete-link');
+      if (delBtn && ipdCurrentIp) {
+        if (!confirm('이 메시지를 삭제할까요?')) return;
+        if (bearipDeleteOwnCrewChatMessage(ipdCurrentIp.id, delBtn.dataset.msgId)) {
+          ipdRenderCrewChatPanel();
+          bearipShowToast('메시지를 삭제했어요');
+        }
+        return;
+      }
       const btn = e.target.closest('.bearip-report-link');
       if (!btn || !ipdCurrentIp) return;
       const msg = bearipGetCrewChatMessages(ipdCurrentIp.id).find((m) => m.id === btn.dataset.msgId);

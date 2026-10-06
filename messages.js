@@ -80,7 +80,10 @@ function msgRenderMessages() {
   listEl.innerHTML = messages
     .map((m) => {
       const mine = m.from === user.nickname;
-      const reportBtn = mine ? '' : `<button type="button" class="bearip-report-link" data-msg-id="${bearipEscapeAttr(m.id)}">신고</button>`;
+      const msgId = bearipEscapeAttr(m.id);
+      const reportBtn = mine
+        ? `<button type="button" class="bearip-delete-link" data-msg-id="${msgId}">삭제</button>`
+        : `<button type="button" class="bearip-report-link" data-msg-id="${msgId}">신고</button>`;
       return `
       <div class="msg-bubble-row${mine ? ' mine' : ''}">
         <div>
@@ -150,6 +153,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 상대 메시지 신고 — 신고 시점의 글 내용을 그대로 담아 보내요.
   document.getElementById('msgList').addEventListener('click', (e) => {
+    const delBtn = e.target.closest('.bearip-delete-link');
+    if (delBtn && msgActiveOther) {
+      if (!confirm('이 쪽지를 삭제할까요?\n상대방 화면에서도 사라져요.')) return;
+      if (bearipDeleteOwnDmMessage(msgThreadIdFor(msgActiveOther), delBtn.dataset.msgId)) {
+        msgRenderMessages();
+        msgRenderThreadList();
+        bearipShowToast('쪽지를 삭제했어요');
+      }
+      return;
+    }
     const btn = e.target.closest('.bearip-report-link');
     if (!btn || !msgActiveOther) return;
     const msg = bearipGetDmThreadMessages(msgThreadIdFor(msgActiveOther)).find((m) => m.id === btn.dataset.msgId);

@@ -288,14 +288,17 @@ function bearipInjectReportStyles() {
       border: 1px solid var(--rp-border); background: transparent; color: var(--rp-ink);
     }
     .bearip-report-box .rp-actions .rp-submit { background: var(--rp-purple); border-color: var(--rp-purple); color: #fff; }
-    .bearip-report-link {
+    .bearip-report-link, .bearip-delete-link {
       border: none; background: none; padding: 0; margin-left: 8px; font: inherit; font-size: 11px;
       color: inherit; opacity: 0.55; cursor: pointer; text-decoration: underline;
     }
-    .bearip-report-link:hover { color: #e5484d; opacity: 1; }
+    .bearip-report-link:hover, .bearip-delete-link:hover { color: #e5484d; opacity: 1; }
   `;
   document.head.appendChild(style);
 }
+
+// 신고/삭제 링크는 모달이 열리기 전부터 화면에 있으니 스타일도 미리 넣어둬요.
+document.addEventListener('DOMContentLoaded', bearipInjectReportStyles);
 
 function bearipOpenReportModal(opts) {
   const user = typeof bearipGetUser === 'function' ? bearipGetUser() : null;

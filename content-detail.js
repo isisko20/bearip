@@ -383,7 +383,11 @@ document.addEventListener('DOMContentLoaded', () => {
     el.className = 'cd-comment';
     el.dataset.commentId = c.id;
     const me = bearipGetUser();
-    const reportBtn = me && c.name !== me.nickname ? '<button type="button" class="bearip-report-link">신고</button>' : '';
+    const reportBtn = !me
+      ? ''
+      : c.name === me.nickname
+        ? '<button type="button" class="bearip-delete-link">삭제</button>'
+        : '<button type="button" class="bearip-report-link">신고</button>';
     el.innerHTML = `
       <div class="av ${CD_THUMBS[index % CD_THUMBS.length]}"></div>
       <div class="body">
@@ -426,6 +430,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   commentList.addEventListener('click', (e) => {
+    const delBtn = e.target.closest('.bearip-delete-link');
+    if (delBtn) {
+      if (!confirm('이 댓글을 삭제할까요?')) return;
+      const commentId = delBtn.closest('.cd-comment').dataset.commentId;
+      if (bearipDeleteOwnEpisodeComment(ip.id, episode.id, commentId)) {
+        renderComments();
+        bearipShowToast('댓글을 삭제했어요');
+      }
+      return;
+    }
     const reportBtn = e.target.closest('.bearip-report-link');
     if (reportBtn) {
       const commentId = reportBtn.closest('.cd-comment').dataset.commentId;
