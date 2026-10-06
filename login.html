@@ -16,12 +16,24 @@
       </svg>
     </div>
     <h1>Thinkit에 오신 걸 환영해요</h1>
-    <p class="sub">닉네임만 있으면 바로 시작할 수 있어요.<br>테스트용 로그인이라 비밀번호는 필요 없어요.</p>
+    <p class="sub">닉네임과 PIN으로 시작해요.<br>처음 쓰는 닉네임이면 입력한 PIN으로 잠겨서, 다른 사람이 도용할 수 없어요.</p>
 
     <div class="lg-field">
       <label>닉네임</label>
       <input type="text" id="lgNickname" placeholder="예: 판타지" maxlength="20">
       <div class="error" id="lgNicknameError">닉네임을 입력해주세요.</div>
+    </div>
+
+    <div class="lg-field">
+      <label>PIN (4자 이상)</label>
+      <input type="password" id="lgPin" placeholder="PIN을 입력하세요" maxlength="30" autocomplete="current-password">
+      <div class="error" id="lgPinError"></div>
+    </div>
+
+    <div class="lg-field" id="lgPinConfirmField" style="display:none">
+      <label>PIN 확인</label>
+      <input type="password" id="lgPinConfirm" placeholder="PIN을 한 번 더 입력하세요" maxlength="30" autocomplete="new-password">
+      <div class="error" id="lgPinConfirmError"></div>
     </div>
 
     <div class="lg-field">
@@ -32,7 +44,7 @@
     <button class="lg-submit-btn" id="lgSubmitBtn">시작하기</button>
 
     <div class="lg-note">
-      실제 서비스가 아닌 테스트 버전이에요. 입력한 정보는 이 브라우저에만 저장되고, 다른 사람에게는 보이지 않아요.
+      실제 서비스가 아닌 테스트 버전이에요. PIN은 한 번 정하면 직접 바꾸거나 찾을 수 없으니 꼭 기억해두세요. 잊어버렸다면 운영자에게 문의해주세요.
     </div>
 
     <a class="lg-back-link" href="index.html">

@@ -214,6 +214,18 @@
       }
     },
 
+    "accounts": {
+      "$nickname": {
+        ".read": "auth != null",
+        ".write": "auth != null && !data.exists()",
+        ".validate": "newData.hasChildren(['pinHash', 'salt', 'iterations', 'createdAt'])",
+        "pinHash": { ".validate": "newData.isString()" },
+        "salt": { ".validate": "newData.isString()" },
+        "iterations": { ".validate": "newData.isNumber()" },
+        "createdAt": { ".validate": "newData.isString()" }
+      }
+    },
+
     "reports": {
       ".read": "auth != null",
       "$reportId": {

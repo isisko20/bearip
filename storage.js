@@ -2110,6 +2110,96 @@ function bearipLogout() {
   localStorage.removeItem(BEARIP_USER_KEY);
 }
 
+// ---- 계정 (닉네임 + PIN) ----
+// accounts/<닉네임> = { pinHash, salt, iterations, createdAt } — 닉네임을 처음
+// 쓴 사람이 PIN을 정하면 그 닉네임이 잠겨요. 규칙(database.rules.json)이
+// "이미 있는 계정은 덮어쓰기 불가"를 강제하기 때문에, 먼저 잠근 사람이 항상
+// 이기고 다른 사람은 PIN을 맞춰야만 같은 닉네임으로 로그인할 수 있어요.
+//
+// 한계: 진짜 서버 로그인이 아니라서 브라우저 저장소를 직접 만지는 사람까지는
+// 막지 못하고, 해시도 로그인한 사람이면 읽을 수 있어요 (그래서 PBKDF2로 느리게
+// 계산해요). 친구 사이에서 남의 닉네임으로 로그인하는 것을 막는 수준이에요.
+const BEARIP_PIN_ITERATIONS = 100000;
+const BEARIP_PIN_MIN_LENGTH = 4;
+
+function _bearipBytesToHex(bytes) {
+  return Array.from(new Uint8Array(bytes))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+async function _bearipHashPin(nickname, pin, saltHex, iterations) {
+  if (!window.crypto || !window.crypto.subtle) throw new Error('crypto-unavailable');
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(pin), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode(saltHex + ':' + nickname), iterations },
+    key,
+    256
+  );
+  return _bearipBytesToHex(bits);
+}
+
+// Firebase 익명 로그인이 끝날 때까지 기다려요 (최대 ~8초). 로그인 직후 페이지
+// 로드에서는 아직 currentUser가 비어 있을 수 있어서 바로 읽으면 실패해요.
+function _bearipWhenFirebaseAuthed() {
+  return new Promise((resolve, reject) => {
+    if (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) {
+      reject(new Error('firebase-unavailable'));
+      return;
+    }
+    if (firebase.auth().currentUser) {
+      resolve();
+      return;
+    }
+    const timer = setTimeout(() => {
+      unsub();
+      reject(new Error('auth-timeout'));
+    }, 8000);
+    const unsub = firebase.auth().onAuthStateChanged((u) => {
+      if (!u) return;
+      clearTimeout(timer);
+      unsub();
+      resolve();
+    });
+  });
+}
+
+function _bearipAccountRef(nickname) {
+  return firebase.database().ref('accounts/' + bearipSafePathSegment(nickname));
+}
+
+// 계정이 있으면 기록을, 없으면 null을, 서버에 닿지 못하면 예외를 던져요
+// (실패했을 때 "없음"으로 착각해 남의 닉네임을 덮어쓰지 않게 구분해요).
+async function bearipFetchAccount(nickname) {
+  await _bearipWhenFirebaseAuthed();
+  const snap = await _bearipAccountRef(nickname).once('value');
+  return snap.val();
+}
+
+async function bearipVerifyPin(nickname, pin, account) {
+  if (!account || !account.pinHash) return false;
+  const hash = await _bearipHashPin(nickname, pin, account.salt, account.iterations || BEARIP_PIN_ITERATIONS);
+  return hash === account.pinHash;
+}
+
+// 계정 만들기 — 다른 사람이 먼저 만들었다면 규칙이 거절하고 'taken'을 던져요.
+async function bearipCreateAccount(nickname, pin) {
+  await _bearipWhenFirebaseAuthed();
+  const salt = _bearipBytesToHex(crypto.getRandomValues(new Uint8Array(16)));
+  const record = {
+    pinHash: await _bearipHashPin(nickname, pin, salt, BEARIP_PIN_ITERATIONS),
+    salt,
+    iterations: BEARIP_PIN_ITERATIONS,
+    createdAt: new Date().toISOString(),
+  };
+  try {
+    await _bearipAccountRef(nickname).set(record);
+  } catch (e) {
+    throw new Error(e && e.code === 'PERMISSION_DENIED' ? 'taken' : 'write-failed');
+  }
+}
+
 // Sends the user to the login page, remembering where to bring them back to.
 // The return target is kept in sessionStorage rather than a ?next= query
 // param, since some static hosts/dev servers rewrite URLs and drop query

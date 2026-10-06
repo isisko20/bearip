@@ -56,10 +56,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ---- 프로필 설정 저장 ----
   document.getElementById('settingsSaveBtn').addEventListener('click', () => {
-    const nickname = document.getElementById('settingsNickname').value.trim() || '게스트';
+    // 닉네임은 계정(PIN)과 모든 기록의 열쇠라서 여기서는 바꾸지 않아요 — 예전처럼
+    // 아무 값으로 바꿀 수 있으면 남의 닉네임(GM 포함)으로 PIN 없이 갈아탈 수 있어요.
     const bio = document.getElementById('settingsBio').value.trim();
     const current = bearipGetUser();
-    const updated = bearipSetUser({ nickname, bio, joinedAt: current.joinedAt });
+    const updated = bearipSetUser(Object.assign({}, current, { bio }));
     renderHeader(updated);
     flashSaved('settingsSavedNote');
     if (typeof bearipSyncMyCreatorProfile === 'function') bearipSyncMyCreatorProfile();

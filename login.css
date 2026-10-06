@@ -47,7 +47,7 @@
 
 .lg-field { text-align: left; margin-bottom: 16px; }
 .lg-field label { display: block; font-size: 12.5px; font-weight: 700; margin-bottom: 8px; }
-.lg-field input[type="text"], .lg-field textarea {
+.lg-field input[type="text"], .lg-field input[type="password"], .lg-field textarea {
   width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--lg-border);
   background: var(--lg-bg); font-size: 13.5px; color: var(--lg-ink); outline: none; font-family: inherit;
 }
