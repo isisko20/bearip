@@ -71,6 +71,17 @@ function cdRenderEmpty() {
   `;
 }
 
+function cdRenderLoadFailed() {
+  const main = document.getElementById('cdMain');
+  if (!main) return;
+  main.innerHTML = `
+    <div class="cd-panel" style="text-align:center; padding:60px 20px;">
+      <h3 style="margin-bottom:8px;">회차 내용을 불러오지 못했어요</h3>
+      <p class="desc">네트워크 상태를 확인하고, 잠시 후 Content Room이나 IP 상세 페이지에서 다시 들어와주세요.</p>
+    </div>
+  `;
+}
+
 function cdRenderPlayer(ip, episode) {
   const player = document.getElementById('player');
   const badge = document.getElementById('cdPlayerBadge');
@@ -291,13 +302,29 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const snapshot = cdConsumeSnapshot();
   if (!snapshot) {
     cdRenderEmpty();
     return;
   }
-  const { ip, episode } = snapshot;
+  const { ip } = snapshot;
+  let { episode } = snapshot;
+  // 목록에서 넘어온 IP는 가벼운 요약(slim)이라 회차 본문·영상·큰 이미지가 빠져 있어요
+  // (storage.js "큰 파일 분리" 참고). 그 회차 한 편의 전체 내용만 따로 받아서 보여줘요 —
+  // 못 받았을 때 잘린 본문을 그대로 보여주면 오해하기 쉬우니 안내 화면으로 대신해요.
+  if (ip.slim) {
+    const main = document.getElementById('cdMain');
+    if (main) main.style.visibility = 'hidden';
+    const details = typeof bearipLoadIpDetails === 'function' ? await bearipLoadIpDetails(ip.id) : null;
+    const full = details && (details.episodes || []).find((e) => e.id === episode.id);
+    if (main) main.style.visibility = '';
+    if (!full) {
+      cdRenderLoadFailed();
+      return;
+    }
+    episode = full;
+  }
   cdRenderEpisode(ip, episode);
   cdRenderRelated(ip, episode);
   if (typeof bearipOnDataChange === 'function') {

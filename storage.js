@@ -388,6 +388,12 @@ function bearipDeleteIP(id) {
   if (bearipFirebaseReady()) {
     firebase.database().ref('allIPs/' + id).remove();
     firebase.database().ref('publicIPs/' + id).remove();
+    // 큰 파일을 따로 담은 상세·자료실 문서도 IP와 함께 지워요 (_bearipPublishIpSummary 참고).
+    firebase.database().ref('ipDetails/' + id).remove();
+    firebase.database().ref('ipMaterials/' + id).remove();
+    delete _bearipIpRemoteCache[id];
+    delete _bearipHeavyCache.ipDetails[id];
+    delete _bearipHeavyCache.ipMaterials[id];
     firebase.database().ref('ipOverallComments/' + id).remove();
     // 제작요청/전문가검토 큐는 이 IP를 참조만 할 뿐 담고 있지는 않아서, IP가
     // 삭제돼도 저절로 같이 사라지지 않는다 — 안 지우면 GM 쪽에 실체 없는
@@ -1831,6 +1837,23 @@ function _bearipWatchPath(kind, path) {
     });
 }
 
+// 조건에 맞는 레코드만 구독해요 (예: 내가 요청한 것만). 캐시 모양은 _bearipWatchPath와
+// 같아서 읽는 쪽 코드는 그대로 써요. 검색 필드에는 database.rules.json의 .indexOn이
+// 있어야 서버에서 걸러져요 — 없으면 전체를 받은 뒤 걸러서 의미가 없어요.
+function _bearipWatchQuery(kind, path, child, value) {
+  if (!bearipFirebaseReady()) return;
+  firebase
+    .database()
+    .ref(path)
+    .orderByChild(child)
+    .equalTo(value)
+    .on('value', (snap) => {
+      _bearipDataCache[kind] = snap.val() || {};
+      _bearipDataLoaded[kind] = true;
+      _bearipNotifyListeners(kind);
+    });
+}
+
 function _bearipMapToArray(map, sortField) {
   return Object.keys(map || {})
     .map((id) => Object.assign({ id }, map[id]))
@@ -2045,12 +2068,214 @@ function bearipLoadPublicIPs() {
   return Object.values(_bearipDataCache.publicIPs || {});
 }
 
+// ---- 큰 파일 분리 (요약 / 상세 / 자료실) ----
+// publicIPs는 모든 방문자가 모든 페이지에서 통째로 내려받아요. 예전에는 IP 문서
+// 안에 이미지·파일(base64)이 그대로 들어 있어서, IP 7개가 6MB를 넘었고 페이지를
+// 열 때마다 그만큼을 받았어요. 그래서 한 IP를 셋으로 나눠 올려요:
+//   publicIPs/<id>, allIPs/<id>  요약 — 카드·목록에 필요한 가벼운 정보 + 작은
+//                                썸네일 (slim: true 표시)
+//   ipDetails/<id>               공개 상세 — 큰 표지(coverImage)와 회차 전체
+//                                (episodes). IP 상세·회차 페이지에서만 읽어요
+//   ipMaterials/<id>             자료실 — 로드맵 제출물과 자료 원본(roadmap,
+//                                assets). GM이 볼 때만 읽어요
+// slim 표시가 없는 옛 형식 문서도 그대로 동작해요 — 읽는 쪽이 slim일 때만
+// 상세를 따로 불러와서 합쳐요.
+const BEARIP_THUMB_COVER = 480;
+const BEARIP_THUMB_ASSET = 200;
+const BEARIP_THUMB_EPISODE = 240;
+const BEARIP_MAX_ASSET_THUMBS = 3; // 카드의 "Latest Work"는 앞의 3개만 보여줘요
+const BEARIP_MAX_EPISODE_THUMBS = 30;
+const BEARIP_TINY_IMAGE = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='; // "이미지가 있다"는 표시만 필요할 때
+
+// data URL 이미지를 작게 줄인 새 data URL로 (이미 작거나 줄이지 못하면 원본/null).
+function bearipThumbFromDataUrl(dataUrl, maxDim, quality) {
+  return new Promise((resolve) => {
+    if (typeof dataUrl !== 'string' || !/^data:image\//.test(dataUrl)) {
+      resolve(null);
+      return;
+    }
+    if (dataUrl.length < 12000) {
+      resolve(dataUrl); // 이미 충분히 작아요
+      return;
+    }
+    const img = new Image();
+    const timer = setTimeout(() => resolve(null), 10000);
+    img.onerror = () => {
+      clearTimeout(timer);
+      resolve(null);
+    };
+    img.onload = () => {
+      clearTimeout(timer);
+      try {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const width = Math.max(1, Math.round(img.width * scale));
+        const height = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff'; // 투명 PNG를 JPEG로 바꿀 때 검게 변하지 않게
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } catch (e) {
+        resolve(null);
+      }
+    };
+    img.src = dataUrl;
+  });
+}
+
+function _bearipSlimSubmission(sub) {
+  const out = Object.assign({}, sub);
+  if (out.imageData) out.hasImage = true;
+  if (out.fileData) out.hasFile = true;
+  delete out.imageData;
+  delete out.fileData;
+  return out;
+}
+
+// 하이드레이트된 IP 전체를 { slim, details, materials } 로 나눠요.
+async function bearipBuildIpParts(ip) {
+  const src = ip || {};
+  const assets = Array.isArray(src.assets) ? src.assets : [];
+  const episodes = Array.isArray(src.episodes) ? src.episodes : [];
+  const roadmap = Array.isArray(src.roadmap) ? src.roadmap : [];
+
+  const firstImageAsset = assets.find((a) => a && a.imageData);
+  const fullCover = src.coverImage || (firstImageAsset && firstImageAsset.imageData) || null;
+
+  const details = {};
+  if (fullCover) details.coverImage = fullCover;
+  if (episodes.length) details.episodes = episodes;
+  const materials = {};
+  if (roadmap.length) materials.roadmap = roadmap;
+  if (assets.length) materials.assets = assets;
+
+  const slim = Object.assign({}, src, { slim: true });
+  delete slim.coverImage;
+  const coverThumb = fullCover ? await bearipThumbFromDataUrl(fullCover, BEARIP_THUMB_COVER, 0.72) : null;
+  if (coverThumb) slim.coverImage = coverThumb;
+
+  if (roadmap.length) {
+    slim.roadmap = roadmap.map((step) =>
+      Array.isArray(step.submissions) && step.submissions.length
+        ? Object.assign({}, step, { submissions: step.submissions.map(_bearipSlimSubmission) })
+        : step
+    );
+  }
+
+  if (assets.length) {
+    const thumbIdx = new Set();
+    assets.forEach((a, i) => {
+      if (a && a.imageData && thumbIdx.size < BEARIP_MAX_ASSET_THUMBS) thumbIdx.add(i);
+    });
+    slim.assets = await Promise.all(
+      assets.map(async (a, i) => {
+        const out = Object.assign({}, a);
+        if (out.fileData) out.hasFile = true;
+        delete out.fileData;
+        if (a.imageData) {
+          // 앞의 3개는 진짜 썸네일, 나머지는 "이미지 있음" 표시(1px)만 — 카드의 "+N" 개수가 유지돼요.
+          out.imageData = thumbIdx.has(i) ? (await bearipThumbFromDataUrl(a.imageData, BEARIP_THUMB_ASSET, 0.7)) || BEARIP_TINY_IMAGE : BEARIP_TINY_IMAGE;
+        }
+        return out;
+      })
+    );
+  }
+
+  if (episodes.length) {
+    slim.episodes = await Promise.all(
+      episodes.map(async (ep, i) => {
+        const out = Object.assign({}, ep);
+        if (out.fileData) out.hasFile = true;
+        delete out.fileData;
+        if (typeof out.body === 'string' && out.body.length > 200) {
+          out.body = out.body.slice(0, 200); // 본문은 상세에서만 — 목록에는 미리보기만
+          out.bodyTruncated = true;
+        }
+        if (ep.imageData) {
+          out.imageData = i < BEARIP_MAX_EPISODE_THUMBS ? (await bearipThumbFromDataUrl(ep.imageData, BEARIP_THUMB_EPISODE, 0.7)) || BEARIP_TINY_IMAGE : BEARIP_TINY_IMAGE;
+        }
+        return out;
+      })
+    );
+  }
+  return { slim, details, materials };
+}
+
+function _bearipFingerprint(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  return str.length + ':' + (h >>> 0);
+}
+
+// 상세·자료실 문서 쓰기 — 내용이 비어 있으면 예전에 올린 문서가 남지 않게 지워요.
+function _bearipWriteIpHeavyParts(ipId, parts) {
+  const db = firebase.database();
+  const put = (path, data) => (Object.keys(data).length ? db.ref(path).set(bearipFirebaseSafe(data)) : db.ref(path).remove());
+  return Promise.all([put('ipDetails/' + ipId, parts.details), put('ipMaterials/' + ipId, parts.materials)]);
+}
+
+// 같은 IP를 공개용·GM용으로 동시에 올릴 때(그리고 같은 내용이 다시 저장될 때) 썸네일
+// 만들기와 큰 문서 업로드를 한 번만 하도록 내용 지문으로 묶어요.
+const _bearipIpRemoteCache = {};
+function _bearipPrepareIpRemote(ip) {
+  return bearipHydrateIpForRemote(ip).then((hydrated) => {
+    const fp = _bearipFingerprint(JSON.stringify(hydrated));
+    const cached = _bearipIpRemoteCache[ip.id];
+    if (cached && cached.fp === fp) return cached;
+    const entry = { fp };
+    entry.parts = bearipBuildIpParts(hydrated);
+    entry.heavyDone = entry.parts.then((parts) => _bearipWriteIpHeavyParts(ip.id, parts));
+    entry.heavyDone.catch(() => {
+      if (_bearipIpRemoteCache[ip.id] === entry) delete _bearipIpRemoteCache[ip.id]; // 실패는 다음에 다시 시도
+    });
+    _bearipIpRemoteCache[ip.id] = entry;
+    return entry;
+  });
+}
+
+// 요약을 path(publicIPs 또는 allIPs)에 올려요. 상세가 먼저 올라가야, 요약을 본
+// 사람이 곧바로 상세를 가져올 수 있어요.
+function _bearipPublishIpSummary(ip, path) {
+  _bearipPrepareIpRemote(ip)
+    .then(async (entry) => {
+      const parts = await entry.parts;
+      await entry.heavyDone;
+      _bearipFirebaseWrite(() => firebase.database().ref(path + '/' + ip.id).set(bearipFirebaseSafe(parts.slim)));
+    })
+    .catch(() => {
+      /* best-effort background sync — 다음 저장 때 다시 시도돼요 */
+    });
+}
+
+const _bearipHeavyCache = { ipDetails: {}, ipMaterials: {} };
+// 공개 상세/자료실 문서를 한 번만 읽어서 기억해둬요. 문서가 없으면 {} (옛 형식이거나
+// 비어 있는 IP), 서버에 닿지 못하면 null — 호출하는 쪽이 "없음"과 "실패"를 구분할 수 있게요.
+function _bearipLoadHeavy(kind, ipId) {
+  const cache = _bearipHeavyCache[kind];
+  if (cache[ipId]) return cache[ipId];
+  cache[ipId] = _bearipWhenFirebaseAuthed()
+    .then(() => firebase.database().ref(kind + '/' + ipId).once('value'))
+    .then((snap) => snap.val() || {})
+    .catch(() => {
+      delete cache[ipId];
+      return null;
+    });
+  return cache[ipId];
+}
+function bearipLoadIpDetails(ipId) {
+  return _bearipLoadHeavy('ipDetails', ipId);
+}
+function bearipLoadIpMaterials(ipId) {
+  return _bearipLoadHeavy('ipMaterials', ipId);
+}
+
 function bearipSetIpPublic(ip, isPublic) {
   if (!bearipFirebaseReady() || !ip || !ip.id) return;
-  const ref = firebase.database().ref('publicIPs/' + ip.id);
-  if (isPublic) {
-    bearipHydrateIpForRemote(ip).then((hydrated) => _bearipFirebaseWrite(() => ref.set(bearipFirebaseSafe(hydrated))));
-  } else ref.remove();
+  if (isPublic) _bearipPublishIpSummary(ip, 'publicIPs');
+  else firebase.database().ref('publicIPs/' + ip.id).remove();
 }
 
 // ---- GM-only: every IP regardless of publish status — a 제작요청/전문가검토
@@ -2062,9 +2287,7 @@ function bearipSetIpPublic(ip, isPublic) {
 // client subscribes to this feed at all (see bearipInitFirebaseWatchers).
 function bearipSyncIpForGm(ip) {
   if (!bearipFirebaseReady() || !ip || !ip.id) return;
-  bearipHydrateIpForRemote(ip).then((hydrated) =>
-    _bearipFirebaseWrite(() => firebase.database().ref('allIPs/' + ip.id).set(bearipFirebaseSafe(hydrated)))
-  );
+  _bearipPublishIpSummary(ip, 'allIPs');
 }
 
 function bearipLoadAllIPsForGm() {
@@ -2675,14 +2898,24 @@ function bearipDeleteAssetFile(id) {
 // bearipSetUser's callers), so there's no live-switch case to handle here.
 function _bearipStartFirebaseWatchers() {
   _bearipWatchPath('notifications', bearipNotificationsPath());
-  _bearipWatchPath('productionRequests', 'productionRequests');
-  _bearipWatchPath('ipReviews', 'ipReviews');
+  const _u = bearipGetUser();
+  const _isGm = !!(_u && _u.nickname === 'GM');
+  // 제작요청·전문가 검토는 GM만 전체가 필요해요. 일반 사용자는 내가 요청한 것만
+  // 받아요 (예전엔 모두가 남의 것까지 통째로 내려받아서 페이지마다 7MB가 넘었어요).
+  // 로그인하지 않은 방문자는 볼 일이 없으니 구독하지 않고 "불러옴"으로만 표시해요.
+  ['productionRequests', 'ipReviews'].forEach((kind) => {
+    if (_isGm) _bearipWatchPath(kind, kind);
+    else if (_u && _u.nickname) _bearipWatchQuery(kind, kind, 'requesterNickname', _u.nickname);
+    else {
+      _bearipDataLoaded[kind] = true;
+      _bearipNotifyListeners(kind);
+    }
+  });
   _bearipWatchPath('ipOverallComments', 'ipOverallComments');
   _bearipWatchPath('publicIPs', 'publicIPs');
   // Only GM's own client pulls the full every-IP feed — everyone else's
   // gallery views only ever need (and only ever subscribe to) publicIPs.
-  const _u = bearipGetUser();
-  if (_u && _u.nickname === 'GM') {
+  if (_isGm) {
     _bearipWatchPath('allIPs', 'allIPs');
     // 신고 접수 목록도 GM만 구독 — 일반 사용자는 신고를 올리기만 하고 읽지 않아요.
     _bearipWatchPath('reports', 'reports');

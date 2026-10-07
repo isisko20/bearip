@@ -20,7 +20,7 @@
 
     "productionRequests": {
       ".read": "auth != null",
-      ".indexOn": ["ipId"],
+      ".indexOn": ["ipId", "requesterNickname"],
       "$reqId": {
         ".write": "auth != null",
         ".validate": "newData.hasChildren(['ipId', 'requesterNickname', 'status', 'requestedAt'])",
@@ -34,7 +34,7 @@
 
     "ipReviews": {
       ".read": "auth != null",
-      ".indexOn": ["ipId"],
+      ".indexOn": ["ipId", "requesterNickname"],
       "$reviewId": {
         ".write": "auth != null",
         ".validate": "newData.hasChildren(['ipId', 'requesterNickname', 'stepKey', 'status', 'requestedAt'])",
@@ -211,6 +211,20 @@
             "createdAt": { ".validate": "newData.isString()" }
           }
         }
+      }
+    },
+
+    "ipDetails": {
+      "$ipId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+
+    "ipMaterials": {
+      "$ipId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
       }
     },
 

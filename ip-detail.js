@@ -356,6 +356,29 @@ function ipdApplyDynamicIP() {
   if (heroStage) heroStage.textContent = stageLabel;
 
   ipdRenderGmMaterials(ip);
+  ipdHydrateFullIp(ip);
+}
+
+// 목록에서 넘어온 IP는 가벼운 요약(slim)이라서, 일단 요약으로 화면을 그린 뒤 큰 표지와
+// (GM이라면) 자료실 원본을 따로 받아서 채워 넣어요 (storage.js "큰 파일 분리" 참고).
+// ipdCurrentIp는 일부러 요약 그대로 둬요 — 회차로 넘어갈 때 sessionStorage에 담는 용도라
+// 큰 파일이 합쳐지면 저장 한도를 넘을 수 있어요.
+function ipdHydrateFullIp(ip) {
+  if (!ip.slim) return;
+  if (typeof bearipLoadIpDetails === 'function') {
+    bearipLoadIpDetails(ip.id).then((details) => {
+      if (!details || !details.coverImage || ipdCurrentIp !== ip) return;
+      const heroBg = document.getElementById('ipdHeroBg');
+      if (heroBg) heroBg.style.backgroundImage = `url('${details.coverImage}')`;
+    });
+  }
+  const user = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
+  if (user && user.nickname === 'GM' && typeof bearipLoadIpMaterials === 'function') {
+    bearipLoadIpMaterials(ip.id).then((materials) => {
+      if (!materials || ipdCurrentIp !== ip) return;
+      ipdRenderGmMaterials(Object.assign({}, ip, materials));
+    });
+  }
 }
 
 // GM-only — 제작 시뮬레이션을 위해 개발 맵의 각 항목에 실제 등록된 자료(이미지/문서/메모)를
