@@ -104,8 +104,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ---- 로그아웃 ----
   document.getElementById('pfLogoutBtn').addEventListener('click', () => {
-    bearipLogout();
-    location.href = 'index.html';
+    bearipLogout().then(() => {
+      location.href = 'index.html';
+    });
+  });
+
+  // ---- 계정 관리: PIN 변경 / 계정 삭제 (서버가 현재 PIN을 확인해요) ----
+  const accountMsg = (id, text, kind) => {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'pf-account-msg' + (kind ? ' ' + kind : '');
+  };
+
+  document.getElementById('pwChangeBtn').addEventListener('click', async (e) => {
+    const current = document.getElementById('pwCurrent').value;
+    const next = document.getElementById('pwNew').value;
+    const next2 = document.getElementById('pwNew2').value;
+    if (!current) return accountMsg('pwMsg', '현재 PIN을 입력해주세요.', 'error');
+    if (next.length < BEARIP_PIN_MIN_LENGTH) return accountMsg('pwMsg', `새 PIN은 ${BEARIP_PIN_MIN_LENGTH}자 이상 입력해주세요.`, 'error');
+    if (next !== next2) return accountMsg('pwMsg', '새 PIN이 서로 달라요. 다시 입력해주세요.', 'error');
+    if (next === current) return accountMsg('pwMsg', '현재 PIN과 다른 PIN을 써주세요.', 'error');
+    e.target.disabled = true;
+    accountMsg('pwMsg', '확인 중...');
+    try {
+      await bearipChangePin(current, next);
+      ['pwCurrent', 'pwNew', 'pwNew2'].forEach((id) => (document.getElementById(id).value = ''));
+      accountMsg('pwMsg', 'PIN을 바꿨어요. 다음 로그인부터 새 PIN을 써주세요.', 'ok');
+    } catch (err) {
+      accountMsg('pwMsg', err.message, 'error');
+    } finally {
+      e.target.disabled = false;
+    }
+  });
+
+  document.getElementById('delAccountBtn').addEventListener('click', async (e) => {
+    const me = bearipGetUser();
+    const pin = document.getElementById('delPin').value;
+    const typed = document.getElementById('delNick').value.trim();
+    if (!pin) return accountMsg('delMsg', 'PIN을 입력해주세요.', 'error');
+    if (!me || typed !== me.nickname) return accountMsg('delMsg', '닉네임이 맞지 않아요. 삭제를 확인하려면 내 닉네임을 정확히 입력해주세요.', 'error');
+    if (me.nickname === 'GM') return accountMsg('delMsg', 'GM 계정은 여기서 삭제할 수 없어요.', 'error');
+    e.target.disabled = true;
+    try {
+      accountMsg('delMsg', 'PIN을 확인하는 중...');
+      await bearipVerifyMyPin(pin); // 데이터를 지우기 전에 먼저 본인 확인
+      accountMsg('delMsg', '내 데이터를 지우는 중이에요. 창을 닫지 말아주세요...');
+      await bearipEraseMyData();
+      accountMsg('delMsg', '계정을 삭제하는 중...');
+      await bearipDeleteAccountOnServer(pin);
+      await bearipLogout();
+      bearipEraseLocalData(me.nickname);
+      location.href = 'index.html';
+    } catch (err) {
+      // 데이터 삭제 도중 실패했다면 계정은 그대로 남아 있으니 같은 화면에서 다시 시도하면 돼요.
+      accountMsg('delMsg', err.message + ' (계정은 아직 삭제되지 않았어요. 다시 시도해주세요.)', 'error');
+      e.target.disabled = false;
+    }
   });
 });
 

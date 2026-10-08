@@ -84,4 +84,62 @@ function verifyPin(nickname, pin, account) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-module.exports = { kstDate, clip, sanitizeIp, ipToText, buildSystemPrompt, buildUserPrompt, extractAnswer, verifyPin };
+// ---- 계정 / 서버 로그인 ----
+const PIN_ITERATIONS = 100000;
+const PIN_MIN_LENGTH = 4;
+const PIN_MAX_LENGTH = 64;
+const MAX_PIN_FAILS = 5;
+const LOCK_MS = 10 * 60 * 1000;
+
+// storage.js의 bearipSafePathSegment와 반드시 같아야 해요 — 규칙이 이 값(auth.token.nk)을
+// 경로 키(알림·쪽지 등)와 비교해요.
+function safeSegment(str) {
+  return String(str || '').replace(/[.#$[\]/]/g, '_') || '_guest';
+}
+
+// 로그인 화면이 trim한 닉네임과 같은 값으로 맞춰요 (1~20자).
+function normalizeNickname(value) {
+  const n = typeof value === 'string' ? value.trim() : '';
+  return n.length >= 1 && n.length <= 20 ? n : '';
+}
+
+function validPin(pin) {
+  return typeof pin === 'string' && pin.length >= PIN_MIN_LENGTH && pin.length <= PIN_MAX_LENGTH;
+}
+
+// 닉네임마다 고정된 로그인 uid — 같은 사람은 어느 기기에서든 같은 uid가 돼요.
+function uidFor(nickname) {
+  return 'u_' + crypto.createHash('sha256').update(nickname, 'utf8').digest('hex').slice(0, 32);
+}
+
+function hashPin(nickname, pin, saltHex, iterations) {
+  return crypto
+    .pbkdf2Sync(Buffer.from(String(pin), 'utf8'), Buffer.from(saltHex + ':' + nickname, 'utf8'), iterations, 32, 'sha256')
+    .toString('hex');
+}
+
+function makeAccountRecord(nickname, pin, now = Date.now()) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  return {
+    nickname,
+    pinHash: hashPin(nickname, pin, salt, PIN_ITERATIONS),
+    salt,
+    iterations: PIN_ITERATIONS,
+    createdAt: new Date(now).toISOString(),
+  };
+}
+
+// PIN을 틀렸을 때의 다음 상태: 5번 틀리면 10분 동안 잠겨요 (잠긴 동안은 맞는 PIN도 거절).
+function isLocked(state, now = Date.now()) {
+  return !!state && Number(state.lockedUntil) > now;
+}
+function nextFailState(state, now = Date.now()) {
+  const count = (state && Number(state.count) ? Number(state.count) : 0) + 1;
+  return count >= MAX_PIN_FAILS ? { count: 0, lockedUntil: now + LOCK_MS } : { count, lockedUntil: 0 };
+}
+
+module.exports = {
+  kstDate, clip, sanitizeIp, ipToText, buildSystemPrompt, buildUserPrompt, extractAnswer, verifyPin,
+  PIN_MIN_LENGTH, MAX_PIN_FAILS, LOCK_MS,
+  safeSegment, normalizeNickname, validPin, uidFor, hashPin, makeAccountRecord, isLocked, nextFailState,
+};

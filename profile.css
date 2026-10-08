@@ -43,12 +43,19 @@
 .pf-field { margin-bottom: 18px; max-width: 480px; }
 .pf-field:last-child { margin-bottom: 0; }
 .pf-field label { display: block; font-size: 12.5px; font-weight: 700; margin-bottom: 8px; }
-.pf-field input[type="text"], .pf-field select, .pf-field textarea {
+.pf-field input[type="text"], .pf-field input[type="password"], .pf-field select, .pf-field textarea {
   width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--dr-border);
   background: var(--dr-bg); font-size: 13.5px; color: var(--dr-ink); outline: none; font-family: inherit;
 }
 .pf-field input:focus, .pf-field select:focus, .pf-field textarea:focus { border-color: var(--dr-purple); }
 .pf-field textarea { min-height: 80px; resize: vertical; line-height: 1.6; }
+/* 계정 관리 */
+.pf-sub-h { font-size: 14px; font-weight: 800; margin: 22px 0 12px; }
+.pf-danger-h { color: #e5484d; margin-top: 34px; padding-top: 22px; border-top: 1px solid var(--dr-border); }
+.pf-danger-btn { background: #e5484d !important; }
+.pf-account-msg { font-size: 12.5px; margin-top: 10px; min-height: 18px; color: var(--dr-ink-soft); }
+.pf-account-msg.error { color: #e5484d; }
+.pf-account-msg.ok { color: #2a9d6a; }
 .pf-save-btn {
   margin-top: 4px; padding: 12px 24px; border-radius: 12px; border: none;
   background: linear-gradient(120deg, var(--dr-purple), #8f6bff); color: #fff;

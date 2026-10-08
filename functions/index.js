@@ -41,12 +41,13 @@ function applyCors(req, res) {
   res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
 }
 
+// 로그인 증표(ID 토큰)를 확인해서 풀어낸 내용(uid와 닉네임 claim 등)을 돌려줘요.
 async function verifyUser(req) {
   const header = req.get('authorization') || '';
   const match = header.match(/^Bearer (.+)$/);
   if (!match) throw new ApiError(401, 'unauthenticated', '로그인 정보를 확인하지 못했어요. 페이지를 새로고침해주세요.');
   try {
-    return (await admin.auth().verifyIdToken(match[1])).uid;
+    return await admin.auth().verifyIdToken(match[1]);
   } catch (e) {
     throw new ApiError(401, 'unauthenticated', '로그인 정보를 확인하지 못했어요. 페이지를 새로고침해주세요.');
   }
@@ -188,8 +189,114 @@ async function handleAdmin(uid, body) {
   return { ok: true, config, usedToday, model: MODEL };
 }
 
-function makeEndpoint(handler, secrets) {
-  return onRequest({ region: REGION, secrets, maxInstances: 3, timeoutSeconds: 90, memory: '256MiB' }, async (req, res) => {
+// ---- 서버 로그인 (닉네임 + PIN) ----
+// 계정(accounts)은 이제 서버만 읽고 써요. PIN이 맞으면 "이 닉네임 본인"이라는 증표(커스텀
+// 토큰)를 발급하고, 그 증표의 claim(nk=경로 키용 닉네임, nick=원래 닉네임)을 데이터베이스
+// 규칙이 믿고 써서 쪽지·알림·신고를 진짜로 잠가요 (database.rules.json 참고).
+async function assertNotLocked(nk) {
+  const state = (await db.ref('authFails/' + nk).once('value')).val();
+  if (lib.isLocked(state)) {
+    const mins = Math.max(1, Math.ceil((state.lockedUntil - Date.now()) / 60000));
+    throw new ApiError(429, 'locked', `PIN을 여러 번 틀려서 잠시 잠겼어요. 약 ${mins}분 뒤에 다시 시도해주세요.`);
+  }
+}
+async function recordPinFailure(nk) {
+  await db.ref('authFails/' + nk).transaction((cur) => lib.nextFailState(cur));
+}
+
+async function issueToken(nickname) {
+  try {
+    return await admin.auth().createCustomToken(lib.uidFor(nickname), { nk: lib.safeSegment(nickname), nick: nickname });
+  } catch (e) {
+    console.error('createCustomToken failed:', e && e.code, e && e.message);
+    throw new ApiError(500, 'token_error', '로그인 증표를 만들지 못했어요. 운영자에게 알려주세요.');
+  }
+}
+
+async function handleAuthLogin(_uid, body) {
+  const nickname = lib.normalizeNickname(body.nickname);
+  if (!nickname) throw new ApiError(400, 'bad_nickname', '닉네임을 입력해주세요.');
+  const nk = lib.safeSegment(nickname);
+  const acctRef = db.ref('accounts/' + nk);
+  const account = (await acctRef.once('value')).val();
+  // 경로 키가 같은 다른 닉네임(예: "a.b"와 "a_b")은 서로 다른 사람의 계정으로 취급해요.
+  const sameOwner = !account || !account.nickname || account.nickname === nickname;
+  const takenError = new ApiError(409, 'nickname_taken', '이미 다른 분이 사용 중인 닉네임이에요. 다른 닉네임을 써주세요.');
+
+  if (body.action === 'check') return { ok: true, exists: !!account };
+
+  if (body.action === 'register') {
+    if (!lib.validPin(body.pin)) throw new ApiError(400, 'bad_pin_format', `PIN은 ${lib.PIN_MIN_LENGTH}자 이상 입력해주세요.`);
+    if (account) throw takenError;
+    const record = lib.makeAccountRecord(nickname, body.pin);
+    // 트랜잭션이라 같은 닉네임을 동시에 만들려 해도 먼저 들어온 한 명만 성공해요.
+    const tx = await acctRef.transaction((cur) => (cur ? undefined : record));
+    if (!tx.committed) throw takenError;
+    return { ok: true, nickname, token: await issueToken(nickname) };
+  }
+
+  if (body.action === 'login') {
+    if (!account) throw new ApiError(404, 'no_account', '아직 만들어지지 않은 닉네임이에요.');
+    if (!sameOwner) throw takenError;
+    await assertNotLocked(nk);
+    if (!lib.validPin(body.pin) || !lib.verifyPin(nickname, body.pin, account)) {
+      await recordPinFailure(nk);
+      throw new ApiError(403, 'bad_pin', 'PIN이 맞지 않아요.');
+    }
+    await db.ref('authFails/' + nk).remove();
+    if (!account.nickname) await acctRef.child('nickname').set(nickname); // 예전에 만든 계정에 닉네임 기록을 보강해요
+    return { ok: true, nickname, token: await issueToken(nickname) };
+  }
+  throw new ApiError(400, 'bad_action', '지원하지 않는 요청이에요.');
+}
+
+// 로그인한 본인의 계정 관리 — PIN을 한 번 더 확인해요 (확인, PIN 변경, 계정 삭제).
+async function handleAuthAccount(uid, body, decoded) {
+  const nk = decoded && decoded.nk;
+  const nickname = decoded && decoded.nick;
+  if (!nk || !nickname) throw new ApiError(401, 'need_login', 'PIN으로 로그인한 뒤에 사용할 수 있어요.');
+  const acctRef = db.ref('accounts/' + nk);
+  const account = (await acctRef.once('value')).val();
+  if (!account) throw new ApiError(404, 'no_account', '계정을 찾지 못했어요.');
+  await assertNotLocked(nk);
+  if (!lib.validPin(body.pin) || !lib.verifyPin(nickname, body.pin, account)) {
+    await recordPinFailure(nk);
+    throw new ApiError(403, 'bad_pin', 'PIN이 맞지 않아요.');
+  }
+  await db.ref('authFails/' + nk).remove();
+
+  if (body.action === 'verifyPin') return { ok: true };
+
+  if (body.action === 'changePin') {
+    if (!lib.validPin(body.newPin)) throw new ApiError(400, 'bad_pin_format', `새 PIN은 ${lib.PIN_MIN_LENGTH}자 이상 입력해주세요.`);
+    const record = lib.makeAccountRecord(nickname, body.newPin);
+    record.createdAt = account.createdAt || record.createdAt;
+    await acctRef.set(record);
+    return { ok: true };
+  }
+
+  if (body.action === 'deleteAccount') {
+    // 사용자 데이터(IP, 댓글 등)는 화면에서 먼저 지우고 오고, 여기서는 계정 자체와 서버에만
+    // 있는 기록을 정리해요. 이후 같은 닉네임을 다시 만들 수 있어요.
+    const usage = (await db.ref('aiUsage').once('value')).val() || {};
+    const removals = [
+      acctRef.remove(),
+      db.ref('notifications/' + nk).remove(),
+      db.ref('userThreads/' + nk).remove(),
+      db.ref('aiConsent/' + uid).remove(),
+      db.ref('authFails/' + nk).remove(),
+      ...Object.keys(usage).map((date) => db.ref(`aiUsage/${date}/uid/${uid}`).remove()),
+    ];
+    await Promise.all(removals);
+    await admin.auth().deleteUser(uid).catch(() => {});
+    return { ok: true };
+  }
+  throw new ApiError(400, 'bad_action', '지원하지 않는 요청이에요.');
+}
+
+function makeEndpoint(handler, secrets, opts = {}) {
+  const { requireAuth = true, timeoutSeconds = 90 } = opts;
+  return onRequest({ region: REGION, secrets, maxInstances: 3, timeoutSeconds, memory: '256MiB' }, async (req, res) => {
     applyCors(req, res);
     if (req.method === 'OPTIONS') {
       res.status(204).send('');
@@ -197,9 +304,9 @@ function makeEndpoint(handler, secrets) {
     }
     try {
       if (req.method !== 'POST') throw new ApiError(405, 'method', 'POST만 지원해요.');
-      const uid = await verifyUser(req);
+      const decoded = requireAuth ? await verifyUser(req) : null;
       const body = req.body && typeof req.body === 'object' ? req.body : {};
-      res.json(await handler(uid, body));
+      res.json(await handler(decoded ? decoded.uid : null, body, decoded));
     } catch (e) {
       if (e instanceof ApiError) {
         res.status(e.status).json({ ok: false, error: e.code, message: e.message });
@@ -213,3 +320,6 @@ function makeEndpoint(handler, secrets) {
 
 exports.aiAssist = makeEndpoint(handleAssist, [GEMINI_API_KEY]);
 exports.aiAdmin = makeEndpoint(handleAdmin, []);
+// 로그인 전에 부르는 함수라 로그인 증표를 요구하지 않아요 — 대신 PIN 5회 실패 잠금이 보호해요.
+exports.authLogin = makeEndpoint(handleAuthLogin, [], { requireAuth: false, timeoutSeconds: 30 });
+exports.authAccount = makeEndpoint(handleAuthAccount, [], { timeoutSeconds: 60 });

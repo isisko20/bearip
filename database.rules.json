@@ -5,9 +5,9 @@
 
     "notifications": {
       "$nickname": {
-        ".read": "auth != null",
-        ".write": "auth != null",
+        ".read": "auth.token.nk == $nickname",
         "$notifId": {
+          ".write": "auth.token.nk != null && (!data.exists() || auth.token.nk == $nickname)",
           ".validate": "newData.hasChildren(['type', 'title', 'message', 'createdAt', 'read'])",
           "type": { ".validate": "newData.isString()" },
           "title": { ".validate": "newData.isString()" },
@@ -191,12 +191,22 @@
       }
     },
 
+    "userThreads": {
+      "$nk": {
+        ".read": "auth.token.nk == $nk",
+        "$threadId": {
+          ".write": "auth.token.nk != null",
+          ".validate": "newData.val() == true"
+        }
+      }
+    },
+
     "dmThreads": {
-      ".read": "auth != null",
       "$threadId": {
+        ".read": "auth.token.nk != null && data.child('participants').child(auth.token.nk).exists()",
         "participants": {
           "$nickname": {
-            ".write": "auth != null",
+            ".write": "auth.token.nk != null && ((!data.parent().exists() && $nickname == auth.token.nk) || data.parent().child(auth.token.nk).exists())",
             ".validate": "newData.hasChildren(['name', 'joinedAt'])",
             "name": { ".validate": "newData.isString()" },
             "joinedAt": { ".validate": "newData.isString()" }
@@ -204,7 +214,7 @@
         },
         "messages": {
           "$msgId": {
-            ".write": "auth != null",
+            ".write": "auth.token.nk != null && root.child('dmThreads').child($threadId).child('participants').child(auth.token.nk).exists() && (newData.exists() ? newData.child('from').val() == auth.token.nick : data.child('from').val() == auth.token.nick)",
             ".validate": "newData.hasChildren(['from', 'text', 'createdAt'])",
             "from": { ".validate": "newData.isString()" },
             "text": { ".validate": "newData.isString()" },
@@ -229,21 +239,14 @@
     },
 
     "accounts": {
-      "$nickname": {
-        ".read": "auth != null",
-        ".write": "auth != null && !data.exists()",
-        ".validate": "newData.hasChildren(['pinHash', 'salt', 'iterations', 'createdAt'])",
-        "pinHash": { ".validate": "newData.isString()" },
-        "salt": { ".validate": "newData.isString()" },
-        "iterations": { ".validate": "newData.isNumber()" },
-        "createdAt": { ".validate": "newData.isString()" }
-      }
+      ".read": false,
+      ".write": false
     },
 
     "reports": {
-      ".read": "auth != null",
+      ".read": "auth.token.nk == 'GM'",
       "$reportId": {
-        ".write": "auth != null",
+        ".write": "auth.token.nk == 'GM' || (auth.token.nick != null && !data.exists() && newData.child('reporter').val() == auth.token.nick)",
         ".validate": "newData.hasChildren(['type', 'reporter', 'targetNickname', 'targetId', 'reason', 'status', 'createdAt'])",
         "type": { ".validate": "newData.isString()" },
         "reporter": { ".validate": "newData.isString()" },

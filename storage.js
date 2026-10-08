@@ -1607,9 +1607,14 @@ function bearipSendDm(toNickname, text) {
   if (bearipFirebaseReady()) {
     _bearipFirebaseWrite(() => {
       const base = firebase.database().ref('dmThreads/' + threadId);
+      // 순서가 중요해요: 규칙이 "먼저 쓰는 사람은 자기 자신만, 그다음부터는 참여자만"
+      // 허용하고, 메시지는 참여자만 쓸 수 있어서 참여자 → 메시지 순서로 올려요.
       base.child('participants/' + myKey).set(bearipFirebaseSafe(thread.participants[myKey]));
       base.child('participants/' + otherKey).set(bearipFirebaseSafe(thread.participants[otherKey]));
       base.child('messages/' + id).set(bearipFirebaseSafe(record));
+      // "내 쪽지방 목록" — 각자 자기 목록만 구독해서 자기 쪽지방만 받아요 (_bearipWatchDmThreads).
+      firebase.database().ref('userThreads/' + myKey + '/' + threadId).set(true);
+      firebase.database().ref('userThreads/' + otherKey + '/' + threadId).set(true);
     });
   }
 
@@ -1636,7 +1641,13 @@ function bearipDeleteOwnDmMessage(threadId, msgId) {
     _bearipFirebaseWrite(() => {
       const base = firebase.database().ref('dmThreads/' + threadId);
       base.child('messages/' + msgId).remove();
-      if (empty) participantKeys.forEach((k) => base.child('participants/' + k).remove());
+      if (empty) {
+        // 규칙이 "참여자만 참여자 기록을 지울 수 있게" 하니, 내 기록은 맨 마지막에 지워요.
+        const myKey = bearipApplicantKey(user.nickname);
+        participantKeys.filter((k) => k !== myKey).forEach((k) => base.child('participants/' + k).remove());
+        base.child('participants/' + myKey).remove();
+        participantKeys.forEach((k) => firebase.database().ref('userThreads/' + k + '/' + threadId).remove());
+      }
     });
   }
   return true;
@@ -1835,6 +1846,56 @@ function _bearipWatchPath(kind, path) {
       _bearipDataLoaded[kind] = true;
       _bearipNotifyListeners(kind);
     });
+}
+
+// 쪽지방은 참여자만 읽을 수 있게 규칙으로 잠겨 있어서(database.rules.json) 전체 dmThreads를
+// 한 번에 구독할 수 없어요. 대신 "내 쪽지방 목록"(userThreads/<나>)을 구독하고, 거기 적힌
+// 쪽지방만 하나씩 구독해서 예전과 같은 모양의 캐시(_bearipDataCache.dmThreads)를 채워요 —
+// 읽는 쪽 코드는 그대로예요. 서버 로그인이 안 된 세션은 목록을 읽을 수 없어 빈 상태로 둬요.
+const _bearipDmThreadRefs = {};
+function _bearipWatchDmThreads() {
+  const user = bearipGetUser();
+  const finishLoading = () => {
+    _bearipDataLoaded.dmThreads = true;
+    _bearipNotifyListeners('dmThreads');
+  };
+  if (!bearipFirebaseReady() || !user || !user.nickname) {
+    finishLoading();
+    return;
+  }
+  const db = firebase.database();
+  db.ref('userThreads/' + bearipApplicantKey(user.nickname)).on(
+    'value',
+    (snap) => {
+      const ids = Object.keys(snap.val() || {});
+      ids.forEach((id) => {
+        if (_bearipDmThreadRefs[id]) return;
+        const ref = db.ref('dmThreads/' + id);
+        _bearipDmThreadRefs[id] = ref;
+        ref.on(
+          'value',
+          (s) => {
+            if (s.val()) _bearipDataCache.dmThreads[id] = s.val();
+            else delete _bearipDataCache.dmThreads[id];
+            _bearipNotifyListeners('dmThreads');
+          },
+          () => {
+            // 참여자가 아닌 쪽지방 id가 목록에 끼어 있어도(누군가 장난으로 넣은 경우) 그냥 무시해요.
+            ref.off();
+            delete _bearipDmThreadRefs[id];
+          }
+        );
+      });
+      Object.keys(_bearipDmThreadRefs).forEach((id) => {
+        if (ids.includes(id)) return;
+        _bearipDmThreadRefs[id].off();
+        delete _bearipDmThreadRefs[id];
+        delete _bearipDataCache.dmThreads[id];
+      });
+      finishLoading();
+    },
+    finishLoading
+  );
 }
 
 // 조건에 맞는 레코드만 구독해요 (예: 내가 요청한 것만). 캐시 모양은 _bearipWatchPath와
@@ -2329,39 +2390,27 @@ function bearipSetUser(user) {
   return user;
 }
 
+// 로컬 로그인 정보를 지우고, 서버 로그인(Firebase 로그인)도 함께 끝내요. 로그아웃 직후 바로
+// 페이지를 이동하면 로그아웃이 끝나기 전에 끊길 수 있어서, 호출하는 쪽은 이 Promise가
+// 끝난 뒤에 이동해주세요 (auth-ui.js의 로그아웃 메뉴, profile.js 참고).
 function bearipLogout() {
   localStorage.removeItem(BEARIP_USER_KEY);
+  if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+    return firebase.auth().signOut().catch(() => {});
+  }
+  return Promise.resolve();
 }
 
-// ---- 계정 (닉네임 + PIN) ----
-// accounts/<닉네임> = { pinHash, salt, iterations, createdAt } — 닉네임을 처음
-// 쓴 사람이 PIN을 정하면 그 닉네임이 잠겨요. 규칙(database.rules.json)이
-// "이미 있는 계정은 덮어쓰기 불가"를 강제하기 때문에, 먼저 잠근 사람이 항상
-// 이기고 다른 사람은 PIN을 맞춰야만 같은 닉네임으로 로그인할 수 있어요.
+// ---- 계정 (닉네임 + PIN, 서버 로그인) ----
+// PIN 확인은 서버 함수(functions/index.js의 authLogin·authAccount)가 해요. PIN이 맞으면
+// 서버가 "이 닉네임 본인"이라는 증표(커스텀 토큰)를 주고, 그걸로 Firebase에 로그인하면
+// database.rules.json이 증표 안의 닉네임(nk/nick)을 믿고 쪽지·알림·신고를 잠가요.
+// 계정 정보(accounts)는 서버만 읽고 쓰고, PIN 해시는 브라우저로 오지 않아요.
 //
-// 한계: 진짜 서버 로그인이 아니라서 브라우저 저장소를 직접 만지는 사람까지는
-// 막지 못하고, 해시도 로그인한 사람이면 읽을 수 있어요 (그래서 PBKDF2로 느리게
-// 계산해요). 친구 사이에서 남의 닉네임으로 로그인하는 것을 막는 수준이에요.
-const BEARIP_PIN_ITERATIONS = 100000;
+// 한계: 쪽지·알림·신고처럼 규칙으로 잠근 데이터만 서버가 보장해요. 공개 IP·댓글·좋아요
+// 같은 나머지 데이터는 아직 로그인한 누구나 쓸 수 있는 상태고, 로컬 저장소를 직접 조작하는
+// 사람이 화면에서 남의 닉네임으로 보이게 만드는 것까지는 막지 못해요.
 const BEARIP_PIN_MIN_LENGTH = 4;
-
-function _bearipBytesToHex(bytes) {
-  return Array.from(new Uint8Array(bytes))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-async function _bearipHashPin(nickname, pin, saltHex, iterations) {
-  if (!window.crypto || !window.crypto.subtle) throw new Error('crypto-unavailable');
-  const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey('raw', enc.encode(pin), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode(saltHex + ':' + nickname), iterations },
-    key,
-    256
-  );
-  return _bearipBytesToHex(bits);
-}
 
 // Firebase 익명 로그인이 끝날 때까지 기다려요 (최대 ~8초). 로그인 직후 페이지
 // 로드에서는 아직 currentUser가 비어 있을 수 있어서 바로 읽으면 실패해요.
@@ -2388,31 +2437,17 @@ function _bearipWhenFirebaseAuthed() {
   });
 }
 
-function _bearipAccountRef(nickname) {
-  return firebase.database().ref('accounts/' + bearipSafePathSegment(nickname));
-}
-
-// ---- AI 시나리오 도우미 (서버 함수 호출) ----
-// API 키는 브라우저에 둘 수 없어서 Firebase 함수(functions/index.js)가 대신
-// 호출해요. 여기서는 로그인 토큰을 실어 보내고, 서버가 준 한국어 오류 문구를
-// 그대로 Error.message로 던져서 화면이 바로 보여줄 수 있게 해요.
-const BEARIP_AI_ENDPOINTS = {
-  assist: 'https://asia-northeast3-thinkit-ccb2e.cloudfunctions.net/aiAssist',
-  admin: 'https://asia-northeast3-thinkit-ccb2e.cloudfunctions.net/aiAdmin',
-};
-
-async function bearipAiCall(kind, body) {
-  const url = BEARIP_AI_ENDPOINTS[kind];
-  if (!url) throw Object.assign(new Error('AI 서버가 아직 연결되지 않았어요.'), { code: 'not_configured' });
-  await _bearipWhenFirebaseAuthed();
-  const token = await firebase.auth().currentUser.getIdToken();
+// 서버 함수에 JSON을 보내요. 서버가 준 한국어 오류 문구를 그대로 Error.message로 던져서 화면이
+// 바로 보여줄 수 있게 하고, 서버가 준 오류 종류는 Error.code에 담아요.
+async function _bearipPostJson(url, body, withToken, failMessage) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (withToken) {
+    await _bearipWhenFirebaseAuthed();
+    headers.Authorization = 'Bearer ' + (await firebase.auth().currentUser.getIdToken());
+  }
   let resp;
   try {
-    resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify(body),
-    });
+    resp = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
   } catch (e) {
     throw Object.assign(new Error('서버에 연결하지 못했어요. 잠시 후 다시 시도해주세요.'), { code: 'network' });
   }
@@ -2423,40 +2458,197 @@ async function bearipAiCall(kind, body) {
     /* 본문이 JSON이 아니면 아래에서 일반 오류로 처리 */
   }
   if (!resp.ok || data.ok === false) {
-    throw Object.assign(new Error(data.message || 'AI 요청에 실패했어요. 잠시 후 다시 시도해주세요.'), { code: data.error || 'error' });
+    throw Object.assign(new Error(data.message || failMessage), { code: data.error || 'error' });
   }
   return data;
 }
 
-// 계정이 있으면 기록을, 없으면 null을, 서버에 닿지 못하면 예외를 던져요
-// (실패했을 때 "없음"으로 착각해 남의 닉네임을 덮어쓰지 않게 구분해요).
-async function bearipFetchAccount(nickname) {
-  await _bearipWhenFirebaseAuthed();
-  const snap = await _bearipAccountRef(nickname).once('value');
-  return snap.val();
+const BEARIP_AUTH_ENDPOINTS = {
+  login: 'https://asia-northeast3-thinkit-ccb2e.cloudfunctions.net/authLogin',
+  account: 'https://asia-northeast3-thinkit-ccb2e.cloudfunctions.net/authAccount',
+};
+
+// 이미 PIN으로 잠긴 닉네임인지 (서버에 닿지 못하면 예외 — "없음"으로 착각해 남의 닉네임을
+// 새로 잠그는 일이 없도록 호출하는 쪽이 실패와 "없음"을 구분해요).
+async function bearipAuthExists(nickname) {
+  const data = await _bearipPostJson(BEARIP_AUTH_ENDPOINTS.login, { action: 'check', nickname }, false, '닉네임을 확인하지 못했어요.');
+  return !!data.exists;
 }
 
-async function bearipVerifyPin(nickname, pin, account) {
-  if (!account || !account.pinHash) return false;
-  const hash = await _bearipHashPin(nickname, pin, account.salt, account.iterations || BEARIP_PIN_ITERATIONS);
-  return hash === account.pinHash;
+// action: 'login'(PIN 확인) 또는 'register'(처음 쓰는 닉네임을 PIN으로 잠그기). 성공하면 서버가 준
+// 증표로 Firebase에 로그인해요 — 이때 기존 익명 로그인은 이 로그인으로 대체돼요.
+async function bearipAuthSignIn(action, nickname, pin) {
+  const data = await _bearipPostJson(BEARIP_AUTH_ENDPOINTS.login, { action, nickname, pin }, false, '로그인하지 못했어요. 잠시 후 다시 시도해주세요.');
+  await _bearipWhenFirebaseAuthed().catch(() => {});
+  await firebase.auth().signInWithCustomToken(data.token);
+  return data.nickname;
 }
 
-// 계정 만들기 — 다른 사람이 먼저 만들었다면 규칙이 거절하고 'taken'을 던져요.
-async function bearipCreateAccount(nickname, pin) {
-  await _bearipWhenFirebaseAuthed();
-  const salt = _bearipBytesToHex(crypto.getRandomValues(new Uint8Array(16)));
-  const record = {
-    pinHash: await _bearipHashPin(nickname, pin, salt, BEARIP_PIN_ITERATIONS),
-    salt,
-    iterations: BEARIP_PIN_ITERATIONS,
-    createdAt: new Date().toISOString(),
-  };
+// 지금 Firebase 로그인이, 이 브라우저에 로그인된 닉네임 본인으로 서버에서 확인된 것인지
+// (증표 안의 nk·nick claim으로 판단). PIN 도입 전에 로그인한 세션이나 익명 상태는 false예요.
+async function bearipHasServerIdentity() {
+  const user = bearipGetUser();
+  if (!user || !user.nickname) return false;
   try {
-    await _bearipAccountRef(nickname).set(record);
+    await _bearipWhenFirebaseAuthed();
+    const result = await firebase.auth().currentUser.getIdTokenResult();
+    return result.claims.nk === bearipSafePathSegment(user.nickname) && result.claims.nick === user.nickname;
   } catch (e) {
-    throw new Error(e && e.code === 'PERMISSION_DENIED' ? 'taken' : 'write-failed');
+    return false;
   }
+}
+
+function bearipChangePin(pin, newPin) {
+  return _bearipPostJson(BEARIP_AUTH_ENDPOINTS.account, { action: 'changePin', pin, newPin }, true, 'PIN을 바꾸지 못했어요. 잠시 후 다시 시도해주세요.');
+}
+function bearipVerifyMyPin(pin) {
+  return _bearipPostJson(BEARIP_AUTH_ENDPOINTS.account, { action: 'verifyPin', pin }, true, 'PIN을 확인하지 못했어요. 잠시 후 다시 시도해주세요.');
+}
+function bearipDeleteAccountOnServer(pin) {
+  return _bearipPostJson(BEARIP_AUTH_ENDPOINTS.account, { action: 'deleteAccount', pin }, true, '계정을 삭제하지 못했어요. 잠시 후 다시 시도해주세요.');
+}
+
+// ---- 계정 삭제: 내 데이터 전부 지우기 ----
+// 계정을 지우기 전에 화면에서 먼저 불러요 (서버는 계정 자체와 서버 전용 기록만 지워요).
+//  · 내가 만든 IP: 이 기기뿐 아니라 다른 기기에서 올린 사본까지, 연결된 모집글·참여 신청·팔로워·
+//    조회·응원·크루 채팅·회차 좋아요/댓글/조회·제작요청·검토까지 함께
+//  · 남의 IP에 남긴 흔적: 팔로우, 좋아요, 조회, 응원, 댓글, 크루 채팅 메시지, 참여 신청, 지원
+//  · 내 쪽지(상대 화면에서도 사라져요)와 쪽지방 참여, 크리에이터 프로필
+// 다른 사람이 나에게 남긴 것(내 IP에 달린 댓글 등)은 IP와 함께 지워지고, 신고 기록은 운영 기록이라
+// 남겨둬요. 이미 지워진 항목은 건너뛰어요. 지운 항목 수를 돌려줘요.
+async function bearipEraseMyData() {
+  const user = bearipGetUser();
+  if (!user || !user.nickname) throw new Error('로그인 정보가 없어요');
+  if (user.nickname === 'GM') throw new Error('GM 계정은 여기서 삭제할 수 없어요');
+  if (!bearipFirebaseReady()) throw new Error('서버에 연결되지 않았어요. 잠시 후 다시 시도해주세요');
+  const db = firebase.database();
+  const nick = user.nickname;
+  const nk = bearipApplicantKey(nick);
+  const cache = _bearipDataCache;
+  const pending = [];
+  let removed = 0;
+  const rm = (path) => {
+    removed++;
+    pending.push(db.ref(path).remove().catch(() => {}));
+  };
+
+  // 1) 내가 만든 IP — 이 기기에 있는 것 + 다른 기기에서 올려 둔 공개/GM 사본
+  const localIds = new Set(bearipLoadIPs().map((ip) => ip.id));
+  const remoteOwned = [...Object.values(cache.publicIPs || {}), ...Object.values(cache.allIPs || {})].filter((ip) => ip && ip.ownerNickname === nick);
+  const remoteOnlyIds = [...new Set(remoteOwned.map((ip) => ip.id))].filter((id) => !localIds.has(id));
+  // bearipDeleteIP는 이 기기에 없는 IP의 연결 데이터(회차 좋아요 등)는 정리하지 못해서, 사본이 지워지기 전에 먼저 정리해요.
+  remoteOnlyIds.forEach((id) => {
+    const copy = (cache.publicIPs || {})[id] || (cache.allIPs || {})[id];
+    ((copy && copy.episodes) || []).forEach((ep) => {
+      bearipDeleteEpisodeLikes(id, ep.id);
+      bearipDeleteEpisodeComments(id, ep.id);
+      bearipDeleteEpisodeViews(id, ep.id);
+    });
+    bearipDeleteJoinRequestsForIp(id);
+    bearipDeleteFollowersForIp(id);
+    bearipDeleteIpViews(id);
+    bearipDeleteCrewChat(id);
+    bearipDeleteIpCheers(id);
+  });
+  [...localIds, ...remoteOnlyIds].forEach((id) => {
+    bearipDeleteIP(id);
+    removed++;
+  });
+  // 내가 올린 CREW MATCH 모집글 (IP 연결이 끊긴 것까지), 내 제작요청·검토
+  bearipLoadPositions()
+    .filter((p) => p.ownerNickname === nick)
+    .forEach((p) => {
+      bearipDeletePosition(p.id);
+      removed++;
+    });
+  bearipLoadProductionRequests().forEach((r) => {
+    bearipDeleteProductionRequest(r.id);
+    removed++;
+  });
+  bearipLoadIpReviews().forEach((r) => {
+    bearipDeleteIpReview(r.id);
+    removed++;
+  });
+
+  // 2) 남의 IP에 남긴 흔적 — 내 닉네임 키로 저장된 기록
+  // depth = 기록(leaf) 위에 있는 경로 단계 수. 예) ipFollowers/<ip>/<닉네임> 은 depth 1(ip),
+  // episodeLikes/<ip>/<회차>/<닉네임> 은 depth 2. fn(상위 경로 키들, 기록 키, 기록 값)
+  const eachLeaf = (collection, depth, fn) => {
+    const walk = (node, parts, level) => {
+      Object.keys(node || {}).forEach((key) => {
+        if (level < depth) walk(node[key], parts.concat(key), level + 1);
+        else fn(parts, key, node[key]);
+      });
+    };
+    walk(cache[collection], [], 0);
+  };
+  ['ipFollowers', 'ipViews', 'ipCheers', 'ipJoinRequests', 'positionApplicants'].forEach((col) =>
+    eachLeaf(col, 1, (parts, key) => {
+      if (key === nk) rm(`${col}/${parts[0]}/${key}`);
+    })
+  );
+  ['episodeLikes', 'episodeViews'].forEach((col) =>
+    eachLeaf(col, 2, (parts, key) => {
+      if (key === nk) rm(`${col}/${parts[0]}/${parts[1]}/${key}`);
+    })
+  );
+  eachLeaf('episodeComments', 2, (parts, key, rec) => {
+    if (rec && rec.name === nick) rm(`episodeComments/${parts[0]}/${parts[1]}/${key}`);
+  });
+  eachLeaf('crewChat', 1, (parts, key, rec) => {
+    if (rec && rec.name === nick) rm(`crewChat/${parts[0]}/${key}`);
+  });
+  rm('publicCreators/' + nk);
+
+  // 3) 쪽지 — 내가 보낸 쪽지를 지우고(상대 화면에서도 사라져요) 쪽지방에서 나가요.
+  Object.keys(cache.dmThreads || {}).forEach((threadId) => {
+    const thread = cache.dmThreads[threadId] || {};
+    Object.keys(thread.messages || {})
+      .filter((msgId) => thread.messages[msgId] && thread.messages[msgId].from === nick)
+      .forEach((msgId) => {
+        removed++;
+        bearipDeleteOwnDmMessage(threadId, msgId); // 마지막 쪽지면 쪽지방 기록도 알아서 정리해요
+      });
+    if (cache.dmThreads[threadId]) {
+      rm(`dmThreads/${threadId}/participants/${nk}`);
+      rm(`userThreads/${nk}/${threadId}`);
+    }
+  });
+
+  // 지운 요청이 모두 서버에 반영된 뒤에 끝내요 — 같은 연결의 쓰기는 순서대로 처리되므로
+  // 마지막에 쓴 것이 끝나면 앞의 것도 끝난 거예요 (바로 로그아웃하면 대기 중인 삭제가 끊길 수 있어요).
+  const barrier = db.ref('userThreads/' + nk + '/__erase_barrier');
+  await barrier.set(true);
+  await barrier.remove();
+  await Promise.all(pending);
+  return { removed };
+}
+
+// 로컬 저장소에 남은 이 닉네임의 데이터(IP, 북마크, 크레딧, 로그인 정보 등)를 지워요.
+function bearipEraseLocalData(nickname) {
+  const suffix = '::' + nickname;
+  Object.keys(localStorage)
+    .filter((k) => k.endsWith(suffix))
+    .forEach((k) => localStorage.removeItem(k));
+  localStorage.removeItem(BEARIP_USER_KEY);
+  try {
+    sessionStorage.clear();
+  } catch (e) {
+    /* best-effort */
+  }
+}
+
+// ---- AI 시나리오 도우미 (서버 함수 호출) ----
+// API 키는 브라우저에 둘 수 없어서 Firebase 함수(functions/index.js)가 대신 호출해요.
+const BEARIP_AI_ENDPOINTS = {
+  assist: 'https://asia-northeast3-thinkit-ccb2e.cloudfunctions.net/aiAssist',
+  admin: 'https://asia-northeast3-thinkit-ccb2e.cloudfunctions.net/aiAdmin',
+};
+
+function bearipAiCall(kind, body) {
+  const url = BEARIP_AI_ENDPOINTS[kind];
+  if (!url) return Promise.reject(Object.assign(new Error('AI 서버가 아직 연결되지 않았어요.'), { code: 'not_configured' }));
+  return _bearipPostJson(url, body, true, 'AI 요청에 실패했어요. 잠시 후 다시 시도해주세요.');
 }
 
 // Sends the user to the login page, remembering where to bring them back to.
@@ -2929,7 +3121,7 @@ function _bearipStartFirebaseWatchers() {
   _bearipWatchPath('episodeComments', 'episodeComments');
   _bearipWatchPath('episodeViews', 'episodeViews');
   _bearipWatchPath('ipViews', 'ipViews');
-  _bearipWatchPath('dmThreads', 'dmThreads');
+  _bearipWatchDmThreads();
   _bearipWatchPath('crewChat', 'crewChat');
   _bearipWatchPath('ipCheers', 'ipCheers');
   bearipOnDataChange('notifications', bearipPruneOldNotificationsIfDue);

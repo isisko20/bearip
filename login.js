@@ -1,6 +1,6 @@
-// 로그인 = 닉네임 + PIN. 이미 잠긴(PIN이 정해진) 닉네임은 PIN을 맞춰야 들어오고,
-// 처음 쓰는 닉네임은 PIN을 두 번 입력받아 그 PIN으로 잠가요 (storage.js의 계정
-// 함수들 참고). 서버에 닿지 못하면 로그인시키지 않아요 — 실패를 "계정 없음"으로
+// 로그인 = 닉네임 + PIN, 확인은 서버가 해요 (storage.js의 서버 로그인 함수들 참고).
+// 이미 잠긴(PIN이 정해진) 닉네임은 PIN을 맞춰야 들어오고, 처음 쓰는 닉네임은 PIN을 두 번
+// 입력받아 그 PIN으로 잠가요. 서버에 닿지 못하면 로그인시키지 않아요 — 실패를 "계정 없음"으로
 // 착각해서 남의 닉네임을 새로 잠그는 일이 없도록 안전한 쪽으로 막아요.
 document.addEventListener('DOMContentLoaded', () => {
   const existing = bearipGetUser();
@@ -55,14 +55,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const label = submitBtn.textContent;
     submitBtn.textContent = '확인 중...';
     try {
-      const account = await bearipFetchAccount(nickname);
+      const exists = await bearipAuthExists(nickname);
 
-      if (account) {
-        if (!(await bearipVerifyPin(nickname, pin, account))) {
-          showError(pinError, pinInput, 'PIN이 맞지 않아요. 이미 다른 분이 쓰고 있는 닉네임일 수 있어요.');
-          pinInput.focus();
-          return;
-        }
+      if (exists) {
+        // 서버가 PIN을 확인하고, 맞으면 이 닉네임 본인이라는 증표로 로그인시켜요.
+        await bearipAuthSignIn('login', nickname, pin);
       } else if (confirmField.style.display === 'none') {
         // 처음 쓰는 닉네임 — 오타로 스스로 잠기지 않게 한 번 더 확인받아요.
         confirmField.style.display = '';
@@ -77,9 +74,9 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
         try {
-          await bearipCreateAccount(nickname, pin);
+          await bearipAuthSignIn('register', nickname, pin);
         } catch (e) {
-          if (e.message === 'taken') {
+          if (e.code === 'nickname_taken') {
             // 그 사이 다른 사람이 먼저 잠갔어요 — 확인 단계를 닫고 처음부터.
             resetConfirmStep();
             showError(nicknameError, nicknameInput, '방금 다른 분이 이 닉네임을 사용했어요. 다른 닉네임을 써주세요.');
@@ -89,13 +86,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     } catch (e) {
-      showError(
-        pinError,
-        pinInput,
-        e && e.message === 'crypto-unavailable'
-          ? '이 브라우저에서는 안전하게 로그인할 수 없어요. https 주소로 접속해주세요.'
-          : '서버에 연결하지 못했어요. 잠시 후 다시 시도해주세요.'
-      );
+      if (e.code === 'bad_pin') {
+        showError(pinError, pinInput, 'PIN이 맞지 않아요. 이미 다른 분이 쓰고 있는 닉네임일 수 있어요.');
+        pinInput.focus();
+      } else if (e.code === 'nickname_taken') {
+        showError(nicknameError, nicknameInput, e.message);
+      } else {
+        // 잠금(locked), 서버 연결 실패 등 서버가 준 안내를 그대로 보여줘요.
+        showError(pinError, pinInput, e.message || '서버에 연결하지 못했어요. 잠시 후 다시 시도해주세요.');
+      }
       return;
     } finally {
       submitBtn.disabled = false;

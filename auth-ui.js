@@ -306,13 +306,14 @@ function bearipInjectReportStyles() {
 // 신고/삭제 링크는 모달이 열리기 전부터 화면에 있으니 스타일도 미리 넣어둬요.
 document.addEventListener('DOMContentLoaded', bearipInjectReportStyles);
 
-// ---- 계정 잠금 안내 (PIN 도입 전에 이미 로그인해 있던 사람용) ----
-// PIN이 생기기 전에 로그인한 브라우저는 pinVerified 표시가 없어요. 그런 세션이
-// 열리면 계정을 한 번 조회해서:
-//   · 아직 아무도 안 잠근 닉네임 → "PIN 설정" 안내 (GM 닉네임은 건너뛸 수 없음)
-//   · 이미 PIN이 걸린 닉네임 → 그 닉네임을 쓰던 사람이 맞는지 알 수 없으므로
-//     다시 로그인(PIN 입력)하도록 막아요. 먼저 잠근 쪽이 항상 이겨요.
+// ---- 본인 확인 안내 (서버 로그인이 안 된 세션용) ----
+// 쪽지·알림 같은 개인 데이터는 "서버가 PIN으로 확인한 로그인"으로만 열려요 (database.rules.json).
+// 이 브라우저에 로그인돼 있어도 서버 로그인이 안 된 세션 — PIN 도입 전에 로그인한 사람이나,
+// 로그인 정보가 지워진 브라우저 — 이 열리면 계정 상태를 보고 안내해요:
+//   · 이미 PIN이 걸린 닉네임 → PIN을 입력해서 본인 확인 (건너뛸 수 없어요)
+//   · 아직 아무도 안 잠근 닉네임 → "PIN 설정" 안내 (GM 닉네임은 건너뛸 수 없어요)
 // 서버에 닿지 못하면 아무것도 막지 않고 넘어가요 (오프라인이라고 못 쓰게 하진 않아요).
+// 로그인이 끝나면 페이지를 새로고침해요 — 데이터 구독이 새 로그인으로 다시 시작돼야 하니까요.
 function bearipShowAccountModal(mode, user) {
   if (document.getElementById('bearipAccountOverlay')) return;
   bearipInjectReportStyles();
@@ -322,91 +323,130 @@ function bearipShowAccountModal(mode, user) {
   overlay.id = 'bearipAccountOverlay';
   overlay.className = 'bearip-report-overlay';
   const canSkip = mode === 'claim' && user.nickname !== 'GM';
+  const switchBtn = '<button type="button" id="bearipAccountSwitch">다른 닉네임으로 로그인</button>';
 
-  overlay.innerHTML =
-    mode === 'relogin'
-      ? `<div class="bearip-report-box" role="dialog" aria-label="다시 로그인">
-          <h3>다시 로그인해주세요</h3>
-          <div class="rp-text">'${esc(user.nickname)}' 닉네임은 이제 PIN으로 보호돼요. 본인 확인을 위해 PIN을 입력해서 다시 로그인해주세요.</div>
-          <div class="rp-actions"><button type="button" class="rp-submit" id="bearipAccountRelogin">로그인하기</button></div>
-        </div>`
-      : `<div class="bearip-report-box" role="dialog" aria-label="닉네임 지키기">
-          <h3>닉네임을 지키세요</h3>
-          <div class="rp-text">'${esc(user.nickname)}' 닉네임에 PIN을 설정하면 다른 사람이 이 닉네임으로 로그인할 수 없어요. PIN은 나중에 직접 바꾸거나 찾을 수 없으니 꼭 기억해두세요.${canSkip ? '' : ' (이 닉네임은 반드시 설정해야 해요)'}</div>
-          <input type="password" id="bearipAccountPin" placeholder="PIN (${BEARIP_PIN_MIN_LENGTH}자 이상)" maxlength="30" autocomplete="new-password">
-          <input type="password" id="bearipAccountPin2" placeholder="PIN 확인" maxlength="30" autocomplete="new-password">
-          <div class="rp-error" id="bearipAccountError"></div>
-          <div class="rp-actions">
-            ${canSkip ? '<button type="button" id="bearipAccountLater">나중에</button>' : ''}
-            <button type="button" class="rp-submit" id="bearipAccountSet">PIN 설정하기</button>
-          </div>
-        </div>`;
-
+  const templates = {
+    verify: `<div class="bearip-report-box" role="dialog" aria-label="본인 확인">
+        <h3>본인 확인이 필요해요</h3>
+        <div class="rp-text">'${esc(user.nickname)}' 닉네임은 PIN으로 보호돼요. 쪽지·알림을 안전하게 쓰려면 PIN을 입력해서 한 번 확인해주세요.</div>
+        <input type="password" id="bearipAccountPin" placeholder="PIN" maxlength="64" autocomplete="current-password">
+        <div class="rp-error" id="bearipAccountError"></div>
+        <div class="rp-actions">${switchBtn}<button type="button" class="rp-submit" id="bearipAccountVerify">확인</button></div>
+      </div>`,
+    claim: `<div class="bearip-report-box" role="dialog" aria-label="닉네임 지키기">
+        <h3>닉네임을 지키세요</h3>
+        <div class="rp-text">'${esc(user.nickname)}' 닉네임에 PIN을 설정하면 다른 사람이 이 닉네임으로 로그인할 수 없고, 쪽지·알림도 안전하게 쓸 수 있어요. 잊어버리면 직접 찾을 수 없으니 꼭 기억해두세요.${canSkip ? '' : ' (이 닉네임은 반드시 설정해야 해요)'}</div>
+        <input type="password" id="bearipAccountPin" placeholder="PIN (${BEARIP_PIN_MIN_LENGTH}자 이상)" maxlength="64" autocomplete="new-password">
+        <input type="password" id="bearipAccountPin2" placeholder="PIN 확인" maxlength="64" autocomplete="new-password">
+        <div class="rp-error" id="bearipAccountError"></div>
+        <div class="rp-actions">
+          ${canSkip ? '<button type="button" id="bearipAccountLater">나중에</button>' : ''}
+          <button type="button" class="rp-submit" id="bearipAccountSet">PIN 설정하기</button>
+        </div>
+      </div>`,
+    taken: `<div class="bearip-report-box" role="dialog" aria-label="닉네임 사용 중">
+        <h3>이미 사용 중인 닉네임이에요</h3>
+        <div class="rp-text">방금 다른 분이 '${esc(user.nickname)}' 닉네임을 PIN으로 잠갔어요. 다른 닉네임으로 다시 시작해주세요.</div>
+        <div class="rp-actions">${switchBtn}</div>
+      </div>`,
+  };
+  overlay.innerHTML = templates[mode] || templates.verify;
   const close = () => overlay.remove();
   root.appendChild(overlay);
 
-  if (mode === 'relogin') {
-    overlay.querySelector('#bearipAccountRelogin').addEventListener('click', () => {
-      bearipLogout();
+  const switchEl = overlay.querySelector('#bearipAccountSwitch');
+  if (switchEl) {
+    switchEl.addEventListener('click', async () => {
+      await bearipLogout();
       bearipGoToLogin();
+    });
+  }
+  const errorEl = overlay.querySelector('#bearipAccountError');
+  // 서버 로그인에 성공하면 로그인 정보를 갱신하고 새로고침해요.
+  const finish = () => {
+    bearipSetUser(Object.assign({}, bearipGetUser() || user, { pinVerified: true }));
+    location.reload();
+  };
+
+  if (mode === 'verify') {
+    const pinEl = overlay.querySelector('#bearipAccountPin');
+    const verify = async (e) => {
+      errorEl.textContent = '';
+      if (!pinEl.value) {
+        errorEl.textContent = 'PIN을 입력해주세요.';
+        return;
+      }
+      const btn = overlay.querySelector('#bearipAccountVerify');
+      btn.disabled = true;
+      try {
+        await bearipAuthSignIn('login', user.nickname, pinEl.value);
+        finish();
+      } catch (err) {
+        btn.disabled = false;
+        errorEl.textContent = err.code === 'bad_pin' ? 'PIN이 맞지 않아요.' : err.message;
+      }
+    };
+    overlay.querySelector('#bearipAccountVerify').addEventListener('click', verify);
+    pinEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') verify();
     });
     return;
   }
 
-  const errorEl = overlay.querySelector('#bearipAccountError');
-  const later = overlay.querySelector('#bearipAccountLater');
-  if (later) {
-    later.addEventListener('click', () => {
-      try {
-        sessionStorage.setItem('bearip_pin_snooze', '1');
-      } catch (e) {
-        /* best-effort */
-      }
-      close();
-    });
-  }
-  overlay.querySelector('#bearipAccountSet').addEventListener('click', async (e) => {
-    const pin = overlay.querySelector('#bearipAccountPin').value;
-    const pin2 = overlay.querySelector('#bearipAccountPin2').value;
-    errorEl.textContent = '';
-    if (pin.length < BEARIP_PIN_MIN_LENGTH) {
-      errorEl.textContent = `PIN은 ${BEARIP_PIN_MIN_LENGTH}자 이상 입력해주세요.`;
-      return;
-    }
-    if (pin !== pin2) {
-      errorEl.textContent = 'PIN이 서로 달라요. 다시 입력해주세요.';
-      return;
-    }
-    e.target.disabled = true;
-    try {
-      await bearipCreateAccount(user.nickname, pin);
-      bearipSetUser(Object.assign({}, bearipGetUser() || user, { pinVerified: true }));
-      close();
-      bearipShowToast('PIN을 설정했어요. 이제 닉네임이 잠겼어요');
-    } catch (err) {
-      e.target.disabled = false;
-      if (err.message === 'taken') {
-        // 그 사이 다른 사람이 먼저 이 닉네임을 잠갔어요.
+  if (mode === 'claim') {
+    const later = overlay.querySelector('#bearipAccountLater');
+    if (later) {
+      later.addEventListener('click', () => {
+        try {
+          sessionStorage.setItem('bearip_pin_snooze', '1');
+        } catch (e) {
+          /* best-effort */
+        }
         close();
-        bearipShowAccountModal('relogin', user);
+      });
+    }
+    overlay.querySelector('#bearipAccountSet').addEventListener('click', async (e) => {
+      const pin = overlay.querySelector('#bearipAccountPin').value;
+      const pin2 = overlay.querySelector('#bearipAccountPin2').value;
+      errorEl.textContent = '';
+      if (pin.length < BEARIP_PIN_MIN_LENGTH) {
+        errorEl.textContent = `PIN은 ${BEARIP_PIN_MIN_LENGTH}자 이상 입력해주세요.`;
         return;
       }
-      errorEl.textContent = '설정하지 못했어요. 잠시 후 다시 시도해주세요.';
-    }
-  });
+      if (pin !== pin2) {
+        errorEl.textContent = 'PIN이 서로 달라요. 다시 입력해주세요.';
+        return;
+      }
+      e.target.disabled = true;
+      try {
+        await bearipAuthSignIn('register', user.nickname, pin);
+        finish();
+      } catch (err) {
+        e.target.disabled = false;
+        if (err.code === 'nickname_taken') {
+          // 그 사이 다른 사람이 먼저 이 닉네임을 잠갔어요.
+          close();
+          bearipShowAccountModal('taken', user);
+          return;
+        }
+        errorEl.textContent = err.message || '설정하지 못했어요. 잠시 후 다시 시도해주세요.';
+      }
+    });
+  }
 }
 
 async function bearipAccountGate() {
   const user = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
-  if (!user || user.pinVerified) return;
-  let account;
+  if (!user) return;
+  if (await bearipHasServerIdentity()) return; // 이미 서버에서 본인 확인된 로그인
+  let exists;
   try {
-    account = await bearipFetchAccount(user.nickname);
+    exists = await bearipAuthExists(user.nickname);
   } catch (e) {
-    return;
+    return; // 서버에 닿지 못하면 막지 않고 넘어가요
   }
-  if (account) {
-    bearipShowAccountModal('relogin', user);
+  if (exists) {
+    bearipShowAccountModal('verify', user);
     return;
   }
   let snoozed = false;
@@ -689,8 +729,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!btn) return;
     const action = btn.dataset.action;
     if (action === 'logout') {
-      bearipLogout();
-      location.href = 'index.html';
+      // 서버 로그인 로그아웃이 끝난 뒤에 이동해야 중간에 끊기지 않아요.
+      bearipLogout().then(() => {
+        location.href = 'index.html';
+      });
     } else if (action === 'profile') {
       location.href = 'profile.html';
     } else if (action === 'notifications') {
