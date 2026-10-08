@@ -1,0 +1,391 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "notifications": {
+      "$nickname": {
+        ".read": "auth.token.nk == $nickname",
+        "$notifId": {
+          ".write": "auth.token.nk != null && (!data.exists() || auth.token.nk == $nickname)",
+          ".validate": "newData.hasChildren(['type', 'title', 'message', 'createdAt', 'read'])",
+          "type": {
+            ".validate": "newData.isString()"
+          },
+          "title": {
+            ".validate": "newData.isString()"
+          },
+          "message": {
+            ".validate": "newData.isString()"
+          },
+          "read": {
+            ".validate": "newData.isBoolean()"
+          },
+          "createdAt": {
+            ".validate": "newData.isString()"
+          }
+        }
+      }
+    },
+    "productionRequests": {
+      ".read": "auth != null",
+      ".indexOn": [
+        "ipId",
+        "requesterNickname"
+      ],
+      "$reqId": {
+        ".write": "(!data.exists() && !newData.exists()) || (auth.token.nick != null && (auth.token.nk == 'GM' || ((data.exists() ? data.child('requesterNickname').val() == auth.token.nick : newData.child('requesterNickname').val() == auth.token.nick) && (!newData.exists() || newData.child('requesterNickname').val() == auth.token.nick))))",
+        ".validate": "newData.hasChildren(['ipId', 'requesterNickname', 'status', 'requestedAt'])",
+        "ipId": {
+          ".validate": "newData.isString()"
+        },
+        "requesterNickname": {
+          ".validate": "newData.isString()"
+        },
+        "status": {
+          ".validate": "newData.isString() && (newData.val() == 'pending' || newData.val() == 'done' || newData.val() == 'rejected' || newData.val() == 'cancelled')"
+        },
+        "price": {
+          ".validate": "newData.isNumber()"
+        },
+        "requestedAt": {
+          ".validate": "newData.isString()"
+        }
+      }
+    },
+    "ipReviews": {
+      ".read": "auth != null",
+      ".indexOn": [
+        "ipId",
+        "requesterNickname"
+      ],
+      "$reviewId": {
+        ".write": "(!data.exists() && !newData.exists()) || (auth.token.nick != null && (auth.token.nk == 'GM' || ((data.exists() ? data.child('requesterNickname').val() == auth.token.nick : newData.child('requesterNickname').val() == auth.token.nick) && (!newData.exists() || newData.child('requesterNickname').val() == auth.token.nick))))",
+        ".validate": "newData.hasChildren(['ipId', 'requesterNickname', 'stepKey', 'status', 'requestedAt'])",
+        "ipId": {
+          ".validate": "newData.isString()"
+        },
+        "requesterNickname": {
+          ".validate": "newData.isString()"
+        },
+        "stepKey": {
+          ".validate": "newData.isString()"
+        },
+        "status": {
+          ".validate": "newData.isString() && (newData.val() == 'pending' || newData.val() == 'reviewed')"
+        },
+        "requestedAt": {
+          ".validate": "newData.isString()"
+        }
+      }
+    },
+    "ipOverallComments": {
+      ".read": "auth != null",
+      "$ipId": {
+        ".write": "(!data.exists() && !newData.exists()) || (auth.token.nick != null && (auth.token.nk == 'GM' || root.child('allIPs').child($ipId).child('ownerNickname').val() == auth.token.nick))",
+        ".validate": "newData.isString() || newData.val() == null"
+      }
+    },
+    "publicIPs": {
+      ".read": "auth != null",
+      "$ipId": {
+        ".write": "(!data.exists() && !newData.exists()) || (auth.token.nick != null && (auth.token.nk == 'GM' || ((data.exists() ? data.child('ownerNickname').val() == auth.token.nick : newData.child('ownerNickname').val() == auth.token.nick) && (!newData.exists() || newData.child('ownerNickname').val() == auth.token.nick))))",
+        ".validate": "newData.hasChildren(['id', 'title'])",
+        "id": {
+          ".validate": "newData.isString()"
+        },
+        "title": {
+          ".validate": "newData.isString()"
+        }
+      }
+    },
+    "allIPs": {
+      ".read": "auth != null",
+      "$ipId": {
+        ".write": "(!data.exists() && !newData.exists()) || (auth.token.nick != null && (auth.token.nk == 'GM' || ((data.exists() ? data.child('ownerNickname').val() == auth.token.nick : newData.child('ownerNickname').val() == auth.token.nick) && (!newData.exists() || newData.child('ownerNickname').val() == auth.token.nick))))",
+        ".validate": "newData.hasChildren(['id', 'title'])",
+        "id": {
+          ".validate": "newData.isString()"
+        },
+        "title": {
+          ".validate": "newData.isString()"
+        }
+      }
+    },
+    "publicCreators": {
+      ".read": "auth != null",
+      "$nickname": {
+        ".write": "(!data.exists() && !newData.exists()) || (auth.token.nk != null && (auth.token.nk == 'GM' || auth.token.nk == $nickname))",
+        ".validate": "newData.hasChildren(['nickname', 'positions'])",
+        "nickname": {
+          ".validate": "newData.isString()"
+        }
+      }
+    },
+    "positions": {
+      ".read": "auth != null",
+      "$posId": {
+        ".write": "(!data.exists() && !newData.exists()) || (auth.token.nick != null && (auth.token.nk == 'GM' || ((data.exists() ? data.child('ownerNickname').val() == auth.token.nick : newData.child('ownerNickname').val() == auth.token.nick) && (!newData.exists() || newData.child('ownerNickname').val() == auth.token.nick))))",
+        ".validate": "newData.hasChildren(['id', 'ipTitle', 'role', 'ownerNickname'])",
+        "id": {
+          ".validate": "newData.isString()"
+        },
+        "ipTitle": {
+          ".validate": "newData.isString()"
+        },
+        "role": {
+          ".validate": "newData.isString()"
+        },
+        "ownerNickname": {
+          ".validate": "newData.isString()"
+        },
+        "count": {
+          ".validate": "newData.isNumber()"
+        },
+        "filled": {
+          ".validate": "newData.isNumber()"
+        }
+      }
+    },
+    "ipJoinRequests": {
+      ".read": "auth != null",
+      "$ipId": {
+        "$reqId": {
+          ".write": "(!data.exists() && !newData.exists()) || (auth.token.nick != null && (auth.token.nk == 'GM' || root.child('allIPs').child($ipId).child('ownerNickname').val() == auth.token.nick || ($reqId == auth.token.nk && (!newData.exists() || newData.child('status').val() == 'pending'))))",
+          ".validate": "newData.hasChildren(['id', 'name', 'ipId', 'status', 'requestedAt'])",
+          "name": {
+            ".validate": "newData.isString()"
+          },
+          "ipId": {
+            ".validate": "newData.isString()"
+          },
+          "status": {
+            ".validate": "newData.isString() && (newData.val() == 'pending' || newData.val() == 'accepted' || newData.val() == 'rejected')"
+          },
+          "requestedAt": {
+            ".validate": "newData.isString()"
+          }
+        }
+      }
+    },
+    "positionApplicants": {
+      ".read": "auth != null",
+      "$posId": {
+        "$appId": {
+          ".write": "(!data.exists() && !newData.exists()) || (auth.token.nick != null && (auth.token.nk == 'GM' || root.child('positions').child($posId).child('ownerNickname').val() == auth.token.nick || ($appId == auth.token.nk && (!newData.exists() || newData.child('status').val() == 'pending'))))",
+          ".validate": "newData.hasChildren(['id', 'name', 'status', 'appliedAt'])",
+          "name": {
+            ".validate": "newData.isString()"
+          },
+          "status": {
+            ".validate": "newData.isString() && (newData.val() == 'pending' || newData.val() == 'accepted' || newData.val() == 'rejected')"
+          },
+          "appliedAt": {
+            ".validate": "newData.isString()"
+          }
+        }
+      }
+    },
+    "ipFollowers": {
+      ".read": "auth != null",
+      "$ipId": {
+        "$nickname": {
+          ".write": "(!data.exists() && !newData.exists()) || (auth.token.nk != null && (auth.token.nk == 'GM' || auth.token.nk == $nickname || (root.child('allIPs').child($ipId).child('ownerNickname').val() == auth.token.nick && !newData.exists())))",
+          ".validate": "newData.hasChildren(['name', 'followedAt'])",
+          "name": {
+            ".validate": "newData.isString()"
+          },
+          "followedAt": {
+            ".validate": "newData.isString()"
+          }
+        }
+      }
+    },
+    "episodeLikes": {
+      ".read": "auth != null",
+      "$ipId": {
+        "$episodeId": {
+          "$nickname": {
+            ".write": "(!data.exists() && !newData.exists()) || (auth.token.nk != null && (auth.token.nk == 'GM' || auth.token.nk == $nickname || (root.child('allIPs').child($ipId).child('ownerNickname').val() == auth.token.nick && !newData.exists())))",
+            ".validate": "newData.hasChildren(['name', 'likedAt'])",
+            "name": {
+              ".validate": "newData.isString()"
+            },
+            "likedAt": {
+              ".validate": "newData.isString()"
+            }
+          }
+        }
+      }
+    },
+    "episodeComments": {
+      ".read": "auth != null",
+      "$ipId": {
+        "$episodeId": {
+          "$commentId": {
+            ".write": "(!data.exists() && !newData.exists()) || (auth.token.nick != null && (auth.token.nk == 'GM' || (root.child('allIPs').child($ipId).child('ownerNickname').val() == auth.token.nick && !newData.exists()) || ((data.exists() ? data.child('name').val() == auth.token.nick : newData.child('name').val() == auth.token.nick) && (!newData.exists() || newData.child('name').val() == auth.token.nick))))",
+            ".validate": "newData.hasChildren(['id', 'name', 'text', 'createdAt'])",
+            "name": {
+              ".validate": "newData.isString()"
+            },
+            "text": {
+              ".validate": "newData.isString()"
+            },
+            "createdAt": {
+              ".validate": "newData.isString()"
+            }
+          }
+        }
+      }
+    },
+    "episodeViews": {
+      ".read": "auth != null",
+      "$ipId": {
+        "$episodeId": {
+          "$nickname": {
+            ".write": "(!data.exists() && !newData.exists()) || (auth.token.nk != null && (auth.token.nk == 'GM' || auth.token.nk == $nickname || (root.child('allIPs').child($ipId).child('ownerNickname').val() == auth.token.nick && !newData.exists())))",
+            ".validate": "newData.hasChildren(['name', 'viewedAt'])",
+            "name": {
+              ".validate": "newData.isString()"
+            },
+            "viewedAt": {
+              ".validate": "newData.isString()"
+            }
+          }
+        }
+      }
+    },
+    "ipViews": {
+      ".read": "auth != null",
+      "$ipId": {
+        "$nickname": {
+          ".write": "(!data.exists() && !newData.exists()) || (auth.token.nk != null && (auth.token.nk == 'GM' || auth.token.nk == $nickname || (root.child('allIPs').child($ipId).child('ownerNickname').val() == auth.token.nick && !newData.exists())))",
+          ".validate": "newData.hasChildren(['name', 'viewedAt'])",
+          "name": {
+            ".validate": "newData.isString()"
+          },
+          "viewedAt": {
+            ".validate": "newData.isString()"
+          }
+        }
+      }
+    },
+    "userThreads": {
+      "$nk": {
+        ".read": "auth.token.nk == $nk",
+        "$threadId": {
+          ".write": "auth.token.nk != null",
+          ".validate": "newData.val() == true"
+        }
+      }
+    },
+    "dmThreads": {
+      "$threadId": {
+        ".read": "auth.token.nk != null && data.child('participants').child(auth.token.nk).exists()",
+        "participants": {
+          "$nickname": {
+            ".write": "auth.token.nk != null && ((!data.parent().exists() && $nickname == auth.token.nk) || data.parent().child(auth.token.nk).exists())",
+            ".validate": "newData.hasChildren(['name', 'joinedAt'])",
+            "name": {
+              ".validate": "newData.isString()"
+            },
+            "joinedAt": {
+              ".validate": "newData.isString()"
+            }
+          }
+        },
+        "messages": {
+          "$msgId": {
+            ".write": "auth.token.nk != null && root.child('dmThreads').child($threadId).child('participants').child(auth.token.nk).exists() && (newData.exists() ? newData.child('from').val() == auth.token.nick : data.child('from').val() == auth.token.nick)",
+            ".validate": "newData.hasChildren(['from', 'text', 'createdAt'])",
+            "from": {
+              ".validate": "newData.isString()"
+            },
+            "text": {
+              ".validate": "newData.isString()"
+            },
+            "createdAt": {
+              ".validate": "newData.isString()"
+            }
+          }
+        }
+      }
+    },
+    "ipDetails": {
+      "$ipId": {
+        ".read": "auth != null",
+        ".write": "(!data.exists() && !newData.exists()) || (auth.token.nick != null && (auth.token.nk == 'GM' || ((data.exists() ? data.child('owner').val() == auth.token.nick : newData.child('owner').val() == auth.token.nick) && (!newData.exists() || newData.child('owner').val() == auth.token.nick))))"
+      }
+    },
+    "ipMaterials": {
+      "$ipId": {
+        ".read": "auth != null",
+        ".write": "(!data.exists() && !newData.exists()) || (auth.token.nick != null && (auth.token.nk == 'GM' || ((data.exists() ? data.child('owner').val() == auth.token.nick : newData.child('owner').val() == auth.token.nick) && (!newData.exists() || newData.child('owner').val() == auth.token.nick))))"
+      }
+    },
+    "accounts": {
+      ".read": false,
+      ".write": false
+    },
+    "reports": {
+      ".read": "auth.token.nk == 'GM'",
+      "$reportId": {
+        ".write": "auth.token.nk == 'GM' || (auth.token.nick != null && !data.exists() && newData.child('reporter').val() == auth.token.nick)",
+        ".validate": "newData.hasChildren(['type', 'reporter', 'targetNickname', 'targetId', 'reason', 'status', 'createdAt'])",
+        "type": {
+          ".validate": "newData.isString()"
+        },
+        "reporter": {
+          ".validate": "newData.isString()"
+        },
+        "targetNickname": {
+          ".validate": "newData.isString()"
+        },
+        "targetId": {
+          ".validate": "newData.isString()"
+        },
+        "reason": {
+          ".validate": "newData.isString()"
+        },
+        "status": {
+          ".validate": "newData.isString()"
+        },
+        "createdAt": {
+          ".validate": "newData.isString()"
+        }
+      }
+    },
+    "crewChat": {
+      ".read": "auth != null",
+      "$ipId": {
+        "$msgId": {
+          ".write": "(!data.exists() && !newData.exists()) || (auth.token.nick != null && (auth.token.nk == 'GM' || (root.child('allIPs').child($ipId).child('ownerNickname').val() == auth.token.nick && !newData.exists()) || ((data.exists() ? data.child('name').val() == auth.token.nick : newData.child('name').val() == auth.token.nick) && (!newData.exists() || newData.child('name').val() == auth.token.nick))))",
+          ".validate": "newData.hasChildren(['name', 'text', 'createdAt'])",
+          "name": {
+            ".validate": "newData.isString()"
+          },
+          "text": {
+            ".validate": "newData.isString()"
+          },
+          "createdAt": {
+            ".validate": "newData.isString()"
+          }
+        }
+      }
+    },
+    "ipCheers": {
+      ".read": "auth != null",
+      "$ipId": {
+        "$nickname": {
+          ".write": "(!data.exists() && !newData.exists()) || (auth.token.nk != null && (auth.token.nk == 'GM' || auth.token.nk == $nickname || (root.child('allIPs').child($ipId).child('ownerNickname').val() == auth.token.nick && !newData.exists())))",
+          ".validate": "newData.hasChildren(['name', 'cheeredAt'])",
+          "name": {
+            ".validate": "newData.isString()"
+          },
+          "cheeredAt": {
+            ".validate": "newData.isString()"
+          }
+        }
+      }
+    }
+  }
+}

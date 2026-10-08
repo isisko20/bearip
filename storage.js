@@ -385,15 +385,33 @@ function bearipDeleteIP(id) {
   if (bearipGetFeaturedId() === id) {
     bearipSetFeaturedId(null);
   }
+  // 이 기기에 없는 IP(다른 기기에서 올린 사본)도 지울 수 있어야 해서, 연결 데이터를 찾을 때는
+  // 이 기기의 IP 또는 공개/GM 사본(회차 목록·제목) 중 있는 쪽을 써요.
+  const copy = ip || (_bearipDataCache.publicIPs || {})[id] || (_bearipDataCache.allIPs || {})[id] || null;
   if (bearipFirebaseReady()) {
-    firebase.database().ref('allIPs/' + id).remove();
-    firebase.database().ref('publicIPs/' + id).remove();
-    // 큰 파일을 따로 담은 상세·자료실 문서도 IP와 함께 지워요 (_bearipPublishIpSummary 참고).
-    firebase.database().ref('ipDetails/' + id).remove();
-    firebase.database().ref('ipMaterials/' + id).remove();
-    delete _bearipIpRemoteCache[id];
-    delete _bearipHeavyCache.ipDetails[id];
-    delete _bearipHeavyCache.ipMaterials[id];
+    // ① 연결된 데이터를 먼저 지워요. 데이터베이스 규칙이 allIPs/<id>에 적힌 ownerNickname으로
+    //   "이 IP의 소유자인지"를 판단해서 남의 팔로우·댓글 같은 기록을 지울 수 있게 해주는데,
+    //   IP 본문을 먼저 지우면 이 판단이 사라져서 정리가 거부돼요. 같은 연결로 보낸 쓰기는
+    //   순서대로 처리되니, 본문 삭제는 맨 마지막에 둬요.
+    ((copy && copy.episodes) || []).forEach((ep) => {
+      bearipDeleteEpisodeLikes(id, ep.id);
+      bearipDeleteEpisodeComments(id, ep.id);
+      bearipDeleteEpisodeViews(id, ep.id);
+    });
+    // A CREW MATCH posting only exists to recruit for this IP, and an applicant record only
+    // exists to apply to one of those postings — both are meaningless once the IP itself is
+    // gone. Postings made before ipId was recorded only know their IP by title.
+    const me = bearipScopeSuffix();
+    bearipLoadPositions()
+      .filter((p) => p.ownerNickname === me && (p.ipId ? p.ipId === id : !!copy && p.ipTitle === copy.title))
+      .forEach((p) => bearipDeletePosition(p.id));
+    // Same for requests to join it, its followers, its view records, its crew chat history
+    // and cheers.
+    bearipDeleteJoinRequestsForIp(id);
+    bearipDeleteFollowersForIp(id);
+    bearipDeleteIpViews(id);
+    bearipDeleteCrewChat(id);
+    bearipDeleteIpCheers(id);
     firebase.database().ref('ipOverallComments/' + id).remove();
     // 제작요청/전문가검토 큐는 이 IP를 참조만 할 뿐 담고 있지는 않아서, IP가
     // 삭제돼도 저절로 같이 사라지지 않는다 — 안 지우면 GM 쪽에 실체 없는
@@ -408,6 +426,14 @@ function bearipDeleteIP(id) {
         .filter((r) => r.ipId === id)
         .forEach((r) => bearipDeleteIpReview(r.id));
     }
+    // ② IP 본문과, 큰 파일을 따로 담은 상세·자료실 문서는 마지막에 (_bearipPublishIpSummary 참고).
+    firebase.database().ref('allIPs/' + id).remove();
+    firebase.database().ref('publicIPs/' + id).remove();
+    firebase.database().ref('ipDetails/' + id).remove();
+    firebase.database().ref('ipMaterials/' + id).remove();
+    delete _bearipIpRemoteCache[id];
+    delete _bearipHeavyCache.ipDetails[id];
+    delete _bearipHeavyCache.ipMaterials[id];
   }
   if (!ip) return;
 
@@ -426,28 +452,8 @@ function bearipDeleteIP(id) {
     });
     (ip.episodes || []).forEach((ep) => {
       if (ep.blobId) bearipDeleteAssetFile(ep.blobId);
-      bearipDeleteEpisodeLikes(id, ep.id);
-      bearipDeleteEpisodeComments(id, ep.id);
-      bearipDeleteEpisodeViews(id, ep.id);
     });
   }
-
-  // A CREW MATCH posting only exists to recruit for this IP, and an
-  // applicant record only exists to apply to one of those postings — both
-  // are meaningless (and, now that postings are visible to everyone, publicly
-  // confusing) once the IP itself is gone. Postings made before ipId was
-  // recorded only know their IP by title, so fall back to that for those.
-  const me = bearipScopeSuffix();
-  bearipLoadPositions()
-    .filter((p) => p.ownerNickname === me && (p.ipId ? p.ipId === id : p.ipTitle === ip.title))
-    .forEach((p) => bearipDeletePosition(p.id));
-  // Same for requests to join it, its followers, its view records, and its
-  // crew chat history.
-  bearipDeleteJoinRequestsForIp(id);
-  bearipDeleteFollowersForIp(id);
-  bearipDeleteIpViews(id);
-  bearipDeleteCrewChat(id);
-  bearipDeleteIpCheers(id);
 }
 
 // ---- Shared genre tag options ----
@@ -1951,10 +1957,26 @@ function bearipFirebaseSafe(value) {
 // worth breaking a local save over.
 function _bearipFirebaseWrite(fn) {
   try {
-    fn();
+    const result = fn();
+    // 서버가 쓰기를 거절하면(권한 없음) 조용히 사라지지 않고 한 번 알려줘요.
+    if (result && typeof result.catch === 'function') result.catch(_bearipHandleWriteDenied);
   } catch (e) {
     /* best-effort background sync */
   }
+}
+
+// 권한이 없어서 저장이 거절됐을 때의 안내 — 서버 로그인(PIN)이 안 된 세션이면 가장 흔한
+// 원인이니 그걸 알려주고, 로그인돼 있다면 남의 데이터라는 뜻이에요. 30초에 한 번만 보여줘요.
+let _bearipDeniedNoticeAt = 0;
+function _bearipHandleWriteDenied(err) {
+  if (!err || err.code !== 'PERMISSION_DENIED') return;
+  const now = Date.now();
+  if (now - _bearipDeniedNoticeAt < 30000) return;
+  _bearipDeniedNoticeAt = now;
+  if (typeof bearipShowToast !== 'function') return;
+  bearipHasServerIdentity().then((ok) =>
+    bearipShowToast(ok ? '이 데이터는 수정할 권한이 없어요' : '저장하려면 PIN으로 본인 확인이 필요해요. 페이지를 새로고침하면 안내 창이 떠요')
+  );
 }
 
 // ---- 제작요청 — a global queue (every creator's requests, one place) so
@@ -2272,9 +2294,16 @@ function _bearipFingerprint(str) {
 }
 
 // 상세·자료실 문서 쓰기 — 내용이 비어 있으면 예전에 올린 문서가 남지 않게 지워요.
-function _bearipWriteIpHeavyParts(ipId, parts) {
+// 문서마다 owner(소유자 닉네임)를 함께 적어요 — 데이터베이스 규칙이 이 값으로 "소유자만 쓰기"를
+// 판단해요 (상세·자료실은 IP 본문보다 먼저 올라가서 allIPs의 소유자 기록을 볼 수 없어요).
+function _bearipWriteIpHeavyParts(ipId, parts, owner) {
   const db = firebase.database();
-  const put = (path, data) => (Object.keys(data).length ? db.ref(path).set(bearipFirebaseSafe(data)) : db.ref(path).remove());
+  // 내용이 없는 쪽은 예전 문서가 남지 않게 지우기만 하는 정리라서, 이 정리가 실패해도 올리는 흐름
+  // 전체(특히 요약 올리기)를 막지 않게 오류를 삼켜요.
+  const put = (path, data) =>
+    Object.keys(data).length
+      ? db.ref(path).set(bearipFirebaseSafe(Object.assign({ owner }, data)))
+      : db.ref(path).remove().catch(() => {});
   return Promise.all([put('ipDetails/' + ipId, parts.details), put('ipMaterials/' + ipId, parts.materials)]);
 }
 
@@ -2282,13 +2311,17 @@ function _bearipWriteIpHeavyParts(ipId, parts) {
 // 만들기와 큰 문서 업로드를 한 번만 하도록 내용 지문으로 묶어요.
 const _bearipIpRemoteCache = {};
 function _bearipPrepareIpRemote(ip) {
-  return bearipHydrateIpForRemote(ip).then((hydrated) => {
+  return bearipHydrateIpForRemote(ip).then((hydratedRaw) => {
+    // 이 기기의 IP 목록은 로그인한 계정 것이라, 소유자 기록이 없는 옛 IP도 지금 계정을 소유자로
+    // 적어서 올려요 (데이터베이스 규칙이 소유자만 쓰기를 허용해요).
+    const me = bearipScopeSuffix();
+    const hydrated = hydratedRaw.ownerNickname || me === '_guest' ? hydratedRaw : Object.assign({}, hydratedRaw, { ownerNickname: me });
     const fp = _bearipFingerprint(JSON.stringify(hydrated));
     const cached = _bearipIpRemoteCache[ip.id];
     if (cached && cached.fp === fp) return cached;
     const entry = { fp };
     entry.parts = bearipBuildIpParts(hydrated);
-    entry.heavyDone = entry.parts.then((parts) => _bearipWriteIpHeavyParts(ip.id, parts));
+    entry.heavyDone = entry.parts.then((parts) => _bearipWriteIpHeavyParts(ip.id, parts, hydrated.ownerNickname));
     entry.heavyDone.catch(() => {
       if (_bearipIpRemoteCache[ip.id] === entry) delete _bearipIpRemoteCache[ip.id]; // 실패는 다음에 다시 시도
     });
@@ -2536,20 +2569,7 @@ async function bearipEraseMyData() {
   const localIds = new Set(bearipLoadIPs().map((ip) => ip.id));
   const remoteOwned = [...Object.values(cache.publicIPs || {}), ...Object.values(cache.allIPs || {})].filter((ip) => ip && ip.ownerNickname === nick);
   const remoteOnlyIds = [...new Set(remoteOwned.map((ip) => ip.id))].filter((id) => !localIds.has(id));
-  // bearipDeleteIP는 이 기기에 없는 IP의 연결 데이터(회차 좋아요 등)는 정리하지 못해서, 사본이 지워지기 전에 먼저 정리해요.
-  remoteOnlyIds.forEach((id) => {
-    const copy = (cache.publicIPs || {})[id] || (cache.allIPs || {})[id];
-    ((copy && copy.episodes) || []).forEach((ep) => {
-      bearipDeleteEpisodeLikes(id, ep.id);
-      bearipDeleteEpisodeComments(id, ep.id);
-      bearipDeleteEpisodeViews(id, ep.id);
-    });
-    bearipDeleteJoinRequestsForIp(id);
-    bearipDeleteFollowersForIp(id);
-    bearipDeleteIpViews(id);
-    bearipDeleteCrewChat(id);
-    bearipDeleteIpCheers(id);
-  });
+  // bearipDeleteIP가 이 기기에 없는 IP도 공개/GM 사본을 보고 연결 데이터까지 순서대로 지워요.
   [...localIds, ...remoteOnlyIds].forEach((id) => {
     bearipDeleteIP(id);
     removed++;
