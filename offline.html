@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thinkit — 연결 없음</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Noto Sans KR', system-ui, sans-serif; background: #f6f4fb; color: #201d33; text-align: center; padding: 24px; }
+  .box { max-width: 340px; }
+  .logo { width: 56px; height: 56px; border-radius: 16px; margin: 0 auto 18px; background: linear-gradient(150deg, #6a3fd6, #1e6fd9); display: flex; align-items: center; justify-content: center; }
+  h1 { font-size: 19px; margin: 0 0 8px; }
+  p { font-size: 13px; line-height: 1.7; color: #6f6a82; margin: 0 0 22px; }
+  button { padding: 12px 26px; border: none; border-radius: 999px; background: #6a3fd6; color: #fff; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+  @media (prefers-color-scheme: dark) { body { background: #14122a; color: #f0eeff; } p { color: #a9a4c4; } }
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo"><svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M5 6h14M12 6v13" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <h1>인터넷에 연결되어 있지 않아요</h1>
+  <p>Thinkit은 친구들의 작품과 쪽지를 실시간으로 보여주는 서비스라서, 연결이 되어야 쓸 수 있어요. 연결을 확인한 뒤 다시 시도해주세요.</p>
+  <button type="button" onclick="location.reload()">다시 시도</button>
+</div>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "Thinkit — AI-Native IP Platform",
+  "short_name": "Thinkit",
+  "description": "아이디어로 IP를 만들고 함께 성장하는 공간",
+  "lang": "ko",
+  "start_url": "./create.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6a3fd6",
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

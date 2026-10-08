@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#6a3fd6">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Thinkit">
 <title>Thinkit — 내 프로젝트 관리</title>
 <script>try{document.documentElement.dataset.theme=localStorage.getItem('bearip_theme')||'light';}catch(e){}</script>
 <link rel="stylesheet" href="styles.css">
@@ -148,6 +154,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="firebase-init.js"></script>
 <script src="storage.js"></script>
+<script src="app-boot.js"></script>
 <script src="auth-ui.js"></script>
 <script src="my-projects.js"></script>
 </body>

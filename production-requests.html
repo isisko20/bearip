@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#6a3fd6">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Thinkit">
 <title>Thinkit — 제작요청 관리</title>
 <script>try{document.documentElement.dataset.theme=localStorage.getItem('bearip_theme')||'light';}catch(e){}</script>
 <link rel="stylesheet" href="styles.css">
@@ -152,6 +158,18 @@
       </div>
     </section>
 
+    <section class="pr-report-panel" id="prErrorPanel">
+      <div class="pr-cleanup-head">
+        <div class="t">앱 오류 기록 <span id="prErrorCount"></span></div>
+        <div class="s">친구들 화면에서 난 오류가 자동으로 모여요. 같은 오류는 묶어서 보여주고, 고쳤으면 "해결됨"으로 지워요.</div>
+      </div>
+      <div class="pr-ai-actions" style="margin-bottom:4px">
+        <button type="button" id="prErrorReload">새로고침</button>
+        <button type="button" id="prErrorClearAll">전부 지우기</button>
+      </div>
+      <div class="pr-report-list" id="prErrorList"></div>
+    </section>
+
     <section class="pr-report-panel" id="prReportPanel">
       <div class="pr-cleanup-head">
         <div class="t">신고 접수 <span id="prReportOpenCount"></span></div>
@@ -194,6 +212,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="firebase-init.js"></script>
 <script src="storage.js"></script>
+<script src="app-boot.js"></script>
 <script src="auth-ui.js"></script>
 <script src="production-requests.js"></script>
 </body>

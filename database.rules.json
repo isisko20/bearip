@@ -243,6 +243,28 @@
       ".write": false
     },
 
+    "clientErrors": {
+      ".read": "auth.token.nk == 'GM'",
+      ".indexOn": ["createdAt"],
+      "$errId": {
+        ".write": "auth.token.nk == 'GM' || (auth != null && !data.exists() && newData.exists())",
+        ".validate": "newData.hasChildren(['kind', 'message', 'page', 'createdAt'])",
+        "kind": { ".validate": "newData.isString() && newData.val().length < 20" },
+        "message": { ".validate": "newData.isString() && newData.val().length < 500" },
+        "source": { ".validate": "newData.isString() && newData.val().length < 200" },
+        "line": { ".validate": "newData.isNumber()" },
+        "col": { ".validate": "newData.isNumber()" },
+        "stack": { ".validate": "newData.isString() && newData.val().length < 1200" },
+        "page": { ".validate": "newData.isString() && newData.val().length < 100" },
+        "nickname": { ".validate": "newData.isString() && newData.val().length < 40" },
+        "ua": { ".validate": "newData.isString() && newData.val().length < 200" },
+        "standalone": { ".validate": "newData.isBoolean()" },
+        "code": { ".validate": "newData.isString() && newData.val().length < 60" },
+        "createdAt": { ".validate": "newData.isString()" },
+        "$other": { ".validate": false }
+      }
+    },
+
     "reports": {
       ".read": "auth.token.nk == 'GM'",
       "$reportId": {

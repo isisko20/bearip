@@ -22,6 +22,8 @@ function prShowGmLocked() {
   if (reportPanel) reportPanel.style.display = 'none';
   const aiPanel = document.getElementById('prAiPanel');
   if (aiPanel) aiPanel.style.display = 'none';
+  const errorPanel = document.getElementById('prErrorPanel');
+  if (errorPanel) errorPanel.style.display = 'none';
   if (filterRow) filterRow.style.display = 'none';
   if (list) list.style.display = 'none';
   if (empty) empty.style.display = 'none';
@@ -200,6 +202,93 @@ async function prAiRequest(action) {
   } finally {
     pinInput.value = '';
   }
+}
+
+// 앱 오류 기록 — app-boot.js가 친구들 화면에서 모은 오류(clientErrors)를 같은 오류끼리 묶어서
+// 보여줘요. GM만 읽을 수 있어서(데이터베이스 규칙), PIN으로 본인 확인이 안 된 GM 세션이면
+// 안내 문구가 떠요. 많이 쌓이지 않게 최근 300건만 읽어요.
+const PR_ERROR_KIND_LABEL = { error: '스크립트 오류', rejection: '처리 안 된 오류', denied: '저장 거부(권한)', resource: '파일 불러오기 실패' };
+
+function prGroupErrors(rows) {
+  const groups = {};
+  rows.forEach((r) => {
+    const key = [r.kind, r.message, r.source || '', r.line || 0].join('|');
+    const g = (groups[key] = groups[key] || { kind: r.kind, message: r.message, source: r.source, line: r.line, count: 0, last: '', pages: new Set(), nicks: new Set(), ids: [], stack: '', ua: '' });
+    g.count++;
+    g.ids.push(r.id);
+    if ((r.createdAt || '') > g.last) {
+      g.last = r.createdAt;
+      g.ua = r.ua || '';
+    }
+    if (r.page) g.pages.add(r.page);
+    if (r.nickname) g.nicks.add(r.nickname);
+    if (r.stack && !g.stack) g.stack = r.stack;
+  });
+  return Object.values(groups).sort((a, b) => (b.last || '').localeCompare(a.last || ''));
+}
+
+async function prRenderErrors() {
+  const listEl = document.getElementById('prErrorList');
+  const countEl = document.getElementById('prErrorCount');
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="pr-report-empty">불러오는 중이에요...</div>';
+  let rows = [];
+  try {
+    await _bearipWhenFirebaseAuthed();
+    const snap = await firebase.database().ref('clientErrors').orderByChild('createdAt').limitToLast(300).once('value');
+    snap.forEach((child) => {
+      rows.push(Object.assign({ id: child.key }, child.val()));
+    });
+  } catch (e) {
+    countEl.textContent = '';
+    listEl.innerHTML = '<div class="pr-report-empty">오류 기록을 읽을 수 없어요. GM PIN으로 본인 확인이 된 상태인지 확인해주세요.</div>';
+    return;
+  }
+  const groups = prGroupErrors(rows);
+  countEl.textContent = groups.length ? `· ${groups.length}종류, 최근 ${rows.length}건` : '';
+  if (!groups.length) {
+    listEl.innerHTML = '<div class="pr-report-empty">기록된 오류가 없어요. 👍</div>';
+    return;
+  }
+  const esc = bearipEscapeHtml;
+  listEl.innerHTML = groups
+    .slice(0, 40)
+    .map(
+      (g, i) => `
+    <div class="pr-report-row">
+      <div class="pr-report-top">
+        <span class="pr-report-type">${esc(PR_ERROR_KIND_LABEL[g.kind] || g.kind)}</span>
+        <span class="pr-report-who"><b>${g.count}회</b>${g.nicks.size ? ' · ' + esc([...g.nicks].slice(0, 4).join(', ')) : ''}</span>
+        <span class="pr-report-time">${g.last ? prFormatRelativeTime(g.last) : ''}</span>
+      </div>
+      <div class="pr-report-text">${esc(g.message)}</div>
+      <div class="pr-report-ctx">${esc(g.source || '')}${g.line ? ':' + g.line : ''} · ${esc([...g.pages].slice(0, 4).join(', '))}</div>
+      ${g.stack ? `<details class="pr-error-stack"><summary>자세히</summary><pre>${esc(g.stack)}</pre><div class="pr-report-ctx">${esc(g.ua)}</div></details>` : ''}
+      <div class="pr-report-actions"><button type="button" data-err-group="${i}">해결됨(삭제)</button></div>
+    </div>`
+    )
+    .join('');
+  listEl.querySelectorAll('[data-err-group]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const g = groups[Number(btn.dataset.errGroup)];
+      btn.disabled = true;
+      await Promise.all(g.ids.map((id) => firebase.database().ref('clientErrors/' + id).remove().catch(() => {})));
+      bearipShowToast(`${g.count}건을 지웠어요`);
+      prRenderErrors();
+    });
+  });
+}
+
+async function prClearAllErrors() {
+  if (!confirm('기록된 오류를 전부 지울까요?')) return;
+  try {
+    await _bearipWhenFirebaseAuthed();
+    await firebase.database().ref('clientErrors').remove();
+    bearipShowToast('오류 기록을 모두 지웠어요');
+  } catch (e) {
+    bearipShowToast('지우지 못했어요. GM PIN으로 본인 확인이 필요해요');
+  }
+  prRenderErrors();
 }
 
 let prActiveFilter = 'all';
@@ -488,6 +577,9 @@ document.addEventListener('DOMContentLoaded', () => {
     bearipOnDataChange('reports', prRenderReports);
   }
 
+  prRenderErrors();
+  document.getElementById('prErrorReload').addEventListener('click', prRenderErrors);
+  document.getElementById('prErrorClearAll').addEventListener('click', prClearAllErrors);
   document.getElementById('prAiLoad').addEventListener('click', () => prAiRequest('get'));
   document.getElementById('prAiSave').addEventListener('click', () => prAiRequest('set'));
 
