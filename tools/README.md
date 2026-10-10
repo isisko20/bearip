@@ -47,3 +47,26 @@ node tools/make-icons.js     # assets/icons/ 의 앱 아이콘(PNG)을 다시 �
   싶을 때만 `sw.js`의 `VERSION`을 올리세요.
 - 친구들 화면의 오류는 `app-boot.js`가 `clientErrors`에 모아요. GM 화면(제작요청 관리)의 "앱 오류 기록"에서 보거나,
   `firebase database:get /clientErrors` 로 읽을 수 있어요. 규칙을 켠 직후에는 `denied`(저장 거부) 종류가 어디서 나는지 보세요.
+
+## 의뢰하기 1차 검토 (requestTriage)
+
+- 사용자 화면의 "의뢰하기"는 대기열(`productionRequests`/`ipReviews`)에 `triage: 'queued'`로 들어가고, 본인 브라우저가
+  서버 함수 `requestTriage`를 불러요. 글로 처리할 수 있는 항목(시나리오·설정·세계관 등)이면 결과를 바로 기록하고
+  알림을 보내고(`handledBy: 'auto'`), 아니면 `triage: 'handoff'`와 사유(`triageNote`)를 남긴 채 평소처럼 GM 대기열에 둬요.
+  어떤 이유로든 실패하면 의뢰는 그대로 대기열에 남아요.
+- GM 화면(제작요청 관리, IP 심사)에는 "자동 처리됨 / 직접 확인 필요" 표시가 보여요 (사용자 화면에는 안 보여요).
+  "AI 시나리오 도우미 설정"에서 의뢰 자동 처리를 끄거나 하루 한도를 바꿀 수 있어요.
+- 자동 처리 대상 판단(글 항목만)은 `functions/lib.js`의 `isTextWork`예요. 항목 이름을 바꾸면 `functions/test.js`가 알려줘요.
+- 배포 없이 로직 검증: `cd functions && npm test` (가짜 DB·가짜 AI 응답으로 실제 `index.js`를 돌려요).
+- 배포: `functions/`를 구글드라이브 밖 폴더에 복사해서 `firebase deploy --only functions:requestTriage,functions:aiAssist,functions:aiAdmin`.
+
+## 자료 분석 (analyzeMaterial)
+
+- MY DNA의 "작성 완성도"와 "띵킷 분석"이 쓰는 서버 함수예요. `kind: 'check'`는 올린 자료마다 매뉴얼의 필수 요소가 들어 있는지
+  점검해서 빠진 요소의 이름만 돌려주고(`entry.analysis`에 저장), `kind: 'score'`는 글 항목별 준비도 점수만 돌려줘요.
+- 필수 요소 목록은 `functions/lib.js`의 `CHECKLISTS`(시나리오·캐릭터 설정·세계관)예요. 항목 이름으로 대상을 가리는 규칙
+  (`checklistCategory`)은 `storage.js`의 `bearipChecklistCategory`와 반드시 같아야 해요.
+- 목표 수량을 0으로 두면 "필요 없는 단계"라서 작성 완성도 평균에서 빠져요.
+- GM 화면의 AI 설정에서 의뢰 자동 처리와 별개로 하루 한도(`aiConfig/checkDaily`, `analyzeDaily`)를 조정할 수 있어요
+  (`analysisEnabled`로 끌 수도 있어요).
+- 배포할 함수 목록에 `functions:analyzeMaterial`도 넣어주세요.

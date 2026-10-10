@@ -192,6 +192,7 @@ function irRenderList() {
             <span class="pr-status ${r.status === 'reviewed' ? 'done' : 'pending'}">${IR_STATUS_LABEL[r.status] || r.status}</span>
           </div>
           <div class="pr-card-meta"><span>${irFormatRelativeTime(r.requestedAt)}</span></div>
+          ${bearipTriageBadgeHtml(r)}
           ${r.requesterNote ? `<div class="ir-requester-note"><span class="lbl">요청자 메모</span>"${bearipEscapeHtml(r.requesterNote)}"</div>` : ''}
           ${irSubmissionHtml(r.submissions || r.submission)}
           ${

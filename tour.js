@@ -21,7 +21,7 @@ const BEARIP_TOUR_STEPS = [
     selector: '.dr-nav a[href="my-dna.html"]',
     placement: 'right',
     title: 'MY DNA',
-    body: '만든 IP의 실제 작업공간이에요. 개발맵을 채우고, 전문가에게 검토나 제작을 요청하고, 완성도를 확인할 수 있어요.',
+    body: '만든 IP의 실제 작업공간이에요. 개발맵을 채우고, 필요한 항목은 의뢰하고, 완성도를 확인할 수 있어요.',
   },
   {
     page: 'create.html',

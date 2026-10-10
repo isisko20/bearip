@@ -294,7 +294,7 @@
 .md-genre-custom-add-btn:hover { border-color: var(--dr-purple); color: var(--dr-purple); }
 
 /* ---- IP status cards ---- */
-.md-status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.md-status-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .md-status-card { border: 1px solid var(--dr-border); border-radius: 18px; padding: 18px; cursor: pointer; transition: border-color 0.15s; }
 .md-status-card:hover { border-color: var(--dr-purple); }
 .md-status-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
@@ -997,3 +997,46 @@
   .md-dna-report-body { flex-direction: column; align-items: center; }
   .md-dna-tiles { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ---- 개발 맵 카드: 업로드 / 의뢰하기 두 가지 선택지 ---- */
+.md-road-btns { display: flex; flex-direction: column; align-items: stretch; gap: 4px; margin-top: 6px; width: 100%; }
+.md-road-btns .md-road-action-btn { margin-top: 0; width: 100%; }
+.md-road-action-btn.upload { background: var(--dr-bg-soft); color: var(--dr-ink-soft); }
+.md-road-action-btn.upload:hover { color: var(--dr-ink); }
+.md-road-action-btn.request { background: var(--dr-purple); color: #fff; }
+.md-road-status-link { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.md-road-status-link:focus-visible { outline: 2px solid var(--dr-purple); outline-offset: 2px; border-radius: 4px; }
+
+/* 업로드 창 안의 "이 단계 완료로 표시" — 저장 버튼보다 조용한 보조 버튼 */
+.md-step-material-selfdone {
+  display: block; width: 100%; margin-top: 8px; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--dr-border); background: transparent; color: var(--dr-ink-soft);
+  font-size: 12.5px; font-weight: 700; font-family: inherit; cursor: pointer;
+}
+.md-step-material-selfdone:hover { color: var(--dr-ink); border-color: var(--dr-ink-soft); }
+
+/* 의뢰 내역에 표시되는 글 결과(초안) — 줄바꿈을 그대로 보여줘요 */
+.md-production-result-body { white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; font-size: 12px; line-height: 1.6; max-height: 320px; overflow-y: auto; }
+
+/* ---- 띵킷 분석 카드 / 올릴 때 분석 결과 ---- */
+.md-status-value-text { font-size: 22px; }
+.md-status-action {
+  display: block; width: 100%; margin-top: 12px; padding: 10px 12px; border-radius: 10px; border: none;
+  background: var(--dr-blue); color: #fff; font-size: 12.5px; font-weight: 800; font-family: inherit; cursor: pointer;
+}
+.md-status-action:disabled { opacity: 0.6; cursor: default; }
+.md-road-step.skipped { opacity: 0.55; }
+.md-road-analyzing { font-size: 10.5px; font-weight: 700; color: var(--dr-ink-soft); }
+.md-road-missing {
+  margin: 0; padding: 2px 8px; border: none; border-radius: 999px; cursor: pointer; font-family: inherit;
+  font-size: 10.5px; font-weight: 700; background: rgba(214,138,28,0.14); color: #d68a1c;
+}
+.md-road-missing:hover { background: rgba(214,138,28,0.24); }
+.md-missing-body { display: flex; flex-direction: column; gap: 10px; }
+.md-missing-row { padding: 10px 12px; border-radius: 10px; background: var(--dr-bg-soft); }
+.md-missing-name { font-size: 12.5px; font-weight: 800; color: var(--dr-ink); }
+.md-missing-name span { font-size: 11px; font-weight: 700; color: var(--dr-ink-soft); margin-left: 4px; }
+.md-missing-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.md-missing-chip { padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; background: rgba(214,138,28,0.14); color: #d68a1c; }
+.md-missing-ok { margin-top: 6px; font-size: 12px; font-weight: 700; color: #2fae6b; }
+.md-missing-ok.muted { color: var(--dr-ink-soft); font-weight: 600; }

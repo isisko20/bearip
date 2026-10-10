@@ -168,7 +168,7 @@
         <div class="md-tabs" id="mdTabs">
           <button class="md-tab active" data-tab-target="overview">개요</button>
           <button class="md-tab" data-tab-target="assets">ASSETS</button>
-          <button class="md-tab" data-tab-target="production">제작요청</button>
+          <button class="md-tab" data-tab-target="production">의뢰 내역</button>
           <button class="md-tab" data-tab-target="episodes">회차</button>
         </div>
 
@@ -237,26 +237,15 @@
               <div class="md-status-top">
                 <div class="md-status-left">
                   <div class="md-status-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg></div>
-                  <div class="md-status-label">전문가 준비도</div>
+                  <div class="md-status-label">띵킷 분석</div>
                 </div>
                 <svg class="md-status-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.1"/></svg>
               </div>
-              <div class="md-status-value" id="readinessValue">57%</div>
-              <div class="md-status-desc" id="readinessDesc">선택한 목표(웹툰) 준비도</div>
-              <div class="md-status-bar"><div class="md-status-bar-fill" id="readinessBar" style="width:57%"></div></div>
+              <div class="md-status-value" id="readinessValue">분석 전</div>
+              <div class="md-status-desc" id="readinessDesc">작성 완성도를 100%로 채우면 분석할 수 있어요.</div>
+              <div class="md-status-bar"><div class="md-status-bar-fill" id="readinessBar" style="width:0%"></div></div>
+              <button type="button" class="md-status-action" id="analysisBtn" style="display:none">분석하기</button>
               <div class="md-status-overall-comment" id="readinessOverallComment" hidden></div>
-            </div>
-            <div class="md-status-card green">
-              <div class="md-status-top">
-                <div class="md-status-left">
-                  <div class="md-status-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l3-4h3l-2 4z"/><path d="M8 8l3-4h3l-2 4z"/><path d="M13 8l3-4h3l-2 4z"/><rect x="3" y="8" width="18" height="12" rx="1.5"/></svg></div>
-                  <div class="md-status-label">제작 진행률</div>
-                </div>
-                <svg class="md-status-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.1"/></svg>
-              </div>
-              <div class="md-status-value" id="productionValue">23%</div>
-              <div class="md-status-desc">제작 의뢰 후 실제 작업 진행도</div>
-              <div class="md-status-bar"><div class="md-status-bar-fill" id="productionBar" style="width:23%"></div></div>
             </div>
           </div>
         </section>
@@ -269,7 +258,7 @@
             <span class="md-badge" id="roadmapGoalBadge">선택한 목표: 웹툰</span>
             <button type="button" class="md-expert-help-btn-main" id="mdExpertHelpBtn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.8 1.4 6.8L12 17.3 5.9 20.7l1.4-6.8-5.1-4.8 6.9-.8z"/></svg>
-              전문가 의뢰
+              의뢰하기
             </button>
           </div>
 
@@ -438,8 +427,8 @@
         <div class="md-tab-panel" data-tab-panel="production">
           <section class="md-panel">
             <div class="md-section-label">
-              <span class="t">제작요청 현황</span>
-              <span class="hint">이 IP에 대해 요청한 제작 내역이에요</span>
+              <span class="t">의뢰 내역</span>
+              <span class="hint">이 IP에 대해 의뢰한 내역이에요</span>
             </div>
             <div id="productionRequestsList"></div>
           </section>

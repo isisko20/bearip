@@ -175,7 +175,9 @@ function prAiRender(data) {
   document.getElementById('prAiEnabled').checked = !!data.config.enabled;
   document.getElementById('prAiPerUser').value = data.config.dailyPerUser;
   document.getElementById('prAiGlobal').value = data.config.globalDaily;
-  document.getElementById('prAiState').textContent = `· ${data.config.enabled ? '켜짐' : '꺼짐'} · 오늘 ${data.usedToday}/${data.config.globalDaily}회 사용 · ${data.model}`;
+  document.getElementById('prAiTriageEnabled').checked = data.config.triageEnabled !== false;
+  document.getElementById('prAiTriageDaily').value = data.config.triageDaily == null ? 100 : data.config.triageDaily;
+  document.getElementById('prAiState').textContent = `· ${data.config.enabled ? '켜짐' : '꺼짐'} · 오늘 ${data.usedToday}/${data.config.globalDaily}회 사용 · 의뢰 자동 처리 ${data.config.triageEnabled === false ? '꺼짐' : '켜짐'} ${data.triageUsedToday || 0}/${data.config.triageDaily == null ? 100 : data.config.triageDaily}건 · ${data.model}`;
 }
 
 async function prAiRequest(action) {
@@ -192,6 +194,8 @@ async function prAiRequest(action) {
     body.enabled = document.getElementById('prAiEnabled').checked;
     body.dailyPerUser = Number(document.getElementById('prAiPerUser').value);
     body.globalDaily = Number(document.getElementById('prAiGlobal').value);
+    body.triageEnabled = document.getElementById('prAiTriageEnabled').checked;
+    body.triageDaily = Number(document.getElementById('prAiTriageDaily').value);
   }
   try {
     const data = await bearipAiCall('admin', body);
@@ -332,9 +336,11 @@ function prRenderList() {
         <span class="pr-status ${r.status}">${PR_STATUS_LABEL[r.status] || r.status}</span>
       </div>
       <div class="pr-card-label">${bearipEscapeHtml(r.label)}</div>
+      ${bearipTriageBadgeHtml(r)}
       <div class="pr-card-meta"><span>${r.isFollowup ? '추가문의' : r.price + 'C'}</span><span>${prFormatRelativeTime(r.requestedAt)}</span></div>
       ${r.detail ? `<div class="pr-card-detail">"${bearipEscapeHtml(r.detail)}"</div>` : ''}
       ${r.resultNote ? `<div class="pr-card-result"><span>완료 메모</span>${bearipEscapeHtml(r.resultNote)}</div>` : ''}
+      ${r.resultText ? `<div class="pr-card-result pr-card-result-text"><span>전달된 결과</span>${bearipEscapeHtml(r.resultText)}</div>` : ''}
       ${bearipRenderResultFileHtml(r, 'pr-result')}
       ${
         r.status === 'pending'

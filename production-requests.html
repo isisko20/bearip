@@ -149,6 +149,8 @@
         <label class="pr-ai-row"><input type="checkbox" id="prAiEnabled"> AI 기능 켜기</label>
         <label class="pr-ai-row">1인당 하루 <input type="number" id="prAiPerUser" min="0" max="100" value="10"> 회</label>
         <label class="pr-ai-row">전체 하루 <input type="number" id="prAiGlobal" min="0" max="2000" value="200"> 회</label>
+        <label class="pr-ai-row"><input type="checkbox" id="prAiTriageEnabled" checked> 의뢰 자동 처리 켜기 (끄면 모든 의뢰가 바로 대기열로 와요)</label>
+        <label class="pr-ai-row">의뢰 자동 처리 전체 하루 <input type="number" id="prAiTriageDaily" min="0" max="1000" value="100"> 건</label>
         <label class="pr-ai-row">GM PIN <input type="password" id="prAiPin" autocomplete="current-password" placeholder="PIN"></label>
         <div class="pr-ai-actions">
           <button type="button" id="prAiLoad">현재 상태 보기</button>

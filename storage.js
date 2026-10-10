@@ -554,7 +554,7 @@ function bearipEnsureRoadmapSubmissions(ip) {
       delete step.submission;
       migrated = true;
     }
-    if (!step.targetCount) {
+    if (step.targetCount == null) {
       step.targetCount = 1;
       migrated = true;
     }
@@ -565,15 +565,96 @@ function bearipEnsureRoadmapSubmissions(ip) {
 // How complete a single roadmap step is, as a % — registered entries out of
 // its target count (e.g. 4/10화 = 40%), capped at 100 so extra entries past
 // the target don't overflow the bar/number.
+//
+// 올린 자료 하나하나는 "필수 요소를 얼마나 갖췄는지"(0~1)로 쳐요 — 자료를 올릴 때 분석이 돌고(분석
+// 결과는 entry.analysis), 분석이 아직 없거나 못 읽는 자료(파일뿐인 자료 등)는 감점 없이 1로 쳐요.
+// 목표 수량 N개 중 가장 잘 갖춘 N개의 평균이 그 단계의 완성률이에요.
+function bearipStepTarget(step) {
+  const n = parseInt(step && step.targetCount, 10);
+  return Number.isFinite(n) && n >= 0 ? n : 1;
+}
+
+// 목표 수량을 0으로 두면 "이 작품에는 필요 없는 단계"예요 — 작성 완성도 평균에서 빠져요.
+function bearipStepSkipped(step) {
+  return bearipStepTarget(step) === 0;
+}
+
+function bearipEntryHash(entry) {
+  const text = [entry.label || '', entry.note || '', entry.fileName || '', entry.fileSize || 0].join('\u0001');
+  let h = 0;
+  for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0;
+  return String(h >>> 0);
+}
+
+// 단계에 올린 자료 전체가 바뀌었는지 알아보는 지문 (분석 이후 자료가 바뀌었는지 판단에 써요)
+function bearipStepHash(step) {
+  return (step.submissions || []).map(bearipEntryHash).join('|');
+}
+
+function bearipEntryCoverage(entry) {
+  const a = entry && entry.analysis;
+  if (!a || a.hash !== bearipEntryHash(entry) || !Array.isArray(a.covered)) return 1;
+  const total = a.covered.length + (Array.isArray(a.missing) ? a.missing.length : 0);
+  return total ? a.covered.length / total : 1;
+}
+
+// 분석이 유효한 자료의 빠진 요소 이름들 (자료가 바뀌었으면 옛 분석은 무시해요)
+function bearipEntryMissing(entry) {
+  const a = entry && entry.analysis;
+  if (!a || a.hash !== bearipEntryHash(entry) || !Array.isArray(a.missing)) return [];
+  return a.missing;
+}
+
 function bearipStepCompletionPercent(step) {
   // 제작 요청은 아무 자료도 등록하지 않은 '미등록' 상태에서 바로 전문가에게
   // 통째로 맡길 수도 있다 — 그렇게 완성된 단계(제작 완료/직접 완료)까지 등록한
   // 자료 개수로만 % 를 매기면, 실제로는 다 끝난 단계가 0%로 보여서 "완성됐다"는
   // 신호와 어긋난다. 어떻게 완성됐든 완성은 완성이니 100%로 취급한다.
   if (step.mode === 'done' || step.mode === 'self_done') return 100;
-  const target = step.targetCount || 1;
-  const count = (step.submissions || []).length;
-  return Math.max(0, Math.min(100, Math.round((count / target) * 100)));
+  const target = bearipStepTarget(step);
+  if (target === 0) return 100;
+  const best = (step.submissions || [])
+    .map(bearipEntryCoverage)
+    .sort((a, b) => b - a)
+    .slice(0, target);
+  const sum = best.reduce((acc, v) => acc + v, 0);
+  return Math.max(0, Math.min(100, Math.round((sum / target) * 100)));
+}
+
+// 작성 완성도 — 필요 없는 단계(목표 수량 0)를 뺀 단계들의 평균이에요.
+function bearipWritingCompleteness(roadmap) {
+  const steps = (roadmap || []).filter((s) => !bearipStepSkipped(s));
+  return steps.length ? Math.round(steps.reduce((sum, s) => sum + bearipStepCompletionPercent(s), 0) / steps.length) : 0;
+}
+
+// 올린 자료 분석 대상 종류 — functions/lib.js의 checklistCategory와 반드시 같은 규칙이에요
+// (서버가 다시 판단하니 여기는 "보낼지 말지"만 정해요). 글 항목만 대상이에요.
+function bearipChecklistCategory(label) {
+  const text = String(label || '').replace(/<br>/g, ' ');
+  if (/스토리보드|콘티/.test(text)) return null;
+  if (/캐릭터/.test(text) && /설정/.test(text) && !/디자인/.test(text)) return 'character';
+  if (/세계관/.test(text) && !/디자인|비주얼|가이드/.test(text)) return 'world';
+  if (/스토리|시나리오/.test(text)) return 'story';
+  return null;
+}
+
+// 분석에 보낼 글: 메모 + 텍스트(.txt) 파일 내용. 이미지·PDF·워드·음향은 읽지 못해요.
+function bearipEntryAnalysisText(entry) {
+  const parts = [];
+  if (entry.note && entry.note.trim()) parts.push(entry.note.trim());
+  if (typeof entry.fileData === 'string' && /^data:text\/plain/i.test(entry.fileData)) {
+    try {
+      const comma = entry.fileData.indexOf(',');
+      const raw = entry.fileData.slice(comma + 1);
+      const text = /;base64/i.test(entry.fileData.slice(0, comma))
+        ? new TextDecoder().decode(Uint8Array.from(atob(raw), (c) => c.charCodeAt(0)))
+        : decodeURIComponent(raw);
+      if (text.trim()) parts.push(text.trim());
+    } catch (e) {
+      /* 읽지 못하는 파일은 메모만 */
+    }
+  }
+  return parts.join('\n');
 }
 
 // ---- Unified growth stage (OPEN DNA badges + CONTENT ROOM rows) ----
@@ -2045,6 +2126,17 @@ function bearipRenderResultFileHtml(r, classPrefix) {
   return `<div class="${classPrefix}-file plain">${esc(r.resultFileName)}${fileMeta}</div>`;
 }
 
+// 관리 화면(제작요청/IP 심사)에서 "의뢰하기"의 1차 검토가 어떻게 됐는지 보여줘요. 사용자 화면에는
+// 쓰지 않아요 — 누가 처리했는지는 사용자에게 드러내지 않는 게 원칙이에요.
+function bearipTriageBadgeHtml(r) {
+  const esc = typeof bearipEscapeHtml === 'function' ? bearipEscapeHtml : (s) => s;
+  if (r.handledBy === 'auto') return '<div class="pr-auto-badge handled">자동 처리됨 · 필요하면 결과를 확인해 주세요</div>';
+  if (r.status !== 'pending') return '';
+  if (r.triage === 'handoff') return `<div class="pr-auto-badge handoff">직접 확인 필요${r.triageNote ? ' · ' + esc(r.triageNote) : ''}</div>`;
+  if (r.triage === 'queued') return '<div class="pr-auto-badge queued">자동 검토 대기 중</div>';
+  return '';
+}
+
 // ---- IP 심사(전문가 검토) 요청 — same reasoning as 제작요청 above: a global
 // queue GM works through from any device, with the outcome pulled back onto
 // the requester's own local IP by mdReconcileRemoteStatus.
@@ -2663,12 +2755,38 @@ function bearipEraseLocalData(nickname) {
 const BEARIP_AI_ENDPOINTS = {
   assist: 'https://asia-northeast3-thinkit-ccb2e.cloudfunctions.net/aiAssist',
   admin: 'https://asia-northeast3-thinkit-ccb2e.cloudfunctions.net/aiAdmin',
+  triage: 'https://asia-northeast3-thinkit-ccb2e.cloudfunctions.net/requestTriage',
+  analyze: 'https://asia-northeast3-thinkit-ccb2e.cloudfunctions.net/analyzeMaterial',
 };
 
 function bearipAiCall(kind, body) {
   const url = BEARIP_AI_ENDPOINTS[kind];
   if (!url) return Promise.reject(Object.assign(new Error('AI 서버가 아직 연결되지 않았어요.'), { code: 'not_configured' }));
   return _bearipPostJson(url, body, true, 'AI 요청에 실패했어요. 잠시 후 다시 시도해주세요.');
+}
+
+// 올린 자료 분석 — kind 'check'(필수 요소 점검: 빠진 요소 이름만) / 'score'(글 항목 준비도 점수).
+// 서버가 실패하면 오류로 던져요 — 부르는 쪽이 "분석 안 됨"으로 두고 감점은 하지 않아요.
+function bearipAnalyzeMaterial(body) {
+  return bearipAiCall('analyze', body);
+}
+
+// ---- 의뢰 1차 검토 ----
+// "의뢰하기"로 만든 대기 건(triage: 'queued')을 서버에 넘겨요. 서버가 글로 처리할 수 있으면 결과를
+// 기록하고(알림 포함), 아니면 관리자 대기열에 그대로 둬요 — 결과는 평소처럼 실시간 구독으로 들어와요.
+// 방금 만든 의뢰가 아직 서버에 쓰이는 중이면 "not_found"가 올 수 있어서 몇 번 다시 시도해요.
+// 실패해도 의뢰는 그대로 대기열에 남아서 사용자에게 보여줄 오류는 없어요 (그래서 항상 resolve).
+function bearipRequestTriage(kind, id, ip) {
+  const attempt = (tries) =>
+    bearipAiCall('triage', { kind, id, ip: ip || {} })
+      .then((data) => {
+        if (data && data.outcome === 'skipped' && data.reason === 'not_found' && tries < 4) {
+          return new Promise((resolve) => setTimeout(resolve, 2500)).then(() => attempt(tries + 1));
+        }
+        return data;
+      })
+      .catch(() => null);
+  return attempt(0);
 }
 
 // Sends the user to the login page, remembering where to bring them back to.

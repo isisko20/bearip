@@ -329,7 +329,7 @@ function toggleGenre(genre) {
 function renderStatus() {
   document.getElementById('dnaScoreValue').textContent = currentIP.dnaScore + '%';
   document.getElementById('dnaScoreBar').style.width = currentIP.dnaScore + '%';
-  const steps = currentIP.roadmap || [];
+  const steps = (currentIP.roadmap || []).filter((s) => !bearipStepSkipped(s));
   // A step commissioned straight from GM (제작 요청 on an unregistered step)
   // never gets a self-registered draft, but it still ends up genuinely done —
   // counting only s.submissions here made a fully-produced IP look like
@@ -341,9 +341,7 @@ function renderStatus() {
     ? `개발 항목 ${registeredCount}/${steps.length}개 등록 · 눌러서 자세히 보기`
     : '눌러서 자세히 보기';
 
-  document.getElementById('readinessValue').textContent = currentIP.readinessScore + '%';
-  document.getElementById('readinessBar').style.width = currentIP.readinessScore + '%';
-  document.getElementById('readinessDesc').textContent = `선택한 목표(${GOAL_LABELS[currentIP.goal]}) 준비도`;
+  renderAnalysisCard();
   const commentEl = document.getElementById('readinessOverallComment');
   if (commentEl) {
     const overallComment = typeof bearipGetIpOverallComment === 'function' ? bearipGetIpOverallComment(currentIP.id) : '';
@@ -354,16 +352,116 @@ function renderStatus() {
       commentEl.hidden = true;
     }
   }
+}
 
-  const prodValueEl = document.getElementById('productionValue');
-  const prodBarEl = document.getElementById('productionBar');
-  if (currentIP.productionProgress == null) {
-    prodValueEl.textContent = '아직 시작 전';
-    prodBarEl.style.width = '0%';
+// ---- 띵킷 분석 (나의 IP 현황 2번) ----
+// 작성 완성도를 다 채우면 "분석하기"로 받을 수 있는 준비도예요. 분석 전에는 퍼센트 대신 "분석 전"이
+// 나와요. 분석은 무료이고, 단계별 구체적인 피드백은 "의뢰하기"(크레딧)로 받아요.
+const MD_ANALYSIS_MIN_COMPLETENESS = 100;
+let mdAnalysisRunning = false;
+
+// 분석 점수는 분석 이후에 자료가 바뀌어도 다음 분석 때까지 유지돼요 (카드가 '자료가 바뀌었어요'라고 알려줘요).
+function mdStepAnalysisFresh(step) {
+  return step.analysisScore != null;
+}
+
+// 준비도에 들어가는 단계별 점수: 완료한 단계 100, 의뢰로 검토받은 점수(가장 정확), 분석 점수 순이에요.
+function mdStepReadinessValue(step) {
+  if (bearipStepSkipped(step)) return null;
+  if (step.mode === 'done' || step.mode === 'self_done') return 100;
+  if (step.reviewStatus === 'reviewed' && step.adminProgress != null) return step.adminProgress;
+  if (mdStepAnalysisFresh(step)) return step.analysisScore;
+  return null;
+}
+
+// 분석 이후에 자료나 목표 수량이 바뀌었는지 알아보는 지문
+function mdMaterialFingerprint() {
+  return (currentIP.roadmap || []).map((s) => bearipStepTarget(s) + ':' + bearipStepHash(s)).join('/');
+}
+
+function renderAnalysisCard() {
+  const valueEl = document.getElementById('readinessValue');
+  const barEl = document.getElementById('readinessBar');
+  const descEl = document.getElementById('readinessDesc');
+  const btn = document.getElementById('analysisBtn');
+  const complete = (currentIP.dnaScore || 0) >= MD_ANALYSIS_MIN_COMPLETENESS;
+  const analyzed = !!currentIP.analysisAt;
+  const scored = (currentIP.roadmap || []).filter((s) => mdStepReadinessValue(s) != null).length;
+  let value;
+  let desc;
+  let width = 0;
+  let btnLabel = '';
+  if (mdAnalysisRunning) {
+    value = '분석 중...';
+    desc = '자료를 살펴보고 있어요. 잠시만 기다려주세요.';
+    btnLabel = '분석 중...';
+  } else if (!analyzed) {
+    value = '분석 전';
+    desc = complete ? '준비가 끝났어요. 분석하기를 눌러 확인해보세요.' : `작성 완성도를 ${MD_ANALYSIS_MIN_COMPLETENESS}%로 채우면 분석할 수 있어요.`;
+    btnLabel = complete ? '분석하기' : '';
+  } else if (!scored) {
+    value = '분석 대상 없음';
+    desc = '시나리오·캐릭터 설정·세계관 같은 글 항목을 올리면 분석할 수 있어요.';
+    btnLabel = complete ? '다시 분석' : '';
   } else {
-    prodValueEl.textContent = currentIP.productionProgress + '%';
-    prodBarEl.style.width = currentIP.productionProgress + '%';
+    value = currentIP.readinessScore + '%';
+    width = currentIP.readinessScore;
+    const changed = currentIP.analysisHash !== mdMaterialFingerprint();
+    const date = new Date(currentIP.analysisAt);
+    const when = Number.isNaN(date.getTime()) ? '' : `${date.getMonth() + 1}월 ${date.getDate()}일 `;
+    desc = changed ? '자료가 바뀌었어요. 다시 분석하면 반영돼요.' : `${when}분석 · ${scored}개 단계 반영`;
+    btnLabel = complete ? '다시 분석' : '';
   }
+  valueEl.textContent = value;
+  valueEl.classList.toggle('md-status-value-text', !/%$/.test(value));
+  barEl.style.width = width + '%';
+  descEl.textContent = desc;
+  if (btn) {
+    btn.style.display = btnLabel ? 'block' : 'none';
+    btn.textContent = btnLabel;
+    btn.disabled = mdAnalysisRunning;
+  }
+}
+
+async function mdRunAnalysis() {
+  if (mdAnalysisRunning) return;
+  if ((currentIP.dnaScore || 0) < MD_ANALYSIS_MIN_COMPLETENESS) {
+    bearipShowToast('작성 완성도를 먼저 채워주세요');
+    return;
+  }
+  const steps = (currentIP.roadmap || [])
+    .filter((s) => !bearipStepSkipped(s) && bearipChecklistCategory(s.label))
+    .map((s) => ({
+      key: s.key,
+      label: s.label.replace(/<br>/g, ' '),
+      text: (s.submissions || []).map((e) => (e.label ? e.label + '\n' : '') + bearipEntryAnalysisText(e)).join('\n\n').trim(),
+    }))
+    .filter((s) => s.text.length >= 40);
+  mdAnalysisRunning = true;
+  renderAnalysisCard();
+  let data = { scores: {} };
+  try {
+    if (steps.length) data = await bearipAnalyzeMaterial({ kind: 'score', ip: mdIpForTriage(currentIP), steps });
+  } catch (e) {
+    mdAnalysisRunning = false;
+    renderAnalysisCard();
+    bearipShowToast(e.message || '분석하지 못했어요. 잠시 후 다시 시도해주세요.');
+    return;
+  }
+  mdAnalysisRunning = false;
+  currentIP.roadmap.forEach((s) => {
+    const score = data.scores && data.scores[s.key];
+    if (typeof score === 'number') {
+      s.analysisScore = score;
+      s.analysisHash = bearipStepHash(s);
+    }
+  });
+  currentIP.analysisAt = new Date().toISOString();
+  currentIP.analysisHash = mdMaterialFingerprint();
+  recomputeExpertReadiness();
+  bearipUpdateIP(currentIP.id, { roadmap: currentIP.roadmap, analysisAt: currentIP.analysisAt, analysisHash: currentIP.analysisHash });
+  renderStatus();
+  bearipShowToast('분석을 마쳤어요');
 }
 
 function jumpToRoadmap() {
@@ -392,10 +490,7 @@ function recomputeDnaScore() {
 // numbers untouched.
 function recomputeWritingCompleteness() {
   if (currentIP.id === 'demo') return;
-  const steps = currentIP.roadmap || [];
-  currentIP.dnaScore = steps.length
-    ? Math.round(steps.reduce((sum, s) => sum + bearipStepCompletionPercent(s), 0) / steps.length)
-    : 0;
+  currentIP.dnaScore = bearipWritingCompleteness(currentIP.roadmap);
   bearipUpdateIP(currentIP.id, { dnaScore: currentIP.dnaScore });
 }
 
@@ -404,15 +499,11 @@ function recomputeWritingCompleteness() {
 const MD_METRIC_INFO = {
   dna: {
     title: '작성 완성도란?',
-    body: '개발맵 각 단계의 완성률을 평균낸 값이에요. 완성률은 등록한 자료 수 ÷ 목표 수량으로 계산하지만, 제작 완료됐거나 직접 완료 처리한 단계는 자료를 따로 안 올렸어도 100%로 쳐요 — 어떻게 완성됐든 완성은 완성이니까요.',
+    body: '개발맵에서 필요한 단계마다 목표 수량을 정하고, 올린 자료가 매뉴얼의 필수 요소를 얼마나 갖췄는지를 평균낸 값이에요. 내용이 좋은지는 보지 않고 요소가 들어 있는지만 확인하며, 빠진 요소는 이름만 알려드려요. 필요 없는 단계는 목표 수량을 0으로 두면 빠지고, 완료 처리한 단계는 100%로 쳐요.',
   },
   readiness: {
-    title: '전문가 준비도란?',
-    body: '전문가 검토를 받은 단계는 그때 받은 점수로, 제작 완료(또는 직접 완료)된 단계는 100점으로 쳐서 평균낸 값이에요. 아직 손대지 않은 단계는 평균에서 빠지기 때문에, 진행 안 한 단계가 남아있다고 점수가 깎이진 않아요.',
-  },
-  production: {
-    title: '제작 진행률이란?',
-    body: '제작을 의뢰한 단계들 중에서 실제로 완료된 비율이에요. 자료 등록만 하고 제작 의뢰를 한 적 없는 단계, 직접 완료 처리한 단계는 이 계산에 아예 포함되지 않아요 — 이 숫자는 오직 "GM에게 맡긴 것" 기준이에요.',
+    title: '띵킷 분석이란?',
+    body: '작성 완성도를 다 채우면 "분석하기"로 받을 수 있는 준비도예요. 분석 전에는 퍼센트가 나오지 않아요. 분석은 무료이고, 의뢰하기로 검토를 받은 단계는 그 점수를, 나머지 글 항목은 분석 점수를 쓰고, 완료한 단계는 100점으로 쳐서 평균내요. 구체적인 보완 의견은 의뢰하기(크레딧)로 받을 수 있어요.',
   },
 };
 
@@ -468,7 +559,7 @@ function ensureWritingCompletenessOverlay() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
-      <p class="md-wc-note">개발 항목마다 등록한 자료 수 ÷ 목표 수량으로 자동 계산돼요.</p>
+      <p class="md-wc-note">개발 항목마다 올린 자료가 필수 요소를 얼마나 갖췄는지를 목표 수량 기준으로 계산해요. 필요 없는 항목은 목표 수량을 0으로 두면 빠져요.</p>
       <div class="md-wc-list" id="writingCompletenessBody"></div>
     </div>
   `;
@@ -489,7 +580,14 @@ function openWritingCompletenessView() {
     .map((s) => {
       const pct = bearipStepCompletionPercent(s);
       const count = (s.submissions || []).length;
-      const target = s.targetCount || 1;
+      const target = bearipStepTarget(s);
+      if (target === 0 && !count) {
+        return `
+        <div class="md-wc-row">
+          <span class="md-wc-label">${s.label.replace(/<br>/g, ' ')}</span>
+          <span class="md-wc-right"><span class="md-wc-count">필요 없음</span></span>
+        </div>`;
+      }
       // A step commissioned from scratch (제작 요청, no self-registered draft)
       // and now done has nothing meaningful to count out of — "0/1" next to
       // 100% reads as a contradiction, so this names what actually happened
@@ -518,13 +616,7 @@ function openWritingCompletenessView() {
 // 작성 완성도. Steps touched by neither still don't drag the average down.
 function recomputeExpertReadiness() {
   if (currentIP.id === 'demo') return;
-  const scored = (currentIP.roadmap || [])
-    .map((s) => {
-      if (s.mode === 'done' || s.mode === 'self_done') return 100;
-      if (s.reviewStatus === 'reviewed' && s.adminProgress != null) return s.adminProgress;
-      return null;
-    })
-    .filter((v) => v != null);
+  const scored = (currentIP.roadmap || []).map(mdStepReadinessValue).filter((v) => v != null);
   currentIP.readinessScore = scored.length ? Math.round(scored.reduce((sum, v) => sum + v, 0) / scored.length) : 0;
   bearipUpdateIP(currentIP.id, { readinessScore: currentIP.readinessScore });
 }
@@ -616,14 +708,14 @@ function mdProductionRowHtml(scope, key, mode, price) {
   if (mode === 'requested') {
     return `
       <div class="md-production-row requested">
-        <span class="md-production-tag requested">제작 요청됨 · 검토 대기</span>
-        <button type="button" class="md-production-btn cancel" data-scope="${scope}" data-key="${key}">자체제작으로 전환</button>
+        <span class="md-production-tag requested">의뢰됨 · 확인 중</span>
+        <button type="button" class="md-production-btn cancel" data-scope="${scope}" data-key="${key}">의뢰 취소</button>
       </div>`;
   }
   return `
     <div class="md-production-row">
-      <span class="md-production-tag self">자체제작 중</span>
-      <button type="button" class="md-production-btn request" data-scope="${scope}" data-key="${key}">제작요청 · ${price}C</button>
+      <span class="md-production-tag self">직접 작업 중</span>
+      <button type="button" class="md-production-btn request" data-scope="${scope}" data-key="${key}">의뢰하기 · ${price}C</button>
     </div>`;
 }
 
@@ -683,11 +775,11 @@ function openAdminReviewView(stepKey) {
   const resultHtml =
     step.reviewStatus === 'reviewed'
       ? `
-        <div class="md-admin-review-score">전문가 준비도 <b>${step.adminProgress}%</b>${step.needsRevision ? ' <span class="md-admin-review-flag">보완 필요</span>' : ''}</div>
+        <div class="md-admin-review-score">준비도 <b>${step.adminProgress}%</b>${step.needsRevision ? ' <span class="md-admin-review-flag">보완 필요</span>' : ''}</div>
         ${step.adminComment ? `<p class="md-admin-review-comment">"${bearipEscapeHtml(step.adminComment)}"</p>` : ''}
         ${typeof bearipRenderResultFileHtml === 'function' ? bearipRenderResultFileHtml(step, 'md-production-result') : ''}
       `
-      : `<div class="md-admin-review-waiting">담당 IP 매니저가 아직 확인 전이에요.</div>`;
+      : `<div class="md-admin-review-waiting">의뢰를 확인하고 있어요. 결과가 나오면 알림으로 알려드려요.</div>`;
 
   document.getElementById('adminReviewViewBody').innerHTML = `
     <div class="md-admin-review-submission">
@@ -721,7 +813,7 @@ function mdMarkStepSelfDone(index) {
   recomputeProductionProgress();
   renderRoadmap();
   renderStatus();
-  bearipShowToast('직접 완료로 표시했어요');
+  bearipShowToast('완료로 표시했어요');
 }
 
 function mdUndoStepSelfDone(index) {
@@ -732,6 +824,39 @@ function mdUndoStepSelfDone(index) {
   renderRoadmap();
   renderStatus();
   bearipShowToast('완료 표시를 취소했어요');
+}
+
+// 내가 한 "의뢰하기" 중 1차 검토를 기다리는 건(triage: 'queued')을 서버에 넘겨요. 서버가 글로 처리할
+// 수 있으면 결과를 바로 기록하고 알림을 보내고, 아니면 대기열에 그대로 남아요. 페이지를 닫았다가
+// 다시 열어도 이 함수가 남은 건을 이어서 넘겨요 (서버가 같은 건을 두 번 처리하지 않아요).
+const mdTriageSent = new Set();
+
+function mdIpForTriage(ip) {
+  if (!ip) return {};
+  return {
+    title: ip.title || '',
+    goal: (typeof GOAL_LABELS === 'object' && GOAL_LABELS[ip.goal]) || ip.goal || '',
+    genres: ip.genres || [],
+    logline: ip.logline || '',
+    synopsis: ip.synopsis || '',
+    episodes: (ip.episodes || []).map((e) => e.title || '').filter(Boolean),
+  };
+}
+
+function mdTriageSweep() {
+  if (typeof bearipRequestTriage !== 'function' || typeof bearipLoadProductionRequests !== 'function') return;
+  const me = bearipScopeSuffix();
+  const mine = (r) => r.requesterNickname === me && r.status === 'pending' && r.triage === 'queued' && !mdTriageSent.has(r.id);
+  const jobs = [
+    ...bearipLoadProductionRequests().filter(mine).map((r) => ['production', r]),
+    ...bearipLoadIpReviews().filter(mine).map((r) => ['review', r]),
+  ];
+  if (!jobs.length) return;
+  const ips = typeof bearipLoadIPs === 'function' ? bearipLoadIPs() : [];
+  jobs.forEach(([kind, r]) => {
+    mdTriageSent.add(r.id);
+    bearipRequestTriage(kind, r.id, mdIpForTriage(ips.find((ip) => ip.id === r.ipId)));
+  });
 }
 
 // 제작요청/전문가검토 are now a cross-device queue (storage.js's Firebase-backed
@@ -816,6 +941,8 @@ function mdReconcileRemoteStatus() {
     if (typeof bearipRefreshCreditDisplays === 'function') bearipRefreshCreditDisplays();
   }
   if (touchedCurrent) {
+    // 의뢰 결과(점수)가 들어왔으니 띵킷 분석 점수에도 반영해요
+    recomputeExpertReadiness();
     if (typeof renderRoadmap === 'function') renderRoadmap();
     if (typeof renderStatus === 'function') renderStatus();
     if (typeof renderDnaReportTiles === 'function') renderDnaReportTiles();
@@ -846,7 +973,7 @@ function mdCancelProductionRequest(scope, key) {
   }
   if (typeof bearipRefreshCreditDisplays === 'function') bearipRefreshCreditDisplays();
   if (typeof renderProductionRequestsList === 'function') renderProductionRequestsList();
-  bearipShowToast(`자체제작으로 전환했어요. ${price}C를 환불했어요.`);
+  bearipShowToast(`의뢰를 취소했어요. ${price}C를 환불했어요.`);
 }
 
 let productionRequestPending = null;
@@ -861,7 +988,7 @@ function updateProductionRequestPayState() {
   if (balanceEl) balanceEl.textContent = balance + 'C';
   if (payBtn) {
     payBtn.disabled = !enough;
-    payBtn.textContent = enough ? '결제하고 요청하기' : '크레딧이 부족해요';
+    payBtn.textContent = enough ? '결제하고 의뢰하기' : '크레딧이 부족해요';
   }
   // Not the `hidden` attribute — .md-production-request-topup sets
   // `display: block` unconditionally, which wins over the UA's `[hidden]`
@@ -889,20 +1016,20 @@ function ensureProductionRequestOverlay() {
   overlay.innerHTML = `
     <div class="md-road-edit-box md-production-request-box">
       <div class="md-road-edit-head">
-        <span>제작 요청</span>
+        <span>의뢰하기</span>
         <button type="button" class="md-road-edit-close" id="productionRequestClose" aria-label="닫기">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
       <p class="md-production-request-desc" id="productionRequestDesc"></p>
-      <label class="md-production-request-detail-label" for="productionRequestDetail">요청 세부사항 (선택)</label>
+      <label class="md-production-request-detail-label" for="productionRequestDetail">의뢰 내용 (선택)</label>
       <textarea id="productionRequestDetail" class="md-production-request-detail" placeholder="원하는 스타일, 참고 자료, 꼭 반영됐으면 하는 부분 등을 자유롭게 적어주세요."></textarea>
       <div class="md-production-request-price">
         <span class="lbl">결제 크레딧</span>
         <span class="val" id="productionRequestPrice">0C</span>
       </div>
       <div class="md-production-request-balance">보유 크레딧 <span id="productionRequestBalance" class="bearip-credit-balance-display">0C</span></div>
-      <button type="button" class="md-production-request-pay" id="productionRequestPayBtn">결제하고 요청하기</button>
+      <button type="button" class="md-production-request-pay" id="productionRequestPayBtn">결제하고 의뢰하기</button>
       <a href="#" class="md-production-request-topup" id="productionRequestTopup" style="display:none">크레딧 충전하러 가기 →</a>
     </div>
   `;
@@ -946,18 +1073,19 @@ function ensureProductionRequestOverlay() {
       price,
       detail,
       status: 'pending',
+      triage: 'queued',
       requestedAt: new Date().toISOString(),
     });
     bearipAddNotification({
       type: 'production',
-      title: '제작을 요청했어요',
-      message: `'${currentIP.title || '제목 없는 IP'}'의 '${label}' 파트 제작을 요청했어요. ${price}C가 결제됐어요.`,
+      title: '의뢰를 접수했어요',
+      message: `'${currentIP.title || '제목 없는 IP'}'의 '${label}' 항목 의뢰를 접수했어요. ${price}C가 결제됐어요.`,
       link: 'my-dna.html',
     });
     if (typeof bearipRefreshCreditDisplays === 'function') bearipRefreshCreditDisplays();
     if (typeof renderProductionRequestsList === 'function') renderProductionRequestsList();
     closeProductionRequest();
-    bearipShowToast(`제작을 요청했어요. ${price}C가 결제됐어요.`);
+    bearipShowToast(`의뢰를 접수했어요. ${price}C가 결제됐어요.`);
   });
   return overlay;
 }
@@ -971,7 +1099,7 @@ function closeProductionRequest() {
 function openProductionRequest(scope, key, label, price) {
   const overlay = ensureProductionRequestOverlay();
   productionRequestPending = { scope, key, price, label };
-  document.getElementById('productionRequestDesc').textContent = `'${label}' 파트를 전문가에게 제작 요청할까요?`;
+  document.getElementById('productionRequestDesc').textContent = `'${label}' 항목을 의뢰할까요?`;
   document.getElementById('productionRequestPrice').textContent = price + 'C';
   const detailInput = document.getElementById('productionRequestDetail');
   if (detailInput) detailInput.value = '';
@@ -988,7 +1116,7 @@ function mdFormatRelativeTime(iso) {
   return `${Math.floor(hr / 24)}일 전`;
 }
 
-const MD_PRODUCTION_STATUS_LABEL = { pending: '검토 대기', cancelled: '취소됨', done: '완료', rejected: '거절됨' };
+const MD_PRODUCTION_STATUS_LABEL = { pending: '확인 중', cancelled: '취소됨', done: '완료', rejected: '거절됨' };
 
 // The "제작요청" tab's history list — every request/cancel this IP has
 // gone through, newest first, so the user can check what they asked for
@@ -1002,8 +1130,8 @@ function renderProductionRequestsList() {
   if (!requests.length) {
     wrap.innerHTML = `
       <div class="md-production-list-empty">
-        아직 요청한 제작이 없어요.<br>
-        DNA 현황이나 개발 맵의 '제작요청' 버튼으로 전문가에게 맡겨보세요.
+        아직 의뢰한 내역이 없어요.<br>
+        DNA 현황이나 개발 맵의 '의뢰하기' 버튼으로 맡겨보세요.
       </div>`;
     return;
   }
@@ -1021,6 +1149,7 @@ function renderProductionRequestsList() {
         </div>
         ${r.detail ? `<div class="md-production-list-detail">"${bearipEscapeHtml(r.detail)}"</div>` : ''}
         ${r.resultNote ? `<div class="md-production-list-result"><span>완료 메모</span>${bearipEscapeHtml(r.resultNote)}</div>` : ''}
+        ${r.resultText ? `<div class="md-production-list-result md-production-list-result-text"><span>결과</span><div class="md-production-result-body">${bearipEscapeHtml(r.resultText)}</div></div>` : ''}
         ${typeof bearipRenderResultFileHtml === 'function' ? bearipRenderResultFileHtml(r, 'md-production-result') : ''}
         ${
           r.status === 'pending'
@@ -1088,7 +1217,7 @@ function ensureProductionFollowupOverlay() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
-      <p class="md-production-request-desc">전달받은 결과물에 대한 수정·보완 요청을 담당 IP 매니저에게 다시 전달해요. 추가 크레딧은 들지 않아요.</p>
+      <p class="md-production-request-desc">받은 결과에 대한 수정·보완을 다시 의뢰해요. 추가 크레딧은 들지 않아요.</p>
       <label class="md-production-request-detail-label" for="productionFollowupDetail">요청 내용</label>
       <textarea id="productionFollowupDetail" class="md-production-request-detail" placeholder="예: 이 부분을 이렇게 바꿔주세요" maxlength="300"></textarea>
       <button type="button" class="md-production-request-pay" id="productionFollowupSubmit">보내기</button>
@@ -1138,6 +1267,7 @@ function mdSendProductionFollowup(r, detail) {
     detail,
     isFollowup: true,
     status: 'pending',
+    triage: 'queued',
     requestedAt: new Date().toISOString(),
   });
   // The original 'done' round is now superseded by this new round — mark
@@ -1294,26 +1424,181 @@ function mdStepStatus(step) {
   if (step.reviewStatus === 'reviewed') return step.needsRevision ? 'needs_revision' : 'ready';
   if (step.reviewStatus === 'requested') return 'reviewing';
   if (step.submissions && step.submissions.length) return 'writing';
+  if (bearipStepSkipped(step)) return 'skipped';
   return 'unregistered';
 }
 
 const STEP_STATUS_META = {
-  unregistered: { label: '미등록', cls: 'unregistered', btn: '자료 등록' },
-  writing: { label: '작성 중', cls: 'writing', btn: '계속 작성' },
-  reviewing: { label: '전문가 검토 중', cls: 'reviewing', btn: '검토 현황' },
-  needs_revision: { label: '보완 필요', cls: 'needs-revision', btn: '의견 확인' },
-  ready: { label: '준비 완료', cls: 'ready', btn: '제작 의뢰' },
-  production_requested: { label: '제작 의뢰 중', cls: 'production', btn: '진행 상황 확인' },
-  production_done: { label: '제작 완료', cls: 'done', btn: '결과물 보기' },
+  skipped: { label: '필요 없음', cls: 'skipped' },
+  unregistered: { label: '미등록', cls: 'unregistered' },
+  writing: { label: '작성 중', cls: 'writing' },
+  reviewing: { label: '검토 중', cls: 'reviewing' },
+  needs_revision: { label: '보완 필요', cls: 'needs-revision' },
+  ready: { label: '준비 완료', cls: 'ready' },
+  production_requested: { label: '의뢰 진행 중', cls: 'production' },
+  production_done: { label: '제작 완료', cls: 'done' },
   // Same 'done' styling (초록, 체크 배지) as production_done — from a "is this
   // step finished" standpoint they're equivalent; the label is the only thing
   // that still says how it got there.
-  self_done: { label: '완료 (직접)', cls: 'done', btn: '완료 취소' },
+  self_done: { label: '완료 (직접)', cls: 'done' },
 };
 
-// A step can be self-declared done once there's actually something
-// registered for it — no point "completing" an empty, unregistered step.
-const SELF_DONE_ELIGIBLE_STATUSES = ['writing', 'reviewing', 'needs_revision', 'ready'];
+// ---- 올릴 때 자동 분석 ----
+// 글 항목(시나리오·캐릭터 설정·세계관)에 자료를 올리면 매뉴얼의 필수 요소가 들어 있는지 점검하고,
+// 빠진 요소의 이름만 알려줘요 (구체적인 피드백은 하지 않아요 — 그건 의뢰하기예요). 결과는 자료마다
+// entry.analysis에 저장되고, 작성 완성도가 이 결과를 써요. 분석이 안 되면 감점 없이 그대로 둬요.
+const mdAnalyzingKeys = new Set();
+
+function mdStepMissingCount(step) {
+  return (step.submissions || []).reduce((sum, e) => sum + bearipEntryMissing(e).length, 0);
+}
+
+async function mdAnalyzeStep(stepKey) {
+  const step = (currentIP.roadmap || []).find((s) => s.key === stepKey);
+  if (!step || mdAnalyzingKeys.has(stepKey) || bearipStepSkipped(step)) return;
+  const label = step.label.replace(/<br>/g, ' ');
+  if (!bearipChecklistCategory(label)) return;
+  const pending = (step.submissions || [])
+    .filter((e) => !e.analysis || e.analysis.hash !== bearipEntryHash(e))
+    .map((e) => ({ id: e.id, hash: bearipEntryHash(e), label: e.label || '', text: bearipEntryAnalysisText(e) }));
+  if (!pending.length) return;
+  mdAnalyzingKeys.add(stepKey);
+  renderRoadmap();
+  let data = null;
+  try {
+    data = await bearipAnalyzeMaterial({ kind: 'check', stepLabel: label, entries: pending.map((p) => ({ id: p.id, label: p.label, text: p.text })) });
+  } catch (e) {
+    // 한도를 넘었거나 꺼져 있을 때만 알려요. 그 밖의 실패는 조용히 "분석 안 됨"으로 둬요.
+    if (e && (e.code === 'limit_user' || e.code === 'limit_global' || e.code === 'disabled')) bearipShowToast(e.message);
+  }
+  mdAnalyzingKeys.delete(stepKey);
+  let newMissing = 0;
+  if (data && data.results) {
+    const cur = (currentIP.roadmap || []).find((s) => s.key === stepKey);
+    if (cur) {
+      const now = new Date().toISOString();
+      cur.submissions = (cur.submissions || []).map((e) => {
+        const sent = pending.find((p) => p.id === e.id);
+        if (!sent || !(e.id in data.results)) return e;
+        const res = data.results[e.id];
+        if (res) {
+          newMissing += res.missing.length;
+          return Object.assign({}, e, { analysis: { covered: res.covered, missing: res.missing, hash: sent.hash, at: now } });
+        }
+        // 글이 너무 짧아 읽을 게 없는 자료는 "분석 불가"로 표시해 다시 묻지 않아요 (감점 없음).
+        if (sent.text.trim().length < 15) return Object.assign({}, e, { analysis: { unreadable: true, covered: [], missing: [], hash: sent.hash, at: now } });
+        return e;
+      });
+      recomputeWritingCompleteness();
+      bearipUpdateIP(currentIP.id, { roadmap: currentIP.roadmap, dnaScore: currentIP.dnaScore });
+      bearipShowToast(newMissing ? `빠진 항목이 ${newMissing}개 있어요. 카드에서 확인해보세요` : '필수 항목을 모두 갖췄어요');
+    }
+  }
+  renderRoadmap();
+  renderStatus();
+}
+
+function ensureMissingViewOverlay() {
+  let overlay = document.getElementById('missingViewOverlay');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.className = 'md-road-edit-overlay';
+  overlay.id = 'missingViewOverlay';
+  overlay.style.display = 'none';
+  overlay.innerHTML = `
+    <div class="md-road-edit-box">
+      <div class="md-road-edit-head">
+        <span id="missingViewTitle"></span>
+        <button type="button" class="md-road-edit-close" id="missingViewClose" aria-label="닫기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <p class="md-wc-note">내용이 좋은지는 보지 않고, 필요한 요소가 들어 있는지만 확인해요. 구체적인 보완 의견은 의뢰하기로 받을 수 있어요.</p>
+      <div class="md-missing-body" id="missingViewBody"></div>
+    </div>
+  `;
+  (document.querySelector('.dna-app') || document.body).appendChild(overlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('#missingViewClose')) overlay.style.display = 'none';
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.style.display !== 'none') overlay.style.display = 'none';
+  });
+  return overlay;
+}
+
+function openMissingView(index) {
+  const step = currentIP.roadmap[index];
+  if (!step) return;
+  const overlay = ensureMissingViewOverlay();
+  overlay.parentNode.appendChild(overlay);
+  document.getElementById('missingViewTitle').textContent = step.label.replace(/<br>/g, ' ');
+  document.getElementById('missingViewBody').innerHTML = (step.submissions || [])
+    .map((e, i) => {
+      const name = bearipEscapeHtml(e.label || `자료 ${i + 1}`);
+      const fresh = e.analysis && e.analysis.hash === bearipEntryHash(e) && Array.isArray(e.analysis.covered);
+      if (!fresh || e.analysis.unreadable) return `<div class="md-missing-row"><div class="md-missing-name">${name}</div><div class="md-missing-ok muted">분석 안 됨</div></div>`;
+      const missing = e.analysis.missing || [];
+      const total = e.analysis.covered.length + missing.length;
+      return missing.length
+        ? `<div class="md-missing-row"><div class="md-missing-name">${name} <span>${e.analysis.covered.length}/${total}</span></div><div class="md-missing-chips">${missing.map((m) => `<span class="md-missing-chip">${bearipEscapeHtml(m)}</span>`).join('')}</div></div>`
+        : `<div class="md-missing-row"><div class="md-missing-name">${name} <span>${total}/${total}</span></div><div class="md-missing-ok">필수 항목을 모두 갖췄어요</div></div>`;
+    })
+    .join('');
+  overlay.style.display = 'flex';
+}
+
+// 카드에는 "업로드"와 "의뢰하기" 두 가지 선택지만 둬요. 의뢰하기가 어떤 의뢰(자료 검토인지,
+// 처음부터 만들기인지)가 될지는 단계 상태가 정해요. 진행 중이거나 끝난 의뢰는 같은 자리에서
+// 현황·결과를 보여주고, 직접 완료 표시는 업로드 창 안으로 옮겼어요.
+function mdRequestSlot(statusKey) {
+  switch (statusKey) {
+    case 'unregistered':
+    case 'writing':
+    case 'needs_revision':
+    case 'ready':
+      return { label: '의뢰하기', cls: 'request' };
+    case 'reviewing':
+    case 'production_requested':
+      return { label: '의뢰 현황', cls: 'production' };
+    case 'production_done':
+      return { label: '결과 보기', cls: 'done' };
+    default:
+      return null; // self_done, skipped
+  }
+}
+
+// 상태 글자를 눌러서 결과를 볼 수 있는 단계들
+const MD_STATUS_LINK_STATUSES = ['reviewing', 'needs_revision', 'ready', 'production_requested', 'production_done'];
+
+function mdOpenStepRequest(index) {
+  const step = currentIP.roadmap[index];
+  if (!step) return;
+  switch (mdStepStatus(step)) {
+    case 'unregistered':
+    case 'ready':
+      openProductionRequest('roadmap', step.key, step.label.replace(/<br>/g, ' '), BEARIP_ROADMAP_STEP_PRICE[step.key] || 0);
+      break;
+    case 'writing':
+    case 'needs_revision':
+      openExpertReviewRequestConfirm(index);
+      break;
+    default:
+      mdOpenStepResult(index);
+  }
+}
+
+function mdOpenStepResult(index) {
+  const step = currentIP.roadmap[index];
+  if (!step) return;
+  const status = mdStepStatus(step);
+  if (status === 'production_requested' || status === 'production_done') {
+    const tab = document.querySelector('#mdTabs [data-tab-target="production"]');
+    if (tab) tab.click();
+  } else if (step.submissions && step.submissions.length) {
+    openAdminReviewView(step.key);
+  }
+}
 
 function renderRoadmap() {
   document.getElementById('roadmapTitle').textContent = `${GOAL_LABELS[currentIP.goal]} 개발 맵`;
@@ -1346,24 +1631,28 @@ function renderRoadmap() {
     const pct = bearipStepCompletionPercent(step);
     const showsPercent = statusKey === 'writing' || statusKey === 'reviewing' || statusKey === 'needs_revision' || statusKey === 'ready';
     const pctHtml = showsPercent ? `<div class="md-road-percent">${pct}%</div>` : '';
+    const missingCount = statusKey === 'production_done' || statusKey === 'self_done' ? 0 : mdStepMissingCount(step);
+    const analyzeHtml = mdAnalyzingKeys.has(step.key)
+      ? '<div class="md-road-analyzing">분석 중…</div>'
+      : missingCount
+        ? `<button type="button" class="md-road-missing" data-index="${i}">빠진 항목 ${missingCount}개</button>`
+        : '';
 
+    const slot = mdRequestSlot(statusKey);
+    const statusLink = MD_STATUS_LINK_STATUSES.includes(statusKey);
     stepEl.innerHTML = `
       <div class="md-road-ic-wrap">
         <div class="md-road-ic">${ROAD_ICONS[step.key] || ''}</div>
         ${checkHtml}
-        <button type="button" class="md-road-edit-material-btn" data-index="${i}" aria-label="자료 수정" title="자료 수정">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
-        </button>
       </div>
       <div class="md-road-name">${step.label}</div>
-      <div class="md-road-status">${meta.label}</div>
+      <div class="md-road-status${statusLink ? ' md-road-status-link' : ''}" data-index="${i}"${statusLink ? ' role="button" tabindex="0" title="눌러서 결과 보기"' : ''}>${meta.label}</div>
       ${pctHtml}
-      <button type="button" class="md-road-action-btn ${meta.cls}" data-index="${i}" data-status="${statusKey}">${meta.btn}</button>
-      ${
-        SELF_DONE_ELIGIBLE_STATUSES.includes(statusKey)
-          ? `<button type="button" class="md-road-self-done-btn" data-index="${i}">전문가 없이 직접 완료</button>`
-          : ''
-      }
+      ${analyzeHtml}
+      <div class="md-road-btns">
+        <button type="button" class="md-road-action-btn upload" data-act="upload" data-index="${i}">업로드</button>
+        ${slot ? `<button type="button" class="md-road-action-btn ${slot.cls}" data-act="request" data-index="${i}" data-status="${statusKey}">${slot.label}</button>` : ''}
+      </div>
     `;
     container.appendChild(stepEl);
     if (i < currentIP.roadmap.length - 1) {
@@ -1446,12 +1735,13 @@ function ensureStepMaterialOverlay() {
       <div class="md-step-material-body">
         <div class="md-step-material-target">
           <label for="stepMaterialTarget">목표 수량</label>
-          <input type="number" id="stepMaterialTarget" min="1" max="999">
-          <span class="md-step-material-target-hint">예: 시나리오는 총 화수, 캐릭터는 필요한 인원 수</span>
+          <input type="number" id="stepMaterialTarget" min="0" max="999">
+          <span class="md-step-material-target-hint">예: 시나리오는 총 화수 · 필요 없는 단계는 0</span>
         </div>
         <div class="md-step-material-entries" id="stepMaterialEntries"></div>
         <button type="button" class="md-step-material-add" id="stepMaterialAddBtn">+ 자료 추가</button>
         <button type="button" class="md-step-material-save" id="stepMaterialSave">저장</button>
+        <button type="button" class="md-step-material-selfdone" id="stepMaterialSelfDone"></button>
       </div>
     </div>
   `;
@@ -1575,6 +1865,8 @@ function ensureStepMaterialOverlay() {
         // leave the entry claiming to have one with nothing to show for it.
         blobStored: en.blobStored || false,
         blobId: en.blobId || null,
+        // 올릴 때 받은 분석 결과 — 자료가 그대로면(지문이 같으면) 유지돼요.
+        analysis: en.analysis || null,
       }));
     // Registered materials (특히 음향/문서, inline as base64) land in
     // localStorage along with the rest of the IP — unlike the Firebase
@@ -1589,7 +1881,7 @@ function ensureStepMaterialOverlay() {
 
     step.submissions = cleaned;
     const targetRaw = parseInt(document.getElementById('stepMaterialTarget').value, 10);
-    step.targetCount = targetRaw > 0 ? targetRaw : 1;
+    step.targetCount = Number.isFinite(targetRaw) && targetRaw >= 0 ? targetRaw : 1;
     mdSyncStepAssetsFromSubmissions(step);
     if (currentIP.id !== 'demo') {
       try {
@@ -1619,6 +1911,29 @@ function ensureStepMaterialOverlay() {
     renderAssets();
     closeStepMaterialEditor();
     bearipShowToast('자료를 등록했어요');
+    mdAnalyzeStep(step.key);
+  });
+
+  // 직접 완료: 의뢰 없이 내가 만든 자료로 이 단계를 끝내는 길이에요 (크레딧 없음). 카드의 선택지를
+  // 업로드/의뢰하기 두 가지로 줄이면서 이 창 안으로 옮겼어요.
+  document.getElementById('stepMaterialSelfDone').addEventListener('click', () => {
+    if (stepMaterialIndex === null) return;
+    const index = stepMaterialIndex;
+    const step = currentIP.roadmap[index];
+    if (!step) return;
+    if (mdStepStatus(step) === 'self_done') {
+      closeStepMaterialEditor();
+      mdUndoStepSelfDone(index);
+      return;
+    }
+    const hasContent = stepMaterialWorkingEntries.some((en) => en.imageData || en.fileName || (en.note && en.note.trim()));
+    if (!hasContent) {
+      bearipShowToast('자료를 먼저 등록해주세요');
+      return;
+    }
+    document.getElementById('stepMaterialSave').click();
+    // 저장이 성공하면 창이 닫히며 stepMaterialIndex가 비워져요 (실패하면 열려 있어요).
+    if (stepMaterialIndex === null) mdMarkStepSelfDone(index);
   });
 
   return overlay;
@@ -1638,10 +1953,19 @@ function openStepMaterialEditor(index) {
   overlay.parentNode.appendChild(overlay);
   stepMaterialIndex = index;
   document.getElementById('stepMaterialTitle').textContent = step.label.replace(/<br>/g, ' ');
-  document.getElementById('stepMaterialTarget').value = step.targetCount || 1;
+  document.getElementById('stepMaterialTarget').value = bearipStepTarget(step);
 
   stepMaterialWorkingEntries = (step.submissions || []).map((sub) => Object.assign({}, sub));
   renderStepMaterialEntries();
+
+  const selfDoneBtn = document.getElementById('stepMaterialSelfDone');
+  const editorStatus = mdStepStatus(step);
+  if (editorStatus === 'production_requested' || editorStatus === 'production_done') {
+    selfDoneBtn.style.display = 'none';
+  } else {
+    selfDoneBtn.style.display = 'block';
+    selfDoneBtn.textContent = editorStatus === 'self_done' ? '완료 표시 취소' : '저장하고 이 단계 완료로 표시';
+  }
 
   overlay.style.display = 'flex';
 }
@@ -1660,14 +1984,15 @@ function openStepMaterialEditor(index) {
 function mdExpertHelpRowMeta(step) {
   const status = mdStepStatus(step);
   const productionPrice = BEARIP_ROADMAP_STEP_PRICE[step.key] || 0;
-  if (status === 'unregistered') return { tag: null, action: 'production', actionLabel: `제작 요청 · ${productionPrice}C` };
-  if (status === 'writing') return { tag: null, action: 'review', actionLabel: `검토 요청 · ${BEARIP_EXPERT_REVIEW_PRICE}C` };
-  if (status === 'reviewing') return { tag: '검토 대기 중', action: null };
-  if (status === 'needs_revision') return { tag: null, action: 'review', actionLabel: `다시 요청하기 · ${BEARIP_EXPERT_REVIEW_PRICE}C` };
-  if (status === 'ready') return { tag: `검토 완료 · ${step.adminProgress}%`, action: null };
-  if (status === 'production_requested') return { tag: '제작 의뢰 중', action: null };
+  if (status === 'unregistered') return { tag: null, action: 'production', actionLabel: `의뢰하기 · ${productionPrice}C` };
+  if (status === 'writing') return { tag: null, action: 'review', actionLabel: `의뢰하기 · ${BEARIP_EXPERT_REVIEW_PRICE}C` };
+  if (status === 'reviewing') return { tag: '의뢰 진행 중', action: null };
+  if (status === 'needs_revision') return { tag: null, action: 'review', actionLabel: `다시 의뢰하기 · ${BEARIP_EXPERT_REVIEW_PRICE}C` };
+  if (status === 'ready') return { tag: null, action: 'production', actionLabel: `의뢰하기 · ${productionPrice}C` };
+  if (status === 'production_requested') return { tag: '의뢰 진행 중', action: null };
   if (status === 'production_done') return { tag: '제작 완료', action: null };
   if (status === 'self_done') return { tag: '완료 (직접)', action: null };
+  if (status === 'skipped') return { tag: '필요 없음', action: null };
   return { tag: null, action: null };
 }
 
@@ -1703,12 +2028,12 @@ function ensureExpertHelpOverlay() {
   overlay.innerHTML = `
     <div class="md-road-edit-box md-expert-help-box">
       <div class="md-road-edit-head">
-        <span>전문가 의뢰</span>
+        <span>의뢰하기</span>
         <button type="button" class="md-road-edit-close" id="expertHelpClose" aria-label="닫기">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
-      <p class="md-expert-help-desc">등록한 자료가 있으면 검토 요청, 아직 없으면 제작 요청을 할 수 있어요. 크레딧이 결제되고 담당 IP 매니저에게 전달돼요.</p>
+      <p class="md-expert-help-desc">의뢰할 항목을 골라주세요. 크레딧이 결제되고, 결과가 나오면 알림으로 알려드려요.</p>
       <div class="md-expert-help-balance">보유 크레딧 <span id="expertHelpBalance" class="bearip-credit-balance-display">0C</span> · <a href="#" id="expertHelpTopup">충전하러 가기 →</a></div>
       <div class="md-expert-help-list" id="expertHelpList"></div>
     </div>
@@ -1769,6 +2094,7 @@ function mdSpendAndRequestReview(index, message) {
     ipTitle: currentIP.title,
     requesterNickname: bearipScopeSuffix(),
     requesterNote: message || '',
+    triage: 'queued',
     stepKey: step.key,
     stepLabel: step.label.replace(/<br>/g, ' '),
     submissions: step.submissions,
@@ -1782,14 +2108,14 @@ function mdSpendAndRequestReview(index, message) {
   if (currentIP.id !== 'demo') bearipUpdateIP(currentIP.id, { roadmap: currentIP.roadmap });
   bearipAddNotification({
     type: 'ip',
-    title: '전문가 검토를 요청했어요',
-    message: `'${currentIP.title}'의 '${step.label.replace(/<br>/g, ' ')}' 항목을 담당 IP 매니저에게 전달했어요. ${BEARIP_EXPERT_REVIEW_PRICE}C가 결제됐어요.`,
+    title: '의뢰를 접수했어요',
+    message: `'${currentIP.title}'의 '${step.label.replace(/<br>/g, ' ')}' 항목 의뢰를 접수했어요. ${BEARIP_EXPERT_REVIEW_PRICE}C가 결제됐어요.`,
     link: 'my-dna.html',
   });
   if (typeof bearipRefreshCreditDisplays === 'function') bearipRefreshCreditDisplays();
   renderExpertHelpList();
   renderRoadmap();
-  bearipShowToast(`전문가 검토를 요청했어요. ${BEARIP_EXPERT_REVIEW_PRICE}C가 결제됐어요.`);
+  bearipShowToast(`의뢰를 접수했어요. ${BEARIP_EXPERT_REVIEW_PRICE}C가 결제됐어요.`);
 }
 
 let expertReviewRequestPendingIndex = null;
@@ -1806,20 +2132,20 @@ function ensureExpertReviewRequestOverlay() {
   overlay.innerHTML = `
     <div class="md-road-edit-box md-production-request-box">
       <div class="md-road-edit-head">
-        <span>전문가 검토 요청</span>
+        <span>의뢰하기</span>
         <button type="button" class="md-road-edit-close" id="expertReviewRequestClose" aria-label="닫기">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
       <p class="md-production-request-desc" id="expertReviewRequestDesc"></p>
-      <label class="md-production-request-detail-label" for="expertReviewRequestDetail">담당자에게 하고 싶은 말 (선택)</label>
+      <label class="md-production-request-detail-label" for="expertReviewRequestDetail">의뢰 내용 (선택)</label>
       <textarea id="expertReviewRequestDetail" class="md-production-request-detail" placeholder="특히 봐줬으면 하는 부분, 고민되는 지점 등을 자유롭게 적어주세요."></textarea>
       <div class="md-production-request-price">
         <span class="lbl">결제 크레딧</span>
         <span class="val">${BEARIP_EXPERT_REVIEW_PRICE}C</span>
       </div>
       <div class="md-production-request-balance">보유 크레딧 <span id="expertReviewRequestBalance" class="bearip-credit-balance-display">0C</span></div>
-      <button type="button" class="md-production-request-pay" id="expertReviewRequestPayBtn">결제하고 요청하기</button>
+      <button type="button" class="md-production-request-pay" id="expertReviewRequestPayBtn">결제하고 의뢰하기</button>
       <a href="#" class="md-production-request-topup" id="expertReviewRequestTopup" style="display:none">크레딧 충전하러 가기 →</a>
     </div>
   `;
@@ -1855,7 +2181,7 @@ function openExpertReviewRequestConfirm(index) {
   if (!step) return;
   const overlay = ensureExpertReviewRequestOverlay();
   expertReviewRequestPendingIndex = index;
-  document.getElementById('expertReviewRequestDesc').textContent = `'${step.label.replace(/<br>/g, ' ')}' 항목을 담당 IP 매니저에게 검토 요청할까요?`;
+  document.getElementById('expertReviewRequestDesc').textContent = `'${step.label.replace(/<br>/g, ' ')}' 항목을 의뢰할까요?`;
   document.getElementById('expertReviewRequestDetail').value = '';
   const balance = bearipGetCredits();
   document.getElementById('expertReviewRequestBalance').textContent = balance + 'C';
@@ -2225,7 +2551,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof bearipOnDataChange === 'function') {
     bearipOnDataChange('productionRequests', mdReconcileRemoteStatus);
     bearipOnDataChange('productionRequests', renderProductionRequestsList);
+    bearipOnDataChange('productionRequests', mdTriageSweep);
     bearipOnDataChange('ipReviews', mdReconcileRemoteStatus);
+    bearipOnDataChange('ipReviews', mdTriageSweep);
     bearipOnDataChange('ipOverallComments', () => {
       if (typeof renderStatus === 'function') renderStatus();
     });
@@ -2273,12 +2601,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // "왜 이 점수가 안 오르지" is exactly the kind of question that came up
   // more than once without this.
   document.querySelectorAll('.md-status-info').forEach((icon, i) => {
-    const key = ['dna', 'readiness', 'production'][i];
+    const key = ['dna', 'readiness'][i];
     icon.addEventListener('click', (e) => {
       e.stopPropagation();
       openMetricInfo(key);
     });
   });
+
+  const analysisBtn = document.getElementById('analysisBtn');
+  if (analysisBtn) analysisBtn.addEventListener('click', mdRunAnalysis);
 
   const expertHelpBtn = document.getElementById('mdExpertHelpBtn');
   if (expertHelpBtn) expertHelpBtn.addEventListener('click', openExpertHelpModal);
@@ -2287,46 +2618,32 @@ document.addEventListener('DOMContentLoaded', () => {
   // 제작 의뢰 중/제작 완료), each routed to whichever existing flow already
   // handles that state — real <button>s, so no separate keydown wiring needed.
   document.getElementById('roadmapContainer').addEventListener('click', (e) => {
-    const editBtn = e.target.closest('.md-road-edit-material-btn');
-    if (editBtn) {
+    const statusEl = e.target.closest('.md-road-status-link');
+    if (statusEl) {
       e.stopPropagation();
-      openStepMaterialEditor(parseInt(editBtn.dataset.index, 10));
+      mdOpenStepResult(parseInt(statusEl.dataset.index, 10));
       return;
     }
-    const selfDoneBtn = e.target.closest('.md-road-self-done-btn');
-    if (selfDoneBtn) {
+    const missingBtn = e.target.closest('.md-road-missing');
+    if (missingBtn) {
       e.stopPropagation();
-      mdMarkStepSelfDone(parseInt(selfDoneBtn.dataset.index, 10));
+      openMissingView(parseInt(missingBtn.dataset.index, 10));
       return;
     }
     const btn = e.target.closest('.md-road-action-btn');
     if (!btn) return;
     e.stopPropagation();
     const index = parseInt(btn.dataset.index, 10);
-    const step = currentIP.roadmap[index];
-    if (!step) return;
-    switch (btn.dataset.status) {
-      case 'unregistered':
-      case 'writing':
-        openStepMaterialEditor(index);
-        break;
-      case 'reviewing':
-      case 'needs_revision':
-        openAdminReviewView(step.key);
-        break;
-      case 'ready':
-        openProductionRequest('roadmap', step.key, step.label.replace(/<br>/g, ' '), BEARIP_ROADMAP_STEP_PRICE[step.key] || 0);
-        break;
-      case 'production_requested':
-      case 'production_done': {
-        const tab = document.querySelector('#mdTabs [data-tab-target="production"]');
-        if (tab) tab.click();
-        break;
-      }
-      case 'self_done':
-        mdUndoStepSelfDone(index);
-        break;
-    }
+    if (!currentIP.roadmap[index]) return;
+    if (btn.dataset.act === 'upload') openStepMaterialEditor(index);
+    else mdOpenStepRequest(index);
+  });
+  document.getElementById('roadmapContainer').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const statusEl = e.target.closest('.md-road-status-link');
+    if (!statusEl) return;
+    e.preventDefault();
+    mdOpenStepResult(parseInt(statusEl.dataset.index, 10));
   });
 
   document.getElementById('assetsRow').addEventListener('click', (e) => {

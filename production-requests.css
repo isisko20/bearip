@@ -209,3 +209,10 @@
 @media (max-width: 560px) {
   .pr-card-actions { flex-direction: column; }
 }
+
+/* 의뢰 1차 검토(자동 처리) 상태 — 관리 화면에서만 보여요 */
+.pr-auto-badge { display: inline-block; align-self: flex-start; margin: 2px 0 6px; padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700; }
+.pr-auto-badge.handled { background: rgba(62,207,125,0.16); color: #2fae6b; }
+.pr-auto-badge.handoff { background: rgba(214,138,28,0.16); color: #d68a1c; }
+.pr-auto-badge.queued { background: var(--dr-bg-soft); color: var(--dr-ink-soft); }
+.pr-card-result-text { white-space: pre-wrap; max-height: 220px; overflow-y: auto; }

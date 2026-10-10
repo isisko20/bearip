@@ -478,9 +478,7 @@ function createIP() {
     step.adminReviewedAt = null;
   });
 
-  const dnaScore = roadmap.length
-    ? Math.round(roadmap.reduce((sum, s) => sum + bearipStepCompletionPercent(s), 0) / roadmap.length)
-    : 0;
+  const dnaScore = bearipWritingCompleteness(roadmap);
 
   const ip = {
     id: 'ip_' + Date.now(),
@@ -528,6 +526,7 @@ function requestExpertReviewForIp(ip) {
       ipId: ip.id,
       ipTitle: ip.title,
       requesterNickname: bearipScopeSuffix(),
+      triage: 'queued',
       stepKey: step.key,
       stepLabel: step.label.replace(/<br>/g, ' '),
       submissions: step.submissions,
@@ -542,8 +541,8 @@ function requestExpertReviewForIp(ip) {
   bearipUpdateIP(ip.id, { roadmap: ip.roadmap });
   bearipAddNotification({
     type: 'ip',
-    title: '전문가 검토를 요청했어요',
-    message: `'${ip.title}'의 ${steps.length}개 항목을 담당 IP 매니저에게 전달했어요.`,
+    title: '의뢰를 접수했어요',
+    message: `'${ip.title}'의 ${steps.length}개 항목 의뢰를 접수했어요. 결과가 나오면 알림으로 알려드려요.`,
     link: 'my-dna.html',
   });
   return true;
