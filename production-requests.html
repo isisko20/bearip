@@ -160,6 +160,23 @@
       </div>
     </section>
 
+    <section class="pr-report-panel" id="prAcctPanel">
+      <div class="pr-cleanup-head">
+        <div class="t">계정 PIN 현황 <span id="prAcctSummary"></span></div>
+        <div class="s">소유자 전용 쓰기 규칙을 켜려면 모두 PIN을 설정하고 주인 없는 IP가 없어야 해요. 바꾸려면 GM PIN이 필요해요.</div>
+      </div>
+      <div class="pr-ai-form">
+        <label class="pr-ai-row">GM PIN <input type="password" id="prAcctPin" autocomplete="current-password" placeholder="PIN"></label>
+        <div class="pr-ai-actions">
+          <button type="button" id="prAcctLoad">현황 불러오기</button>
+          <button type="button" class="primary" id="prAcctNudgeAll" disabled>PIN 없는 분께 모두 알림</button>
+        </div>
+        <div class="pr-ai-msg" id="prAcctMsg"></div>
+      </div>
+      <div id="prAcctList"></div>
+      <div id="prAcctOwnerless"></div>
+    </section>
+
     <section class="pr-report-panel" id="prErrorPanel">
       <div class="pr-cleanup-head">
         <div class="t">앱 오류 기록 <span id="prErrorCount"></span></div>

@@ -17,8 +17,8 @@ function setAt(path, value) {
   if (value === null || value === undefined) delete node[last];
   else node[last] = JSON.parse(JSON.stringify(value));
 }
-const snap = (v) => ({ val: () => (v === undefined ? null : JSON.parse(JSON.stringify(v))) });
-function ref(path) {
+const snap = (v) => ({ val: () => (v === undefined ? null : JSON.parse(JSON.stringify(v))), exists: () => v !== undefined && v !== null });
+function ref(path = '') {
   return {
     once: async () => snap(getAt(path)),
     set: async (v) => setAt(path, v),
@@ -372,6 +372,74 @@ const IP = { title: '테스트 작품', goal: '웹툰', genres: ['판타지'], l
   assert.deepStrictEqual([r.code, r.body.error], [429, 'limit_user']);
   setAt('aiConfig/analyzePerUser', 5);
   console.log('ok  분석 인증·끄기·한도');
+
+  // ================= 계정 PIN 현황 (aiAdmin) =================
+  const admin = fns.aiAdmin;
+  const adm = async (body) => {
+    const res = { code: 200, body: null, set() {}, status(c) { this.code = c; return this; }, json(o) { this.body = o; }, send() {} };
+    await admin({ method: 'POST', get: (h) => (h.toLowerCase() === 'authorization' ? 'Bearer tok_tester' : ''), body }, res);
+    return res;
+  };
+  const GM_PIN = 'gm-pin-1234';
+  setAt('accounts/GM', lib.makeAccountRecord('GM', GM_PIN));
+  setAt('accounts/상욱', lib.makeAccountRecord('상욱', 'pin-4321'));
+  setAt('publicCreators/상욱박', true);
+  setAt('allIPs', {
+    ip_a: { title: '상욱의 작품', ownerNickname: '상욱' },
+    ip_b: { title: '잠팅이 작품 1', ownerNickname: '잠팅이' },
+    ip_c: { title: '잠팅이 작품 2', ownerNickname: '잠팅이' },
+    ip_d: { title: '주인 없는 옛 작품' },
+  });
+  setAt('publicIPs/ip_d', { title: '주인 없는 옛 작품' });
+  setAt('ipDetails/ip_d', { coverImage: 'x' });
+
+  // 23) PIN이 틀리면 거부, 맞으면 현황
+  let a = await adm({ action: 'accounts', pin: 'wrong-pin' });
+  assert.deepStrictEqual([a.code, a.body.error], [403, 'bad_pin']);
+  a = await adm({ action: 'accounts', pin: GM_PIN });
+  assert.strictEqual(a.code, 200);
+  const byName = Object.fromEntries(a.body.people.map((p) => [p.nickname, p]));
+  assert.deepStrictEqual([byName['GM'].hasPin, byName['상욱'].hasPin, byName['상욱'].ipCount], [true, true, 1]);
+  assert.deepStrictEqual([byName['잠팅이'].hasPin, byName['잠팅이'].ipCount, byName['상욱박'].hasPin], [false, 2, false]);
+  assert.deepStrictEqual(a.body.ownerless, [{ id: 'ip_d', title: '주인 없는 옛 작품' }]);
+  assert.strictEqual(a.body.people[0].hasPin, false, 'PIN 없는 사람이 위에');
+  assert.ok(!JSON.stringify(a.body).match(/pinHash|salt/), '계정 기록(해시)은 내보내지 않아요');
+  console.log('ok  계정 PIN 현황 (PIN 확인, 해시 비노출)');
+
+  // 24) 알림: PIN 없는 사람에게만, 24시간에 한 번
+  a = await adm({ action: 'nudge', pin: GM_PIN, nicknames: ['잠팅이', '상욱', '상욱박'] });
+  assert.deepStrictEqual(a.body.results.map((r) => r.status), ['sent', 'has_pin', 'sent']);
+  const nudged = Object.values(getAt('notifications/잠팅이') || {});
+  assert.strictEqual(nudged.length, 1);
+  assert.deepStrictEqual([nudged[0].type, nudged[0].title, nudged[0].read, nudged[0].link], ['security', 'PIN을 설정해 주세요', false, 'my-projects.html']);
+  assert.strictEqual(getAt('notifications/상욱'), undefined, 'PIN이 있는 사람에게는 보내지 않아요');
+  a = await adm({ action: 'nudge', pin: GM_PIN, nicknames: ['잠팅이'] });
+  assert.strictEqual(a.body.results[0].status, 'recent');
+  assert.strictEqual(Object.values(getAt('notifications/잠팅이')).length, 1, '하루 안에 또 보내지 않아요');
+  setAt('pinNudges/잠팅이', { at: Date.now() - 25 * 3600 * 1000 });
+  a = await adm({ action: 'nudge', pin: GM_PIN, nicknames: ['잠팅이'] });
+  assert.strictEqual(a.body.results[0].status, 'sent');
+  assert.strictEqual((await adm({ action: 'nudge', pin: GM_PIN, nicknames: 'x' })).body.results.length, 0);
+  console.log('ok  PIN 설정 알림 (대상 제한·하루 한 번)');
+
+  // 25) 주인 없는 IP에 주인 지정
+  a = await adm({ action: 'assignOwner', pin: GM_PIN, ipId: 'ip_d', nickname: '아무개' });
+  assert.deepStrictEqual([a.code, a.body.error], [400, 'unknown_nickname']);
+  a = await adm({ action: 'assignOwner', pin: GM_PIN, ipId: 'ip_a', nickname: '잠팅이' });
+  assert.deepStrictEqual([a.code, a.body.error], [409, 'has_owner'], '이미 주인이 있으면 바꾸지 않아요');
+  a = await adm({ action: 'assignOwner', pin: GM_PIN, ipId: 'nope', nickname: '잠팅이' });
+  assert.strictEqual(a.code, 404);
+  a = await adm({ action: 'assignOwner', pin: GM_PIN, ipId: '../x', nickname: '잠팅이' });
+  assert.strictEqual(a.code, 400);
+  a = await adm({ action: 'assignOwner', pin: 'wrong-pin', ipId: 'ip_d', nickname: '잠팅이' });
+  assert.strictEqual(a.code, 403);
+  a = await adm({ action: 'assignOwner', pin: GM_PIN, ipId: 'ip_d', nickname: '잠팅이' });
+  assert.deepStrictEqual([a.code, a.body.nickname], [200, '잠팅이']);
+  assert.deepStrictEqual([getAt('allIPs/ip_d/ownerNickname'), getAt('publicIPs/ip_d/ownerNickname'), getAt('ipDetails/ip_d/owner')], ['잠팅이', '잠팅이', '잠팅이']);
+  assert.strictEqual(getAt('ipMaterials/ip_d'), undefined, '없던 문서는 새로 만들지 않아요');
+  a = await adm({ action: 'accounts', pin: GM_PIN });
+  assert.strictEqual(a.body.ownerless.length, 0);
+  console.log('ok  주인 없는 IP 주인 지정');
 
   console.log('\n전부 통과');
 })().catch((e) => {

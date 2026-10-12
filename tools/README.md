@@ -22,6 +22,9 @@ node tools/restore-db.js 백업.json /publicIPs --yes   # 실제 복구 (그 경
 `database.rules.json`이 **지금 라이브에 적용된 규칙**이고, `database.rules.next.json`이 "내 IP·댓글·좋아요 등을
 본인만 고칠 수 있게" 강화한 규칙이에요. 켜는 방법:
 
+0. 먼저 `node tools/check-activation.js`로 켜도 되는 상태인지 점검해요(읽기만 해요). PIN이 없는 분·주인 없는 IP·규칙 파일 동기화·직전 백업을
+   한 번에 확인하고, 모두 ✅면 켜는 순서를 알려줘요.
+   PIN 없는 분께는 GM 화면(제작요청 관리) "계정 PIN 현황"에서 알림을 보내고, 주인 없는 IP는 같은 곳에서 주인을 지정해요.
 1. 친구들이 PIN을 설정했는지 확인해요 (`firebase database:get /accounts --shallow`). PIN이 없는 계정은 켠 뒤
    서버에 저장할 수 없어요 (읽기는 그대로 돼요).
 2. 소유자 기록이 없는 옛 IP는 GM만 고칠 수 있어요. 주인을 알면 `allIPs/<id>/ownerNickname`,

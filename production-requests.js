@@ -24,6 +24,8 @@ function prShowGmLocked() {
   if (aiPanel) aiPanel.style.display = 'none';
   const errorPanel = document.getElementById('prErrorPanel');
   if (errorPanel) errorPanel.style.display = 'none';
+  const acctPanel = document.getElementById('prAcctPanel');
+  if (acctPanel) acctPanel.style.display = 'none';
   if (filterRow) filterRow.style.display = 'none';
   if (list) list.style.display = 'none';
   if (empty) empty.style.display = 'none';
@@ -206,6 +208,100 @@ async function prAiRequest(action) {
   } finally {
     pinInput.value = '';
   }
+}
+
+// 계정 PIN 현황 — 소유자 전용 규칙을 켜기 전에 "모두 PIN이 있고 주인 없는 IP가 없는지" 확인해요.
+// 서버(aiAdmin)가 GM PIN을 확인하고, 계정 기록은 닉네임과 "설정했는지"만 내려와요.
+let prAcctState = null;
+
+async function prAcctRequest(action, extra) {
+  const msg = document.getElementById('prAcctMsg');
+  const pinInput = document.getElementById('prAcctPin');
+  if (!pinInput.value) {
+    msg.textContent = 'GM PIN을 입력해주세요.';
+    pinInput.focus();
+    return null;
+  }
+  msg.textContent = '확인 중...';
+  try {
+    const data = await bearipAiCall('admin', Object.assign({ action, pin: pinInput.value }, extra || {}));
+    msg.textContent = '';
+    return data;
+  } catch (e) {
+    msg.textContent = e.message;
+    return null;
+  } finally {
+    pinInput.value = '';
+  }
+}
+
+function prAcctRender() {
+  const state = prAcctState;
+  const listEl = document.getElementById('prAcctList');
+  const ownerlessEl = document.getElementById('prAcctOwnerless');
+  const summaryEl = document.getElementById('prAcctSummary');
+  const nudgeAll = document.getElementById('prAcctNudgeAll');
+  if (!state) return;
+  const esc = bearipEscapeHtml;
+  const noPin = state.people.filter((p) => !p.hasPin);
+  const ready = !noPin.length && !state.ownerless.length;
+  summaryEl.textContent = ready ? '· 모두 준비됐어요 ✅' : `· PIN 없음 ${noPin.length}명 · 주인 없는 IP ${state.ownerless.length}개`;
+  nudgeAll.disabled = !noPin.length;
+  const DAY = 24 * 3600 * 1000;
+  listEl.innerHTML = state.people
+    .map((p) => {
+      const recent = p.lastNudgeAt && Date.now() - p.lastNudgeAt < DAY;
+      const action = p.hasPin
+        ? ''
+        : `<button type="button" data-nudge="${esc(p.nickname)}" ${recent ? 'disabled' : ''}>${recent ? '오늘 보냄' : '알림 보내기'}</button>`;
+      return `<div class="pr-report-row"><div class="pr-report-top">
+        <span class="pr-report-type">${esc(p.nickname)}</span>
+        <span class="pr-report-who">IP ${p.ipCount}개</span>
+        <span class="pr-report-time" style="color:${p.hasPin ? '#2fae6b' : '#d68a1c'};font-weight:700">${p.hasPin ? 'PIN 설정됨' : 'PIN 없음'}</span>
+      </div>${action ? `<div class="pr-report-actions">${action}</div>` : ''}</div>`;
+    })
+    .join('');
+  ownerlessEl.innerHTML = state.ownerless.length
+    ? `<div class="pr-cleanup-head" style="margin-top:14px"><div class="t">주인 없는 IP</div><div class="s">옛 IP라 만든 사람이 기록돼 있지 않아요. 누구 것인지 정하면 그분만 고칠 수 있게 돼요.</div></div>` +
+      state.ownerless
+        .map(
+          (ip) => `<div class="pr-report-row"><div class="pr-report-top"><span class="pr-report-type">${esc(ip.title)}</span></div>
+          <div class="pr-report-actions"><select data-owner-select="${esc(ip.id)}">${state.people.map((p) => `<option value="${esc(p.nickname)}">${esc(p.nickname)}</option>`).join('')}</select>
+          <button type="button" data-assign="${esc(ip.id)}">주인으로 지정</button></div></div>`
+        )
+        .join('')
+    : '';
+}
+
+async function prAcctLoad() {
+  const data = await prAcctRequest('accounts');
+  if (!data) return;
+  prAcctState = { people: data.people || [], ownerless: data.ownerless || [] };
+  prAcctRender();
+}
+
+async function prAcctNudge(nicknames) {
+  const data = await prAcctRequest('nudge', { nicknames });
+  if (!data) return;
+  const sent = data.results.filter((r) => r.status === 'sent').length;
+  bearipShowToast(sent ? `${sent}명에게 알림을 보냈어요` : '새로 보낼 사람이 없었어요 (이미 설정했거나 오늘 보냈어요)');
+  prAcctLoad_afterAction();
+}
+
+// 알림·지정 뒤에는 PIN이 지워져 있어서, 화면에 보이는 현황만 서버 응답대로 반영해요.
+function prAcctLoad_afterAction() {
+  document.getElementById('prAcctMsg').textContent = 'GM PIN을 다시 입력하고 "현황 불러오기"를 누르면 최신 상태가 보여요.';
+}
+
+async function prAcctAssign(ipId, nickname) {
+  if (!confirm(`이 IP의 주인을 '${nickname}'(으)로 정할까요? 정한 뒤에는 되돌릴 수 없어요.`)) return;
+  const data = await prAcctRequest('assignOwner', { ipId, nickname });
+  if (!data) return;
+  bearipShowToast(`'${data.nickname}'님의 IP로 지정했어요`);
+  prAcctState.ownerless = prAcctState.ownerless.filter((ip) => ip.id !== ipId);
+  const person = prAcctState.people.find((p) => p.nickname === data.nickname);
+  if (person) person.ipCount++;
+  prAcctRender();
 }
 
 // 앱 오류 기록 — app-boot.js가 친구들 화면에서 모은 오류(clientErrors)를 같은 오류끼리 묶어서
@@ -586,6 +682,21 @@ document.addEventListener('DOMContentLoaded', () => {
   prRenderErrors();
   document.getElementById('prErrorReload').addEventListener('click', prRenderErrors);
   document.getElementById('prErrorClearAll').addEventListener('click', prClearAllErrors);
+  document.getElementById('prAcctLoad').addEventListener('click', prAcctLoad);
+  document.getElementById('prAcctNudgeAll').addEventListener('click', () => {
+    if (!prAcctState) return;
+    prAcctNudge(prAcctState.people.filter((p) => !p.hasPin).map((p) => p.nickname));
+  });
+  document.getElementById('prAcctList').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-nudge]');
+    if (btn) prAcctNudge([btn.dataset.nudge]);
+  });
+  document.getElementById('prAcctOwnerless').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-assign]');
+    if (!btn) return;
+    const select = document.querySelector(`[data-owner-select="${CSS.escape(btn.dataset.assign)}"]`);
+    if (select) prAcctAssign(btn.dataset.assign, select.value);
+  });
   document.getElementById('prAiLoad').addEventListener('click', () => prAiRequest('get'));
   document.getElementById('prAiSave').addEventListener('click', () => prAiRequest('set'));
 

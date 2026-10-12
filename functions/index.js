@@ -1,6 +1,6 @@
 // Thinkit AI 시나리오 도우미 — 브라우저에는 API 키를 둘 수 없어서 이 함수가 대신 호출해요.
 //   aiAssist : 동의 확인 → 하루 횟수 확인 → 매뉴얼 + 내 IP 정보 + 질문으로 Gemma 호출
-//   aiAdmin  : GM(PIN 확인)만 AI 켜기/끄기와 하루 한도 조정
+//   aiAdmin  : GM(PIN 확인)만 AI 켜기/끄기와 하루 한도 조정, 계정 PIN 현황·알림·IP 주인 지정
 //   analyzeMaterial : 올린 자료의 필수 요소 점검(빠진 요소 이름만) + 글 항목 준비도 점수 — 작성 완성도·띵킷 분석에 써요
 //   requestTriage : "의뢰하기"로 들어온 의뢰를 1차로 검토 — 글로 처리할 수 있으면 결과를 바로 내고,
 //                   아니면 관리자 대기열에 그대로 남겨요 (화면에는 누가 처리했는지 드러내지 않아요)
@@ -168,6 +168,86 @@ async function handleAssist(uid, body) {
   return { ok: true, answer, remaining: await remainingFor(uid, config) };
 }
 
+// ---- 계정 PIN 현황 (소유자 전용 규칙을 켜기 전 점검용 · GM만) ----
+// 누가 PIN을 설정했는지, 주인 없는 IP가 있는지 보여주고, PIN이 없는 사람에게 알림을 보내거나
+// 주인 없는 IP의 주인을 정해줘요. 계정 기록(PIN 해시)은 이 함수 밖으로 나가지 않아요 — 닉네임과
+// "설정했는지"만 돌려줘요.
+const NUDGE_COOLDOWN_MS = 24 * 3600 * 1000;
+
+async function listAccounts() {
+  const [accountsSnap, ipsSnap, creatorsSnap, nudgeSnap] = await Promise.all([
+    db.ref('accounts').once('value'),
+    db.ref('allIPs').once('value'),
+    db.ref('publicCreators').once('value'),
+    db.ref('pinNudges').once('value'),
+  ]);
+  const accounts = accountsSnap.val() || {};
+  const ips = ipsSnap.val() || {};
+  const creators = creatorsSnap.val() || {};
+  const nudges = nudgeSnap.val() || {};
+
+  const people = {};
+  const touch = (nickname) => {
+    const nk = lib.safeSegment(nickname);
+    if (!people[nk]) people[nk] = { nickname, hasPin: !!accounts[nk], ipCount: 0, lastNudgeAt: (nudges[nk] && nudges[nk].at) || 0 };
+    return people[nk];
+  };
+  Object.keys(accounts).forEach((nk) => touch((accounts[nk] && accounts[nk].nickname) || nk));
+  Object.keys(creators).forEach((name) => touch(name));
+  const ownerless = [];
+  Object.keys(ips).forEach((id) => {
+    const owner = ips[id] && ips[id].ownerNickname;
+    if (owner) touch(owner).ipCount++;
+    else ownerless.push({ id, title: lib.clip(ips[id] && ips[id].title, 60) || '제목 없는 IP' });
+  });
+  const list = Object.values(people).sort((a, b) => Number(a.hasPin) - Number(b.hasPin) || a.nickname.localeCompare(b.nickname, 'ko'));
+  return { people: list, ownerless };
+}
+
+async function nudgePin(nicknames) {
+  const names = (Array.isArray(nicknames) ? nicknames : []).slice(0, 30).map((n) => lib.normalizeNickname(n)).filter(Boolean);
+  const accounts = (await db.ref('accounts').once('value')).val() || {};
+  const results = [];
+  for (const nickname of names) {
+    const nk = lib.safeSegment(nickname);
+    if (accounts[nk]) {
+      results.push({ nickname, status: 'has_pin' });
+      continue;
+    }
+    const last = (await db.ref('pinNudges/' + nk).once('value')).val();
+    if (last && Date.now() - (last.at || 0) < NUDGE_COOLDOWN_MS) {
+      results.push({ nickname, status: 'recent' });
+      continue;
+    }
+    await notifyRequester(nk, {
+      type: 'security',
+      title: 'PIN을 설정해 주세요',
+      message: '내 닉네임을 PIN으로 잠그면 다른 사람이 내 IP를 고칠 수 없어요. 앱에 들어오면 뜨는 안내 창에서 PIN을 설정해 주세요.',
+      link: 'my-projects.html',
+    });
+    await db.ref('pinNudges/' + nk).set({ at: Date.now() });
+    results.push({ nickname, status: 'sent' });
+  }
+  return { results };
+}
+
+async function assignOwner(ipId, nicknameRaw) {
+  const nickname = lib.normalizeNickname(nicknameRaw);
+  if (typeof ipId !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(ipId) || !nickname) throw new ApiError(400, 'bad_request', 'IP와 닉네임을 확인해주세요.');
+  const ip = (await db.ref('allIPs/' + ipId).once('value')).val();
+  if (!ip) throw new ApiError(404, 'no_ip', '그런 IP를 찾지 못했어요.');
+  if (ip.ownerNickname) throw new ApiError(409, 'has_owner', '이미 주인이 정해진 IP예요.');
+  const known = await listAccounts();
+  if (!known.people.some((p) => p.nickname === nickname)) throw new ApiError(400, 'unknown_nickname', '목록에 없는 닉네임이에요.');
+  const [pub, det, mat] = await Promise.all([db.ref('publicIPs/' + ipId).once('value'), db.ref('ipDetails/' + ipId).once('value'), db.ref('ipMaterials/' + ipId).once('value')]);
+  const updates = { ['allIPs/' + ipId + '/ownerNickname']: nickname };
+  if (pub.exists()) updates['publicIPs/' + ipId + '/ownerNickname'] = nickname;
+  if (det.exists()) updates['ipDetails/' + ipId + '/owner'] = nickname;
+  if (mat.exists()) updates['ipMaterials/' + ipId + '/owner'] = nickname;
+  await db.ref().update(updates);
+  return { ipId, nickname };
+}
+
 async function handleAdmin(uid, body) {
   const date = lib.kstDate();
   const failPath = `aiAdminFails/${date}`;
@@ -179,6 +259,10 @@ async function handleAdmin(uid, body) {
     await db.ref(failPath).transaction((cur) => (cur || 0) + 1);
     throw new ApiError(403, 'bad_pin', 'GM PIN이 맞지 않아요.');
   }
+
+  if (body.action === 'accounts') return Object.assign({ ok: true }, await listAccounts());
+  if (body.action === 'nudge') return Object.assign({ ok: true }, await nudgePin(body.nicknames));
+  if (body.action === 'assignOwner') return Object.assign({ ok: true }, await assignOwner(body.ipId, body.nickname));
 
   if (body.action === 'set') {
     const next = {};
