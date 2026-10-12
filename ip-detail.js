@@ -283,8 +283,16 @@ function ipdApplyDynamicIP() {
     el.querySelector('.bar-fill').style.width = `${value}%`;
   };
   setStat(stats[0], ip.dnaScore || 0);
-  setStat(stats[1], ip.readinessScore || 0);
-  setStat(stats[2], ip.productionProgress || 0);
+  // 띵킷 분석: 분석하기를 누른 적이 없으면 퍼센트 대신 "분석 전"
+  if (ip.analysisAt) {
+    setStat(stats[1], Math.max(0, Math.min(100, ip.readinessScore || 0)));
+  } else {
+    stats[1].querySelector('.value').textContent = '분석 전';
+    stats[1].classList.add('pending');
+    stats[1].querySelector('.bar-fill').style.width = '0%';
+  }
+  const progressStat = document.getElementById('ipdProgressStat');
+  if (progressStat) progressStat.onclick = () => odOpenDnaReport(ip.title || '제목 없는 IP', ip);
 
   const joinBtn = document.getElementById('ipdJoinBtn');
   joinBtn.dataset.ip = ip.id;
@@ -310,6 +318,7 @@ function ipdApplyDynamicIP() {
   // in now IS the owner regardless; for someone else's older IP with no
   // recorded owner, fall back to a neutral label instead of misreporting
   // the current *viewer* as the owner.
+  const isOwnIP = typeof bearipLoadIPs === 'function' && bearipLoadIPs().some((i) => i.id === ip.id);
   const ownerName = ip.ownerNickname || (isOwnIP && user ? user.nickname : null);
   ipdOwnerName = ownerName;
 

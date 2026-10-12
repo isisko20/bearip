@@ -193,7 +193,7 @@ function renderHeroLiveCards() {
       <div class="dr-hero-live-thumb ${thumbClass}"${thumbStyle}></div>
       <div class="dr-hero-live-info">
         <div class="t">${bearipEscapeHtml(ip.title || '제목 없는 IP')}</div>
-        <div class="s">DNA ${ip.dnaScore || 0}%</div>
+        <div class="s">작성 완성도 ${ip.dnaScore || 0}%</div>
       </div>
     `;
     ongoingCard.addEventListener('click', (e) => {
@@ -269,21 +269,22 @@ function renderDnaStatus() {
   }
 
   const ip = ips[0]; // bearipAddIP unshifts, so index 0 is the most recent
-  bearipEnsureDnaBreakdown(ip);
-  if (subEl) subEl.textContent = `'${ip.title || '제목 없는 IP'}'의 항목별 완성도예요`;
+  if (subEl) subEl.textContent = `'${ip.title || '제목 없는 IP'}'의 개발 단계별 작성 현황이에요`;
 
-  const tilesHtml = BEARIP_DNA_CATEGORIES.map((cat, i) => {
-    const value = (ip.dnaBreakdown && ip.dnaBreakdown[cat.key]) || 0;
-    return `
-      <div class="dr-dna-tile">
-        <div class="dr-dna-tile-ic">${cat.icon}</div>
+  const stepRows = bearipStepProgressRows(ip);
+  const tilesHtml = stepRows.length
+    ? stepRows
+        .map(
+          (r, i) => `
+      <div class="dr-dna-tile"${r.skipped ? ' style="opacity:.55"' : ''}>
         <div class="dr-dna-tile-num">0${i + 1}</div>
-        <div class="dr-dna-tile-label">${cat.label}</div>
-        <div class="dr-dna-tile-value">${value}%</div>
-        <div class="dr-dna-tile-tip">${bearipDnaTip(cat.key, value)}</div>
-      </div>
-    `;
-  }).join('');
+        <div class="dr-dna-tile-label">${bearipEscapeHtml(r.label)}</div>
+        <div class="dr-dna-tile-value">${r.skipped ? '-' : r.percent + '%'}</div>
+        <div class="dr-dna-tile-tip">${bearipEscapeHtml(r.note)}</div>
+      </div>`
+        )
+        .join('')
+    : '<div class="dr-dna-tile-tip" style="grid-column:1/-1">아직 개발 단계 정보가 없어요.</div>';
 
   body.innerHTML = `
     <div class="dr-dna-body">
@@ -292,10 +293,11 @@ function renderDnaStatus() {
         <div class="dr-dna-score-ring" style="--p:${ip.dnaScore}">
           <div class="dr-dna-score-ring-inner">
             <span class="v">${ip.dnaScore}%</span>
-            <span class="t">${bearipDnaScoreTier(ip.dnaScore)}</span>
+            <span class="t">작성 완성도</span>
           </div>
         </div>
-        <p class="dr-dna-score-hint">6개 항목의 평균으로 계산돼요.</p>
+        <p class="dr-dna-score-hint">필요한 단계의 완성률을 평균낸 값이에요.</p>
+        <p class="dr-dna-score-hint" style="font-weight:800">띵킷 분석 · ${bearipAnalysisLabel(ip)}</p>
         <a class="dr-dna-status-link" href="my-dna.html">MY DNA에서 자세히 보기 →</a>
       </div>
     </div>
@@ -329,7 +331,7 @@ function renderMyProjectsList() {
       return `
         <button type="button" class="dr-project-chip${active ? ' active' : ''}" data-ip-id="${ip.id}">
           <span class="t">${bearipEscapeHtml(ip.title || '제목 없는 IP')}</span>
-          <span class="d">DNA ${ip.dnaScore || 0}%</span>
+          <span class="d">작성 완성도 ${ip.dnaScore || 0}%</span>
         </button>
       `;
     })

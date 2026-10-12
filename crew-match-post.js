@@ -71,7 +71,7 @@ if (cmPositionsListEl) {
     if (!ipTitle) return;
     const resolved = cmResolveIpByTitle(ipTitle);
     if (!resolved) return;
-    odOpenDnaReport(ipTitle, resolved.dnaBreakdown, resolved.dnaScore);
+    odOpenDnaReport(ipTitle, resolved);
   });
 }
 
@@ -94,7 +94,7 @@ function cmRenderApplicantsPanel(pos, panelEl, fracEl) {
   if (!applicants.length) {
     panelEl.innerHTML = dnaHtml + '<div class="cm-applicants-empty">아직 지원자가 없어요.</div>';
     const emptyDnaBtn = panelEl.querySelector('.cm-applicants-dna');
-    if (emptyDnaBtn) emptyDnaBtn.addEventListener('click', () => odOpenDnaReport(pos.ipTitle, projectIp.dnaBreakdown, projectIp.dnaScore));
+    if (emptyDnaBtn) emptyDnaBtn.addEventListener('click', () => odOpenDnaReport(pos.ipTitle, projectIp));
     return;
   }
   panelEl.innerHTML = dnaHtml + applicants
@@ -124,7 +124,7 @@ function cmRenderApplicantsPanel(pos, panelEl, fracEl) {
 
   const dnaBtn = panelEl.querySelector('.cm-applicants-dna');
   if (dnaBtn && projectIp) {
-    dnaBtn.addEventListener('click', () => odOpenDnaReport(pos.ipTitle, projectIp.dnaBreakdown, projectIp.dnaScore));
+    dnaBtn.addEventListener('click', () => odOpenDnaReport(pos.ipTitle, projectIp));
   }
 
   panelEl.querySelectorAll('.cm-applicant-name').forEach((nameBtn) => {
@@ -167,7 +167,7 @@ function cmRenderPositionCard(pos) {
   const applicantCount = bearipGetApplicants(pos.id).length;
   const cardIp = cmResolveIpForPosition(pos);
   const dnaBadgeHtml = cardIp
-    ? `<button type="button" class="cm-position-dna"><span class="lbl">DNA</span><span class="val">${cardIp.dnaScore}%</span></button>`
+    ? `<button type="button" class="cm-position-dna"><span class="lbl">완성도</span><span class="val">${cardIp.dnaScore}%</span></button>`
     : '';
   el.innerHTML = `
     <div class="cm-position-row">

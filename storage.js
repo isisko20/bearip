@@ -621,6 +621,23 @@ function bearipStepCompletionPercent(step) {
   return Math.max(0, Math.min(100, Math.round((sum / target) * 100)));
 }
 
+// 개발 단계별 작성 현황(공개 화면·대시보드의 팝업이 같이 써요): 단계 이름, 완성률, 한 줄 상태.
+// 필요 없는 단계(목표 수량 0, 올린 자료도 없음)는 skipped로 표시해요.
+function bearipStepProgressRows(ip) {
+  return (ip && Array.isArray(ip.roadmap) ? ip.roadmap : []).map((step) => {
+    const label = String(step.label || '').replace(/<br>/g, ' ');
+    const done = step.mode === 'done' || step.mode === 'self_done';
+    const count = (step.submissions || []).length;
+    if (bearipStepSkipped(step) && !count && !done) return { label, skipped: true, percent: 0, note: '필요 없음' };
+    return { label, skipped: false, percent: bearipStepCompletionPercent(step), note: done ? '완료' : `${count}/${bearipStepTarget(step)}` };
+  });
+}
+
+// 띵킷 분석 표시: 분석하기를 누른 적이 없으면 "분석 전"
+function bearipAnalysisLabel(ip) {
+  return ip && ip.analysisAt ? `${Math.max(0, Math.min(100, ip.readinessScore || 0))}%` : '분석 전';
+}
+
 // 작성 완성도 — 필요 없는 단계(목표 수량 0)를 뺀 단계들의 평균이에요.
 function bearipWritingCompleteness(roadmap) {
   const steps = (roadmap || []).filter((s) => !bearipStepSkipped(s));

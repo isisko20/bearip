@@ -24,7 +24,7 @@ function mpBuildCard(ip) {
   const isPublic = ip.visibility === 'public';
   const goalLabel = MP_GOAL_LABELS[ip.goal] || '';
   const metaParts = [goalLabel, ...(ip.genres || [])].filter(Boolean);
-  metaParts.push(`DNA ${ip.dnaScore || 0}%`);
+  metaParts.push(`작성 완성도 ${ip.dnaScore || 0}%`);
 
   el.innerHTML = `
     <div class="mp-thumb"${thumbStyle}>
