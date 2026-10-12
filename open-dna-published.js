@@ -18,32 +18,16 @@ function odBuildPublishedCard(ip, index) {
     ? ` style="background-image:url('${coverUrl}');background-size:cover;background-position:center"`
     : '';
   const bannerClass = coverUrl ? '' : `thumb-${(index % 8) + 1}`;
-  const avatarThumb = `thumb-${((index + 3) % 8) + 1}`;
   const initials = esc(ip.title || 'IP').slice(0, 6);
 
   const formatTag = OD_GOAL_TAG[ip.goal] || 'IP';
   if (typeof bearipEnsureDnaBreakdown === 'function') bearipEnsureDnaBreakdown(ip);
   const dna = ip.dnaScore || 0;
-  const readiness = ip.readinessScore || 0;
-  const production = ip.productionProgress || 0;
   const stage = bearipGrowthStage(dna);
+  // 카드의 진행도는 띵킷 분석이에요. 분석하기를 누른 적이 없으면 퍼센트 대신 "분석 전"이에요.
+  const analyzed = !!ip.analysisAt;
+  const analysis = Math.max(0, Math.min(100, ip.readinessScore || 0));
   const stageLabel = BEARIP_STAGE_LABELS[stage];
-
-  const bylineParts = [];
-  if (ip.genres && ip.genres[0]) bylineParts.push(esc(ip.genres[0]));
-  bylineParts.push(stageLabel);
-  const byline = bylineParts.join(' · ');
-
-  const imageAssets = (ip.assets || []).filter((a) => a.imageData);
-  let latestWorkHtml = '';
-  if (imageAssets.length) {
-    const thumbs = imageAssets
-      .slice(0, 3)
-      .map((a) => `<div class="od-latest-thumb" style="background-image:url('${a.imageData}');background-size:cover;background-position:center"></div>`)
-      .join('');
-    const more = imageAssets.length > 3 ? `<div class="od-latest-thumb od-latest-more">+${imageAssets.length - 3}</div>` : '';
-    latestWorkHtml = `<div class="od-latest-label">Latest Work</div><div class="od-latest-row">${thumbs}${more}</div>`;
-  }
 
   const isRecruiting = (typeof bearipLoadPositions === 'function' ? bearipLoadPositions() : []).some((p) =>
     p.ipId ? p.ipId === ip.id : p.ipTitle === ip.title
@@ -62,37 +46,47 @@ function odBuildPublishedCard(ip, index) {
     (typeof bearipIpCheerCount === 'function' ? bearipIpCheerCount(ip.id) : 0) +
     (typeof bearipIpViewCount === 'function' ? bearipIpViewCount(ip.id) : 0);
   card.dataset.recruiting = isRecruiting ? '1' : '0';
+  // 카드에는 이름·단계·진행도·썸네일만 보여주지만, 검색은 소개글·장르·형식까지 계속 찾아요.
+  card.dataset.search = [ip.title, ip.logline, (ip.genres || []).join(' '), formatTag, stageLabel].join(' ').toLowerCase();
+  card.dataset.viewIp = ip.id;
+  card.tabIndex = 0;
+  card.setAttribute('role', 'link');
+  card.setAttribute('aria-label', `${ip.title || '제목 없는 IP'} 보기`);
   card.innerHTML = `
     <div class="od-card-banner ${bannerClass}"${bannerStyle}>
+      ${coverUrl ? '' : `<span class="od-card-initials">${initials}</span>`}
       <span class="od-stage-badge ${stage}">${stageLabel}</span>
-      <div class="od-card-avatar ${avatarThumb}">${initials}</div>
+      ${isRecruiting ? '<span class="od-recruit-pill">모집 중</span>' : ''}
+      <button class="od-bookmark" aria-label="북마크" data-ip="${ip.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
     </div>
     <div class="od-card-body">
-      <div class="od-card-title-row">
-        <h3>${esc(ip.title || '제목 없는 IP')}</h3>
-        <button class="od-bookmark" aria-label="북마크" data-ip="${ip.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg></button>
-      </div>
-      <div class="od-card-byline">${byline}</div>
-      <p class="od-card-tagline">${esc(ip.logline || '아직 로그라인이 없어요')}</p>
-      <div class="od-format-tags"><span class="od-format-tag">${formatTag}</span></div>
-      <div class="od-stat-row">
-        <button type="button" class="od-stat od-stat-dna" data-dna-report="${ip.id}"><div class="label">DNA</div><div class="value">${dna}%</div><div class="bar"><div class="bar-fill" style="width:${dna}%"></div></div></button>
-        <div class="od-stat"><div class="label">준비도</div><div class="value">${readiness}%</div><div class="bar"><div class="bar-fill" style="width:${readiness}%"></div></div></div>
-        <div class="od-stat"><div class="label">제작 진행</div><div class="value">${production}%</div><div class="bar"><div class="bar-fill" style="width:${production}%"></div></div></div>
-      </div>
-      ${latestWorkHtml}
-      <div class="od-foot-stats">
-        <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.4"/><path d="M1.6 20c0-3.8 2.9-6.2 6.4-6.2S14.4 16.2 14.4 20"/><circle cx="17" cy="9" r="2.6"/><path d="M14.6 13.6c2.6.3 4.4 2.3 5.3 4.1"/></svg>${followerCount}</span><span class="lbl">팔로워</span></div>
-        <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9C.6 8.5 3 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 4 0 6.4 4 4.5 7.5C19 16.5 12 21 12 21z"/></svg>${bearipFormatCount(typeof bearipIpCheerCount === 'function' ? bearipIpCheerCount(ip.id) : 0)}</span><span class="lbl">응원</span></div>
-        <div class="od-foot-stat"><span class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 01-8.9 8.4 8.6 8.6 0 01-3.8-.9L3 20l1.1-5A8.4 8.4 0 1121 11.5z"/></svg>${bearipFormatCount(typeof bearipIpActivityCount === 'function' ? bearipIpActivityCount(ip) : 0)}</span><span class="lbl">활동</span></div>
-      </div>
-      <div class="od-card-actions">
-        <button class="od-btn-outline" data-view-ip="${ip.id}">IP 보기</button>
-        <button class="od-btn-solid" data-view-ip="${ip.id}">참여하기</button>
+      <h3 class="od-card-name">${esc(ip.title || '제목 없는 IP')}</h3>
+      <div class="od-analysis${analyzed ? '' : ' pending'}" aria-label="띵킷 분석 ${analyzed ? analysis + '%' : '분석 전'}">
+        <span class="od-analysis-label">띵킷 분석</span>
+        <span class="od-analysis-value">${analyzed ? analysis + '%' : '분석 전'}</span>
+        <span class="od-analysis-bar"><span class="od-analysis-fill" style="width:${analyzed ? analysis : 0}%"></span></span>
       </div>
     </div>
   `;
   return card;
+}
+
+// 카드 어디를 눌러도 IP 상세로 가요 (북마크·진행도 버튼은 제외). 전체 스냅샷을 같이 넘겨요 —
+// 이 IP가 보는 사람의 로컬에는 없을 수 있어서 ip-detail.html이 스스로 찾을 수 없어요.
+function odWireCardOpen(card, ip) {
+  const open = () => {
+    sessionStorage.setItem('bearip_view_ip_snapshot', JSON.stringify(ip));
+    location.href = 'ip-detail.html';
+  };
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('.od-bookmark, [data-dna-report]')) return;
+    open();
+  });
+  card.addEventListener('keydown', (e) => {
+    if (e.target !== card || (e.key !== 'Enter' && e.key !== ' ')) return;
+    e.preventDefault();
+    open();
+  });
 }
 
 // Hero stat line — real counts, not fabricated platform numbers: how many
@@ -161,15 +155,7 @@ function odRenderPublishedCards() {
     if (firstMock) container.insertBefore(card, firstMock);
     else container.appendChild(card);
     card.querySelectorAll('.od-bookmark').forEach(odWireBookmarkButton);
-    card.querySelectorAll('[data-view-ip]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        // The full snapshot, not just the id — this IP may not exist in
-        // this visitor's own local storage at all (someone else's IP), so
-        // ip-detail.html can't look it up itself; hand it over directly.
-        sessionStorage.setItem('bearip_view_ip_snapshot', JSON.stringify(ip));
-        location.href = 'ip-detail.html';
-      });
-    });
+    odWireCardOpen(card, ip);
   });
   // Cards were just rebuilt from scratch — reapply whatever 정렬 and 카테고리/
   // 검색 filter is active instead of silently resetting them on every live

@@ -18,12 +18,7 @@ function odbRenderBookmarks() {
     const card = odBuildPublishedCard(ip, i);
     grid.appendChild(card);
     card.querySelectorAll('.od-bookmark').forEach(odWireBookmarkButton);
-    card.querySelectorAll('[data-view-ip]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        sessionStorage.setItem('bearip_view_ip_snapshot', JSON.stringify(ip));
-        location.href = 'ip-detail.html';
-      });
-    });
+    odWireCardOpen(card, ip);
   });
 }
 

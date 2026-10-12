@@ -15,7 +15,7 @@ function odApplyFilters() {
 
   let visibleCards = 0;
   grid.querySelectorAll('.od-card').forEach((card) => {
-    const matchesText = !query || card.textContent.trim().toLowerCase().includes(query);
+    const matchesText = !query || (card.dataset.search || card.textContent).trim().toLowerCase().includes(query);
     const matchesGoal = odActiveGoal === 'all' || card.dataset.goal === odActiveGoal;
     const show = matchesText && matchesGoal;
     // Not the `hidden` attribute — .od-card has its own `display: flex`
