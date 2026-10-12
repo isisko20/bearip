@@ -1040,3 +1040,41 @@
 .md-missing-chip { padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; background: rgba(214,138,28,0.14); color: #d68a1c; }
 .md-missing-ok { margin-top: 6px; font-size: 12px; font-weight: 700; color: #2fae6b; }
 .md-missing-ok.muted { color: var(--dr-ink-soft); font-weight: 600; }
+
+/* ---- 개발 맵 사용법 안내 + 업로드 창의 필수 요소 목록 ---- */
+.md-intro-btn {
+  margin-left: auto; margin-right: 8px; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--dr-border);
+  background: var(--dr-panel); color: var(--dr-ink-soft); font-size: 12.5px; font-weight: 700; font-family: inherit; cursor: pointer;
+}
+.md-intro-btn:hover { color: var(--dr-purple); border-color: var(--dr-purple); }
+.md-intro-btn + .md-expert-help-btn-main { margin-left: 0; }
+.md-intro-overlay {
+  position: fixed; inset: 0; z-index: 1200; display: flex; align-items: center; justify-content: center;
+  background: rgba(24, 18, 52, 0.55); padding: 20px;
+}
+.md-intro-box {
+  position: relative; width: 100%; max-width: 420px; background: var(--dr-panel); color: var(--dr-ink);
+  border-radius: 22px; padding: 28px 26px 22px; box-shadow: 0 24px 60px rgba(24, 18, 52, 0.3);
+}
+.md-intro-close { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border: none; background: none; color: var(--dr-ink-soft); cursor: pointer; padding: 5px; }
+.md-intro-close svg { width: 100%; height: 100%; }
+.md-intro-step { font-size: 12.5px; font-weight: 800; color: var(--dr-purple); margin-bottom: 8px; }
+.md-intro-title { font-size: 20px; font-weight: 800; line-height: 1.35; margin: 0 0 10px; word-break: keep-all; }
+.md-intro-body { font-size: 14px; line-height: 1.7; color: var(--dr-ink); margin: 0 0 14px; word-break: keep-all; }
+.md-intro-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+.md-intro-chips span { padding: 5px 11px; border-radius: 999px; background: var(--dr-active-bg); color: var(--dr-purple); font-size: 12.5px; font-weight: 700; }
+.md-intro-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 16px; }
+.md-intro-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--dr-border); }
+.md-intro-dots i.on { background: var(--dr-purple); width: 20px; border-radius: 4px; }
+.md-intro-actions { display: flex; gap: 8px; }
+.md-intro-actions button { flex: 1; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 800; font-family: inherit; cursor: pointer; border: 1px solid var(--dr-border); background: var(--dr-panel); color: var(--dr-ink-soft); }
+.md-intro-actions .md-intro-next { background: var(--dr-purple); border-color: transparent; color: #fff; flex: 2; }
+.md-intro-actions button:disabled { opacity: 0.4; cursor: default; }
+
+.md-step-material-checklist { border: 1px solid var(--dr-border); border-radius: 12px; background: var(--dr-bg-soft); padding: 10px 14px; margin-bottom: 12px; }
+.md-step-material-checklist summary { cursor: pointer; font-size: 13px; font-weight: 800; color: var(--dr-purple); }
+.md-step-material-checklist p { font-size: 12.5px; color: var(--dr-ink-soft); line-height: 1.6; margin: 8px 0; }
+.md-step-material-checklist ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.md-step-material-checklist li { display: flex; flex-direction: column; gap: 1px; font-size: 13px; }
+.md-step-material-checklist li b { color: var(--dr-ink); }
+.md-step-material-checklist li span { color: var(--dr-ink-soft); font-size: 12px; }

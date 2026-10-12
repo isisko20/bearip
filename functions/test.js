@@ -166,6 +166,21 @@ const lib = require('./lib');
   Object.keys(lib.CHECKLISTS).forEach((k) => assert.ok(lib.CHECKLISTS[k].items.length >= 7));
   console.log('ok  분석 대상 종류와 필수 요소 목록');
 
+  // 14-1) 화면(storage.js)의 필수 요소 목록·대상 판단이 서버(lib.js)와 같은지 — 어긋나면 업로드 창이 거짓 안내를 해요
+  const fsMod = require('fs');
+  const vm = require('vm');
+  const storageSrc = fsMod.readFileSync(require('path').join(__dirname, '..', 'storage.js'), 'utf8');
+  const listMatch = storageSrc.match(/const BEARIP_CHECKLISTS = (\{[\s\S]*?\n\});/);
+  assert.ok(listMatch, 'storage.js에서 BEARIP_CHECKLISTS를 찾지 못했어요');
+  const clientLists = vm.runInNewContext('(' + listMatch[1] + ')');
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(clientLists)), JSON.parse(JSON.stringify(lib.CHECKLISTS)), '화면과 서버의 필수 요소 목록이 같아야 해요');
+  const fnMatch = storageSrc.match(/function bearipChecklistCategory\(label\) \{[\s\S]*?\n\}/);
+  const clientCategory = vm.runInNewContext('(' + fnMatch[0].replace('function bearipChecklistCategory', 'function') + ')');
+  ['스토리', '시나리오', '캐릭터 설정', '캐릭터<br>설정', '세계관 구축', '세계관/<br>설정', '캐릭터 디자인', '스토리보드', '콘티', '비주얼 가이드', '초고 집필', '작화', '포맷별 기획', ''].forEach((l) => {
+    assert.strictEqual(clientCategory(l), lib.checklistCategory(String(l).replace(/<br>/g, ' ')), '대상 판단이 서로 달라요: ' + l);
+  });
+  console.log('ok  화면·서버 필수 요소 목록과 대상 판단이 같음');
+
   // 15) 필수 요소 점검 응답 해석
   const storyNames = lib.CHECKLISTS.story.items.map(([name]) => name);
   const sec = (n, yes) => `[자료 ${n}]\n` + storyNames.map((name, i) => `${name}: ${yes.includes(i) ? '있음' : '없음'}`).join('\n');

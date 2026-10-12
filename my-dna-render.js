@@ -1738,6 +1738,7 @@ function ensureStepMaterialOverlay() {
           <input type="number" id="stepMaterialTarget" min="0" max="999">
           <span class="md-step-material-target-hint">예: 시나리오는 총 화수 · 필요 없는 단계는 0</span>
         </div>
+        <details class="md-step-material-checklist" id="stepMaterialChecklist" style="display:none"></details>
         <div class="md-step-material-entries" id="stepMaterialEntries"></div>
         <button type="button" class="md-step-material-add" id="stepMaterialAddBtn">+ 자료 추가</button>
         <button type="button" class="md-step-material-save" id="stepMaterialSave">저장</button>
@@ -1957,6 +1958,22 @@ function openStepMaterialEditor(index) {
 
   stepMaterialWorkingEntries = (step.submissions || []).map((sub) => Object.assign({}, sub));
   renderStepMaterialEntries();
+
+  // 글 항목(시나리오·캐릭터 설정·세계관)이면 올린 자료에서 무엇을 확인하는지 미리 보여줘요.
+  const checklistEl = document.getElementById('stepMaterialChecklist');
+  const category = bearipChecklistCategory(step.label);
+  const checklist = category && BEARIP_CHECKLISTS[category];
+  if (checklistEl) {
+    if (checklist) {
+      checklistEl.style.display = 'block';
+      checklistEl.open = false;
+      checklistEl.innerHTML = `<summary>이 항목에서 확인하는 필수 요소 ${checklist.items.length}개</summary>
+        <p>자료를 올리면 아래 요소가 들어 있는지 확인하고, 빠진 요소의 이름을 알려드려요. 내용이 좋은지는 보지 않아요.</p>
+        <ul>${checklist.items.map(([name, hint]) => `<li><b>${bearipEscapeHtml(name)}</b><span>${bearipEscapeHtml(hint)}</span></li>`).join('')}</ul>`;
+    } else {
+      checklistEl.style.display = 'none';
+    }
+  }
 
   const selfDoneBtn = document.getElementById('stepMaterialSelfDone');
   const editorStatus = mdStepStatus(step);
