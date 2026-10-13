@@ -2,10 +2,12 @@
 //   aiAssist : 동의 확인 → 하루 횟수 확인 → 매뉴얼 + 내 IP 정보 + 질문으로 Gemma 호출
 //   aiAdmin  : GM(PIN 확인)만 AI 켜기/끄기와 하루 한도 조정, 계정 PIN 현황·알림·IP 주인 지정
 //   analyzeMaterial : 올린 자료의 필수 요소 점검(빠진 요소 이름만) + 글 항목 준비도 점수 — 작성 완성도·띵킷 분석에 써요
+//   requestSweep : 1시간마다 — 1차 검토가 시작되지 않은 의뢰를 사람에게 넘기고, 오래 기다리는 의뢰를 GM에게 알려요
 //   requestTriage : "의뢰하기"로 들어온 의뢰를 1차로 검토 — 글로 처리할 수 있으면 결과를 바로 내고,
 //                   아니면 관리자 대기열에 그대로 남겨요 (화면에는 누가 처리했는지 드러내지 않아요)
 // 매뉴얼(functions/manuals)은 공개 저장소에 올리지 않고(.gitignore) 배포할 때만 함께 올라가요.
 const { onRequest } = require('firebase-functions/v2/https');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const fs = require('fs');
@@ -434,6 +436,18 @@ async function loadIpContext(ipId) {
   };
 }
 
+// 사람이 봐야 하는 의뢰가 생기면 GM에게 알려요 (알림 목록의 종 아이콘). 오래 쌓이는 걸 막는 핵심이에요.
+async function notifyGm(kind, rec, note) {
+  const who = rec.requesterNickname || '누군가';
+  const label = (kind === 'review' ? rec.stepLabel : rec.label) || '항목';
+  await notifyRequester('GM', {
+    type: kind === 'review' ? 'ip' : 'production',
+    title: '직접 확인이 필요한 의뢰가 있어요',
+    message: `${who}님의 '${rec.ipTitle || '제목 없는 IP'}' · ${label}${note ? ' — ' + lib.clip(note, 80) : ''}`,
+    link: kind === 'review' ? 'ip-reviews.html' : 'production-requests.html',
+  });
+}
+
 async function handleTriage(uid, body, decoded) {
   const nk = decoded && decoded.nk;
   const nick = decoded && decoded.nick;
@@ -459,6 +473,7 @@ async function handleTriage(uid, body, decoded) {
   };
   const handoff = async (note) => {
     await finish({ triage: 'handoff', triageNote: lib.clip(note, 200), triageAt: new Date().toISOString() });
+    await notifyGm(kind, rec, note).catch(() => {}); // 알림이 실패해도 의뢰 처리는 그대로 끝나요
     return { ok: true, outcome: 'handoff' };
   };
 
@@ -476,7 +491,7 @@ async function handleTriage(uid, body, decoded) {
   if (kind === 'review') {
     const subs = lib.submissionsToText(rec.submissions);
     if (subs.readableChars < 40) return handoff('글로 읽을 수 있는 자료가 적어요');
-    userPrompt = lib.buildReviewPrompt(ip, label, rec.requesterNote, subs.text);
+    userPrompt = lib.buildReviewPrompt(ip, label, lib.meaningfulText(rec.requesterNote), subs.text);
   } else {
     let previous = '';
     if (rec.isFollowup) {
@@ -488,7 +503,12 @@ async function handleTriage(uid, body, decoded) {
       previous = prev ? prev.resultText || prev.resultNote : '';
       if (!previous) return handoff('이전 결과가 없는 추가 문의예요');
     }
-    userPrompt = lib.buildProductionPrompt(ip, label, rec.detail, previous, !!rec.isFollowup);
+    // "ㅇ" 같은 의미 없는 메모는 없는 것으로 보고 작품 정보로 처리해요. 작품 정보도 의뢰 내용도 없으면 지어낼 수밖에
+    // 없어서 사람에게 넘겨요.
+    const detail = lib.meaningfulText(rec.detail);
+    const hasIpInfo = !!(ip.logline || ip.synopsis || (ip.genres && ip.genres.length) || (ip.episodes && ip.episodes.length));
+    if (!detail && !previous && !hasIpInfo) return handoff('작품 정보와 의뢰 내용이 모두 부족해요');
+    userPrompt = lib.buildProductionPrompt(ip, label, detail, previous, !!rec.isFollowup);
   }
 
   const date = lib.kstDate();
@@ -627,6 +647,30 @@ async function handleAnalyze(uid, body, decoded) {
   throw new ApiError(400, 'bad_action', '지원하지 않는 요청이에요.');
 }
 
+// 1시간마다: ① 접수 후 15분이 넘도록 1차 검토가 시작되지 않은 의뢰(브라우저를 닫았거나 서버 호출이 실패한 경우)를
+// 사람에게 넘기고 GM에게 알려요 ② 사람이 봐야 하는 의뢰가 하루 넘게 기다리면 하루에 한 번 GM에게 요약 알림을 보내요.
+async function runSweep() {
+  const now = Date.now();
+  const [prodSnap, revSnap, metaSnap] = await Promise.all([db.ref('productionRequests').once('value'), db.ref('ipReviews').once('value'), db.ref('requestSweep').once('value')]);
+  const meta = metaSnap.val() || {};
+  const plan = lib.planSweep(prodSnap.val() || {}, revSnap.val() || {}, now, meta.lastDigestAt);
+  for (const item of plan.stuck) {
+    const path = (item.kind === 'review' ? 'ipReviews/' : 'productionRequests/') + item.id;
+    await db.ref(path).update({ triage: 'handoff', triageNote: '자동 처리를 시작하지 못했어요', triageAt: new Date().toISOString() });
+    await notifyGm(item.kind, item.r, '자동 처리를 시작하지 못했어요').catch(() => {});
+  }
+  if (plan.digest) {
+    await notifyRequester('GM', {
+      type: 'production',
+      title: '처리를 기다리는 의뢰가 있어요',
+      message: `직접 확인이 필요한 의뢰가 ${plan.digest.count}건 대기 중이에요. 가장 오래된 의뢰는 ${plan.digest.oldestDays}일째예요.`,
+      link: 'production-requests.html',
+    });
+    await db.ref('requestSweep/lastDigestAt').set(now);
+  }
+  return { stuck: plan.stuck.length, digest: !!plan.digest };
+}
+
 function makeEndpoint(handler, secrets, opts = {}) {
   const { requireAuth = true, timeoutSeconds = 90 } = opts;
   return onRequest({ region: REGION, secrets, maxInstances: 3, timeoutSeconds, memory: '256MiB' }, async (req, res) => {
@@ -654,6 +698,7 @@ function makeEndpoint(handler, secrets, opts = {}) {
 exports.aiAssist = makeEndpoint(handleAssist, [GEMINI_API_KEY]);
 exports.aiAdmin = makeEndpoint(handleAdmin, []);
 exports.analyzeMaterial = makeEndpoint(handleAnalyze, [GEMINI_API_KEY], { timeoutSeconds: 120 });
+exports.requestSweep = onSchedule({ region: REGION, schedule: 'every 60 minutes', timeZone: 'Asia/Seoul', memory: '256MiB', timeoutSeconds: 120 }, () => runSweep());
 exports.requestTriage = makeEndpoint(handleTriage, [GEMINI_API_KEY], { timeoutSeconds: 120 });
 // 로그인 전에 부르는 함수라 로그인 증표를 요구하지 않아요 — 대신 PIN 5회 실패 잠금이 보호해요.
 exports.authLogin = makeEndpoint(handleAuthLogin, [], { requireAuth: false, timeoutSeconds: 30 });

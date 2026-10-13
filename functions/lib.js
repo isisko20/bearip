@@ -245,6 +245,36 @@ ${clip(detail, 800) || '(따로 적은 내용 없음 — 이 IP 정보를 바탕
 (이 항목의 초안 본문. 소제목과 번호 목록을 써서 1000자 안팎으로. 이 작품의 실제 사건·인물·장면으로 구체적으로)`;
 }
 
+// 의뢰 내용이 "ㅇ", "ㅋㅋ", "..."처럼 아무 정보가 없는 짧은 글이면 없는 것으로 봐요 (작품 정보만으로 처리하게).
+function meaningfulText(value, min = 4) {
+  const text = String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
+  const letters = text.replace(/[^\p{L}\p{N}]/gu, '');
+  if (letters.length < min) return '';
+  if (/^(.)\1*$/u.test(letters)) return ''; // 같은 글자만 반복 (예: ㅋㅋㅋㅋㅋ)
+  return text;
+}
+
+// 1시간마다 도는 점검이 할 일을 계산해요 (순수 함수 — 시험하기 쉽게 분리):
+//   · 접수된 지 15분이 넘도록 1차 검토가 시작되지 않은 의뢰(stuck) → 사람에게 넘겨요
+//   · 사람이 봐야 하는 의뢰가 하루 넘게 기다리고 있으면, 하루에 한 번만 GM에게 요약 알림을 보내요
+const STUCK_MS = 15 * 60 * 1000;
+const DIGEST_MIN_AGE_MS = 24 * 3600 * 1000;
+function planSweep(productionRequests, ipReviews, now, lastDigestAt) {
+  const rows = [];
+  [['production', productionRequests], ['review', ipReviews]].forEach(([kind, map]) => {
+    Object.keys(map || {}).forEach((id) => {
+      const r = map[id];
+      if (r && r.status === 'pending' && !r.trashed) rows.push({ kind, id, r, age: now - new Date(r.requestedAt).getTime() });
+    });
+  });
+  const stuck = rows.filter((x) => x.r.triage === 'queued' && x.age > STUCK_MS).map((x) => ({ kind: x.kind, id: x.id, r: x.r }));
+  const stuckKeys = new Set(stuck.map((x) => x.kind + x.id));
+  const waiting = rows.filter((x) => x.r.triage === 'handoff' || !x.r.triage || stuckKeys.has(x.kind + x.id));
+  const oldest = waiting.reduce((max, x) => Math.max(max, x.age), 0);
+  const due = waiting.length > 0 && oldest >= DIGEST_MIN_AGE_MS && now - (lastDigestAt || 0) >= DIGEST_MIN_AGE_MS;
+  return { stuck, digest: due ? { count: waiting.length, oldestDays: Math.floor(oldest / 86400000) } : null };
+}
+
 // 길이 제한에 걸려도 문장 중간에서 끊기지 않게, 마지막 문장 끝까지만 남겨요.
 function clipToSentence(value, max) {
   const text = String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -431,7 +461,7 @@ function parseScoreReply(text) {
 
 module.exports = {
   CHECKLISTS, checklistCategory, buildCheckSystemPrompt, buildCheckPrompt, parseCheckReply, buildScoreSystemPrompt, buildScorePrompt, parseScoreReply,
-  clipToSentence, isTextWork, submissionsToText, buildTriageSystemPrompt, buildReviewPrompt, buildProductionPrompt, parseTriageReply,
+  meaningfulText, planSweep, clipToSentence, isTextWork, submissionsToText, buildTriageSystemPrompt, buildReviewPrompt, buildProductionPrompt, parseTriageReply,
   kstDate, clip, sanitizeIp, ipToText, buildSystemPrompt, buildUserPrompt, extractAnswer, verifyPin,
   PIN_MIN_LENGTH, MAX_PIN_FAILS, LOCK_MS,
   safeSegment, normalizeNickname, validPin, uidFor, hashPin, makeAccountRecord, isLocked, nextFailState,

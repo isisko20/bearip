@@ -267,6 +267,20 @@ function prWireInvite() {
   });
 }
 
+const prOldestFirst = (a, b) => new Date(a.requestedAt) - new Date(b.requestedAt);
+
+// "검토 대기"와 "직접 확인 필요" 버튼에 건수를 보여줘서 쌓이는 걸 한눈에 알 수 있게 해요.
+function prUpdateFilterCounts(all) {
+  const live = all.filter((r) => !r.trashed && r.status === 'pending');
+  const counts = { pending: live.length, handoff: live.filter((r) => r.triage === 'handoff' || !r.triage).length };
+  Object.keys(counts).forEach((key) => {
+    const btn = document.querySelector(`#prFilterRow [data-filter="${key}"]`);
+    if (!btn) return;
+    if (!btn.dataset.base) btn.dataset.base = btn.textContent.trim();
+    btn.textContent = counts[key] ? `${btn.dataset.base} ${counts[key]}` : btn.dataset.base;
+  });
+}
+
 // 대기 중인 의뢰가 얼마나 오래 기다렸는지 — 하루 이상이면 일수를, 일주일이 넘으면 주황색으로 보여줘요.
 function prAgeBadgeHtml(r) {
   if (r.status !== 'pending' || !r.requestedAt) return '';
@@ -276,7 +290,7 @@ function prAgeBadgeHtml(r) {
 }
 
 function prPendingSummaryHtml(rows) {
-  if (prActiveFilter !== 'pending' || !rows.length) return '';
+  if ((prActiveFilter !== 'pending' && prActiveFilter !== 'handoff') || !rows.length) return '';
   const oldest = rows.reduce((a, b) => (new Date(a.requestedAt) < new Date(b.requestedAt) ? a : b));
   const days = Math.max(0, Math.floor((Date.now() - new Date(oldest.requestedAt).getTime()) / 86400000));
   const stale = rows.filter((r) => Date.now() - new Date(r.requestedAt).getTime() >= 7 * 86400000).length;
@@ -495,9 +509,12 @@ function prRenderList() {
       ? all.filter((r) => r.trashed)
       : prActiveFilter === 'all'
         ? all.filter((r) => !r.trashed)
-        : all
-            .filter((r) => !r.trashed && r.status === prActiveFilter)
-            .sort((a, b) => (prActiveFilter === 'pending' ? new Date(a.requestedAt) - new Date(b.requestedAt) : 0));
+        : prActiveFilter === 'handoff'
+          ? all.filter((r) => !r.trashed && r.status === 'pending' && (r.triage === 'handoff' || !r.triage)).sort(prOldestFirst)
+          : prActiveFilter === 'auto'
+            ? all.filter((r) => !r.trashed && r.handledBy === 'auto')
+            : all.filter((r) => !r.trashed && r.status === prActiveFilter).sort(prActiveFilter === 'pending' ? prOldestFirst : () => 0);
+  prUpdateFilterCounts(all);
 
   if (!filtered.length) {
     list.innerHTML = '';
@@ -799,5 +816,20 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('prAiSave').addEventListener('click', () => prAiRequest('set'));
 
   const scanBtn = document.getElementById('prCleanupScanBtn');
-  if (scanBtn) scanBtn.addEventListener('click', () => prRenderCleanupResult(bearipScanOrphans()));
+  if (scanBtn) {
+    scanBtn.addEventListener('click', async () => {
+      // 검토 대기열은 이 화면에서 구독하지 않아서 점검할 때 한 번만 읽어 와요 (용량이 커요)
+      scanBtn.disabled = true;
+      scanBtn.textContent = '불러오는 중...';
+      try {
+        await bearipEnsureQueues();
+        prRenderCleanupResult(bearipScanOrphans());
+      } catch (e) {
+        bearipShowToast('점검에 필요한 데이터를 불러오지 못했어요');
+      } finally {
+        scanBtn.disabled = false;
+        scanBtn.textContent = '점검하기';
+      }
+    });
+  }
 });

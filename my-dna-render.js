@@ -1022,7 +1022,7 @@ function ensureProductionRequestOverlay() {
         </button>
       </div>
       <p class="md-production-request-desc" id="productionRequestDesc"></p>
-      <label class="md-production-request-detail-label" for="productionRequestDetail">의뢰 내용 (선택)</label>
+      <label class="md-production-request-detail-label" for="productionRequestDetail">의뢰 내용 (선택) — 구체적으로 적을수록 좋은 결과가 나와요</label>
       <textarea id="productionRequestDetail" class="md-production-request-detail" placeholder="원하는 스타일, 참고 자료, 꼭 반영됐으면 하는 부분 등을 자유롭게 적어주세요."></textarea>
       <div class="md-production-request-price">
         <span class="lbl">결제 크레딧</span>
@@ -2155,7 +2155,7 @@ function ensureExpertReviewRequestOverlay() {
         </button>
       </div>
       <p class="md-production-request-desc" id="expertReviewRequestDesc"></p>
-      <label class="md-production-request-detail-label" for="expertReviewRequestDetail">의뢰 내용 (선택)</label>
+      <label class="md-production-request-detail-label" for="expertReviewRequestDetail">의뢰 내용 (선택) — 구체적으로 적을수록 좋은 결과가 나와요</label>
       <textarea id="expertReviewRequestDetail" class="md-production-request-detail" placeholder="특히 봐줬으면 하는 부분, 고민되는 지점 등을 자유롭게 적어주세요."></textarea>
       <div class="md-production-request-price">
         <span class="lbl">결제 크레딧</span>

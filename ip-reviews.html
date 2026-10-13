@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="production-requests.css">
 <link rel="stylesheet" href="ip-reviews.css">
 </head>
-<body>
+<body data-gm-queues="ipReviews">
 <div class="dna-app">
 
   <!-- ===================== Sidebar ===================== -->
@@ -135,6 +135,8 @@
     <div class="pr-filter-row" id="irFilterRow">
       <button type="button" class="pr-filter-btn active" data-filter="all">전체</button>
       <button type="button" class="pr-filter-btn" data-filter="pending">검토 대기</button>
+      <button type="button" class="pr-filter-btn" data-filter="handoff">직접 확인 필요</button>
+      <button type="button" class="pr-filter-btn" data-filter="auto">자동 처리됨</button>
       <button type="button" class="pr-filter-btn" data-filter="reviewed">전문가 진단 완료</button>
       <button type="button" class="pr-filter-btn" data-filter="trash">휴지통</button>
     </div>

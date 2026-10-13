@@ -61,6 +61,7 @@ const fakes = {
     }),
   },
   'firebase-functions/v2/https': { onRequest: (_opts, handler) => handler },
+  'firebase-functions/v2/scheduler': { onSchedule: (_opts, handler) => handler },
   'firebase-functions/params': { defineSecret: () => ({ value: () => 'FAKE-KEY' }) },
 };
 const realLoad = Module._load;
@@ -465,8 +466,74 @@ const IP = { title: '테스트 작품', goal: '웹툰', genres: ['판타지'], l
   const sangwook = Object.values(getAt('notifications/상욱') || {});
   assert.strictEqual(sangwook.length, 1, '결과 알림은 의뢰한 사람에게 가요');
   assert.strictEqual(sangwook[0].title, '의뢰 결과가 도착했어요');
-  assert.strictEqual(getAt('notifications/GM'), undefined, 'GM에게는 알림이 가지 않아요');
+  assert.ok(!Object.values(getAt('notifications/GM') || {}).some((x) => x.title === '의뢰 결과가 도착했어요'), 'GM에게는 결과 알림이 가지 않아요');
   console.log('ok  GM이 옛 의뢰를 자동 처리 (작품 정보 조회, 알림은 의뢰자에게)');
+
+  // ================= 인계 알림 · 짧은 메모 · 점검 =================
+  const gmNotifs = () => Object.values(getAt('notifications/GM') || {});
+  const gmBefore = gmNotifs().length;
+
+  // 28) 사람에게 넘어가면 GM에게 알림이 가요 (제작/검토 링크가 달라요)
+  id = legacy({ key: 'art', label: '작화', price: 90 });
+  await gmTriage({ kind: 'production', id });
+  let notes = gmNotifs();
+  assert.strictEqual(notes.length, gmBefore + 1);
+  const last = notes.sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt))).pop();
+  assert.deepStrictEqual([last.title, last.link, last.read], ['직접 확인이 필요한 의뢰가 있어요', 'production-requests.html', false]);
+  assert.ok(last.message.includes('상욱님') && last.message.includes('작화') && last.message.includes('글로 처리하기 어려운'));
+  id = newReview({ stepKey: 'art', stepLabel: '작화', submissions: [{ label: 'a', note: NOTE }] });
+  await call('tok_tester', { kind: 'review', id, ip: IP });
+  const reviewNote = gmNotifs().find((x) => x.link === 'ip-reviews.html');
+  assert.ok(reviewNote, '검토 의뢰가 넘어가면 IP 심사 화면으로 연결돼요');
+  console.log('ok  인계되면 GM에게 알림 (제작/검토 링크 구분)');
+
+  // 29) 의미 없는 짧은 메모("ㅇ")는 없는 것으로 보고 작품 정보로 처리, 정보가 전혀 없으면 사람에게
+  ['ㅇ', 'ㅋㅋㅋㅋㅋ', '...', '  '].forEach((v) => assert.strictEqual(lib.meaningfulText(v), '', JSON.stringify(v)));
+  assert.strictEqual(lib.meaningfulText('주인공 설정을 짧게'), '주인공 설정을 짧게');
+  fetchCalls = [];
+  nextReply = () => DRAFT_OK;
+  id = legacy({ detail: 'ㅇ' });
+  r = await gmTriage({ kind: 'production', id });
+  assert.strictEqual(r.body.outcome, 'handled', '메모가 "ㅇ"이어도 작품 정보로 초안을 써요');
+  assert.ok(fetchCalls[0].user.includes('따로 적은 내용 없음') && !fetchCalls[0].user.includes('[의뢰 내용]\nㅇ'));
+  const callsBeforeEmpty = fetchCalls.length;
+  id = legacy({ detail: 'ㅇ', ipId: 'ip_blank' });
+  setAt('allIPs/ip_blank', { title: '뭘만들까요', goal: 'webnovel', ownerNickname: '상욱' });
+  r = await gmTriage({ kind: 'production', id });
+  rec = getAt('productionRequests/' + id);
+  assert.deepStrictEqual([r.body.outcome, rec.triage, rec.triageNote], ['handoff', 'handoff', '작품 정보와 의뢰 내용이 모두 부족해요']);
+  assert.strictEqual(fetchCalls.length, callsBeforeEmpty, '지어낼 수밖에 없으면 AI를 부르지 않아요');
+  console.log('ok  짧은 메모 처리 (작품 정보로 진행 / 정보 없으면 인계)');
+
+  // 30) 1시간 점검: 시작 못 한 의뢰는 사람에게, 오래 기다리는 의뢰는 하루 한 번만 요약 알림
+  const sweep = fns.requestSweep;
+  const old = new Date(Date.now() - 40 * 60 * 1000).toISOString();
+  const fresh = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+  const stuckId = newProd({ triage: 'queued', requestedAt: old });
+  const freshId = newProd({ triage: 'queued', requestedAt: fresh });
+  setAt('requestSweep/lastDigestAt', Date.now()); // 앞선 시험이 남긴 오래된 의뢰 때문에 요약 알림이 끼어들지 않게
+  const before30 = gmNotifs().length;
+  await sweep();
+  assert.deepStrictEqual([getAt('productionRequests/' + stuckId + '/triage'), getAt('productionRequests/' + stuckId + '/triageNote')], ['handoff', '자동 처리를 시작하지 못했어요']);
+  assert.strictEqual(getAt('productionRequests/' + freshId + '/triage'), 'queued', '방금 접수한 의뢰는 건드리지 않아요');
+  assert.strictEqual(gmNotifs().length, before30 + 1, '시작 못 한 의뢰마다 GM에게 알림');
+  // 오래 기다리는 의뢰(2일 전, 인계됨)가 있으면 요약 알림 1회, 같은 날 다시 돌아도 또 보내지 않아요
+  const waitingId = newProd({ triage: 'handoff', requestedAt: new Date(Date.now() - 2 * 86400000).toISOString() });
+  setAt('requestSweep/lastDigestAt', 0);
+  const before30b = gmNotifs().length;
+  await sweep();
+  const digest = gmNotifs().filter((x) => x.title === '처리를 기다리는 의뢰가 있어요');
+  assert.strictEqual(digest.length, 1);
+  assert.ok(/\d+건/.test(digest[0].message) && /\d+일째/.test(digest[0].message));
+  assert.strictEqual(gmNotifs().length, before30b + 1);
+  await sweep();
+  assert.strictEqual(gmNotifs().filter((x) => x.title === '처리를 기다리는 의뢰가 있어요').length, 1, '하루에 한 번만');
+  setAt('requestSweep/lastDigestAt', Date.now() - 25 * 3600 * 1000);
+  await sweep();
+  assert.strictEqual(gmNotifs().filter((x) => x.title === '처리를 기다리는 의뢰가 있어요').length, 2, '하루가 지나면 다시 알려요');
+  // 순수 계산: 대기 중이 없으면 아무것도 하지 않아요
+  assert.deepStrictEqual(lib.planSweep({}, {}, Date.now(), 0), { stuck: [], digest: null });
+  console.log('ok  1시간 점검 (시작 못 한 의뢰 인계·GM 알림·하루 한 번 요약)');
 
   // 27) 이미 처리·인계된 의뢰, 그림 항목, 같은 의뢰 반복
   r = await gmTriage({ kind: 'production', id });

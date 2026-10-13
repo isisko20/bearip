@@ -157,7 +157,12 @@ function irRenderList() {
       ? all.filter((r) => r.trashed)
       : irActiveFilter === 'all'
         ? all.filter((r) => !r.trashed)
-        : all.filter((r) => !r.trashed && r.status === irActiveFilter);
+        : irActiveFilter === 'handoff'
+          ? all.filter((r) => !r.trashed && r.status === 'pending' && (r.triage === 'handoff' || !r.triage))
+          : irActiveFilter === 'auto'
+            ? all.filter((r) => !r.trashed && r.handledBy === 'auto')
+            : all.filter((r) => !r.trashed && r.status === irActiveFilter);
+  irUpdateFilterCounts(all);
 
   if (!filtered.length) {
     list.innerHTML = '';
@@ -422,6 +427,18 @@ function irApplyReview(req, progress, needsRevision, comment, resultFile, result
 
   irRenderList();
   bearipShowToast('검토 결과를 저장했어요');
+}
+
+// "검토 대기"와 "직접 확인 필요" 버튼에 건수를 보여줘요.
+function irUpdateFilterCounts(all) {
+  const live = all.filter((r) => !r.trashed && r.status === 'pending');
+  const counts = { pending: live.length, handoff: live.filter((r) => r.triage === 'handoff' || !r.triage).length };
+  Object.keys(counts).forEach((key) => {
+    const btn = document.querySelector(`#irFilterRow [data-filter="${key}"]`);
+    if (!btn) return;
+    if (!btn.dataset.base) btn.dataset.base = btn.textContent.trim();
+    btn.textContent = counts[key] ? `${btn.dataset.base} ${counts[key]}` : btn.dataset.base;
+  });
 }
 
 document.getElementById('irFilterRow').addEventListener('click', (e) => {

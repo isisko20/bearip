@@ -3289,6 +3289,23 @@ function bearipDeleteAssetFile(id) {
 // global queues GM (or any viewer) needs to see in full. Run once per page
 // load — nickname changes always go through a full page reload (see
 // bearipSetUser's callers), so there's no live-switch case to handle here.
+const _bearipQueueWatched = {};
+
+// 구독하지 않은 대기열이 필요할 때(예: 고아 데이터 점검) 한 번만 읽어 와요 — 용량이 커서 눌렀을 때만 불러요.
+function bearipEnsureQueues(kinds) {
+  return Promise.all(
+    (kinds || ['productionRequests', 'ipReviews']).map((kind) => {
+      if (_bearipQueueWatched[kind]) return null;
+      return _bearipWhenFirebaseAuthed()
+        .then(() => firebase.database().ref(kind).once('value'))
+        .then((snap) => {
+          _bearipDataCache[kind] = snap.val() || {};
+          _bearipDataLoaded[kind] = true;
+        });
+    })
+  );
+}
+
 function _bearipStartFirebaseWatchers() {
   _bearipWatchPath('notifications', bearipNotificationsPath());
   const _u = bearipGetUser();
@@ -3296,9 +3313,17 @@ function _bearipStartFirebaseWatchers() {
   // 제작요청·전문가 검토는 GM만 전체가 필요해요. 일반 사용자는 내가 요청한 것만
   // 받아요 (예전엔 모두가 남의 것까지 통째로 내려받아서 페이지마다 7MB가 넘었어요).
   // 로그인하지 않은 방문자는 볼 일이 없으니 구독하지 않고 "불러옴"으로만 표시해요.
+  // GM도 두 대기열을 어느 화면에서나 구독하지 않아요 — 첨부 파일까지 통째로 내려와서(검토 6MB+, 제작 1.5MB) 매번 받으면 너무
+  // 무거워요. 목록이 필요한 화면(제작요청 관리·IP 심사 관리)만 <body data-gm-queues="...">로 필요한 대기열을 알려요.
+  const _gmQueues = ((document.body && document.body.dataset.gmQueues) || '').split(',');
   ['productionRequests', 'ipReviews'].forEach((kind) => {
-    if (_isGm) _bearipWatchPath(kind, kind);
-    else if (_u && _u.nickname) _bearipWatchQuery(kind, kind, 'requesterNickname', _u.nickname);
+    if (_isGm && !_gmQueues.includes(kind)) {
+      _bearipDataLoaded[kind] = true;
+      _bearipNotifyListeners(kind);
+    } else if (_isGm) {
+      _bearipQueueWatched[kind] = true;
+      _bearipWatchPath(kind, kind);
+    } else if (_u && _u.nickname) _bearipWatchQuery(kind, kind, 'requesterNickname', _u.nickname);
     else {
       _bearipDataLoaded[kind] = true;
       _bearipNotifyListeners(kind);
