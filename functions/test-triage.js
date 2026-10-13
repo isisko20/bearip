@@ -441,6 +441,47 @@ const IP = { title: '테스트 작품', goal: '웹툰', genres: ['판타지'], l
   assert.strictEqual(a.body.ownerless.length, 0);
   console.log('ok  주인 없는 IP 주인 지정');
 
+  // ================= GM이 옛 의뢰를 자동 처리로 넘기기 =================
+  tokens.tok_gm = { uid: 'u_gm', nk: 'GM', nick: 'GM' };
+  const gmTriage = (body) => call('tok_gm', body);
+  setAt('allIPs/ip_legacy', { title: '옛 의뢰의 작품', goal: 'webtoon', genres: ['판타지'], logline: '시간을 되돌리는 소녀', ownerNickname: '상욱' });
+  const legacy = (over) => {
+    const id = 'preq_legacy' + ++n;
+    setAt('productionRequests/' + id, Object.assign({ ipId: 'ip_legacy', ipTitle: '옛 의뢰의 작품', requesterNickname: '상욱', scope: 'roadmap', key: 'story', label: '스토리 기획', price: 40, detail: '초안을 부탁해요', requestedAt: '2026-09-23T01:00:00.000Z', status: 'pending' }, over));
+    return id;
+  };
+
+  // 26) 일반 사용자는 triage 표시가 없는 옛 의뢰를 처리할 수 없고, GM만 가능해요 (AI가 작품 정보를 직접 읽어와요)
+  fetchCalls = [];
+  nextReply = () => DRAFT_OK;
+  id = legacy();
+  r = await call('tok_tester', { kind: 'production', id, ip: IP });
+  assert.deepStrictEqual([r.code, r.body.error], [403, 'not_yours']);
+  r = await gmTriage({ kind: 'production', id });
+  assert.deepStrictEqual([r.code, r.body.outcome], [200, 'handled']);
+  rec = getAt('productionRequests/' + id);
+  assert.deepStrictEqual([rec.status, rec.handledBy, rec.triage], ['done', 'auto', 'handled']);
+  assert.ok(fetchCalls[0].user.includes('제목: 옛 의뢰의 작품') && fetchCalls[0].user.includes('목표 포맷: 웹툰') && fetchCalls[0].user.includes('시간을 되돌리는 소녀'), '작품 정보를 allIPs에서 읽어와요');
+  const sangwook = Object.values(getAt('notifications/상욱') || {});
+  assert.strictEqual(sangwook.length, 1, '결과 알림은 의뢰한 사람에게 가요');
+  assert.strictEqual(sangwook[0].title, '의뢰 결과가 도착했어요');
+  assert.strictEqual(getAt('notifications/GM'), undefined, 'GM에게는 알림이 가지 않아요');
+  console.log('ok  GM이 옛 의뢰를 자동 처리 (작품 정보 조회, 알림은 의뢰자에게)');
+
+  // 27) 이미 처리·인계된 의뢰, 그림 항목, 같은 의뢰 반복
+  r = await gmTriage({ kind: 'production', id });
+  assert.deepStrictEqual([r.body.outcome, r.body.reason], ['skipped', 'not_queued']);
+  id = legacy({ key: 'art', label: '작화', price: 90 });
+  r = await gmTriage({ kind: 'production', id });
+  rec = getAt('productionRequests/' + id);
+  assert.deepStrictEqual([r.body.outcome, rec.status, rec.triage], ['handoff', 'pending', 'handoff']);
+  assert.ok(rec.triageNote.includes('글로 처리하기 어려운'));
+  r = await gmTriage({ kind: 'production', id });
+  assert.deepStrictEqual([r.body.outcome, r.body.reason], ['skipped', 'not_queued'], '인계된 의뢰를 다시 AI에 보내지 않아요');
+  id = legacy({ status: 'done' });
+  assert.strictEqual((await gmTriage({ kind: 'production', id })).body.reason, 'not_queued');
+  console.log('ok  GM 처리 후 재요청·그림 항목·이미 끝난 의뢰');
+
   console.log('\n전부 통과');
 })().catch((e) => {
   console.error('FAIL:', e.stack || e.message);

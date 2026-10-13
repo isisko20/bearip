@@ -210,6 +210,40 @@ async function prAiRequest(action) {
   }
 }
 
+// 대기 중인 의뢰가 얼마나 오래 기다렸는지 — 하루 이상이면 일수를, 일주일이 넘으면 주황색으로 보여줘요.
+function prAgeBadgeHtml(r) {
+  if (r.status !== 'pending' || !r.requestedAt) return '';
+  const days = Math.floor((Date.now() - new Date(r.requestedAt).getTime()) / 86400000);
+  if (!(days >= 1)) return '<span class="pr-age">오늘 접수</span>';
+  return `<span class="pr-age${days >= 7 ? ' old' : ''}">${days}일째 대기</span>`;
+}
+
+function prPendingSummaryHtml(rows) {
+  if (prActiveFilter !== 'pending' || !rows.length) return '';
+  const oldest = rows.reduce((a, b) => (new Date(a.requestedAt) < new Date(b.requestedAt) ? a : b));
+  const days = Math.max(0, Math.floor((Date.now() - new Date(oldest.requestedAt).getTime()) / 86400000));
+  const stale = rows.filter((r) => Date.now() - new Date(r.requestedAt).getTime() >= 7 * 86400000).length;
+  return `<div class="pr-pending-summary">대기 중 <b>${rows.length}건</b> · 가장 오래된 의뢰는 <b>${days}일째</b>예요${stale ? ` · 일주일 넘게 기다린 의뢰 <b>${stale}건</b>` : ''} (오래된 순으로 보여줘요)</div>`;
+}
+
+// 자동 처리가 생기기 전에 접수된 옛 의뢰를 서버의 1차 검토에 넘겨요 — 글로 처리할 수 있으면 결과를 바로 의뢰한
+// 사람에게 전달하고, 어려우면 그대로 두고 "직접 확인 필요"로 표시해요 (어느 쪽이든 의뢰는 사라지지 않아요).
+async function prTryAutoHandle(btn) {
+  if (!confirm('이 의뢰를 자동 처리해 볼까요?\n글로 처리할 수 있으면 결과가 바로 의뢰한 분께 전달돼요. 어려우면 그대로 두고 직접 확인이 필요하다고 표시해요.')) return;
+  btn.disabled = true;
+  btn.textContent = '처리 중...';
+  try {
+    const data = await bearipAiCall('triage', { kind: 'production', id: btn.dataset.id });
+    if (data.outcome === 'handled') bearipShowToast('자동 처리했어요. 결과는 카드에서 확인할 수 있어요');
+    else if (data.outcome === 'handoff') bearipShowToast('글로 처리하기 어려워서 직접 확인이 필요하다고 표시했어요');
+    else bearipShowToast('이미 처리했거나 처리 중인 의뢰예요');
+  } catch (e) {
+    bearipShowToast(e.message || '자동 처리하지 못했어요');
+    btn.disabled = false;
+    btn.textContent = '자동 처리 시도';
+  }
+}
+
 // 계정 PIN 현황 — 소유자 전용 규칙을 켜기 전에 "모두 PIN이 있고 주인 없는 IP가 없는지" 확인해요.
 // 서버(aiAdmin)가 GM PIN을 확인하고, 계정 기록은 닉네임과 "설정했는지"만 내려와요.
 let prAcctState = null;
@@ -404,7 +438,9 @@ function prRenderList() {
       ? all.filter((r) => r.trashed)
       : prActiveFilter === 'all'
         ? all.filter((r) => !r.trashed)
-        : all.filter((r) => !r.trashed && r.status === prActiveFilter);
+        : all
+            .filter((r) => !r.trashed && r.status === prActiveFilter)
+            .sort((a, b) => (prActiveFilter === 'pending' ? new Date(a.requestedAt) - new Date(b.requestedAt) : 0));
 
   if (!filtered.length) {
     list.innerHTML = '';
@@ -423,7 +459,7 @@ function prRenderList() {
   list.style.display = 'flex';
   empty.style.display = 'none';
 
-  list.innerHTML = filtered
+  list.innerHTML = prPendingSummaryHtml(filtered) + filtered
     .map(
       (r) => `
     <div class="pr-card">
@@ -433,7 +469,7 @@ function prRenderList() {
       </div>
       <div class="pr-card-label">${bearipEscapeHtml(r.label)}</div>
       ${bearipTriageBadgeHtml(r)}
-      <div class="pr-card-meta"><span>${r.isFollowup ? '추가문의' : r.price + 'C'}</span><span>${prFormatRelativeTime(r.requestedAt)}</span></div>
+      <div class="pr-card-meta"><span>${r.isFollowup ? '추가문의' : r.price + 'C'}</span><span>${prFormatRelativeTime(r.requestedAt)}</span>${prAgeBadgeHtml(r)}</div>
       ${r.detail ? `<div class="pr-card-detail">"${bearipEscapeHtml(r.detail)}"</div>` : ''}
       ${r.resultNote ? `<div class="pr-card-result"><span>완료 메모</span>${bearipEscapeHtml(r.resultNote)}</div>` : ''}
       ${r.resultText ? `<div class="pr-card-result pr-card-result-text"><span>전달된 결과</span>${bearipEscapeHtml(r.resultText)}</div>` : ''}
@@ -443,7 +479,8 @@ function prRenderList() {
           ? `<div class="pr-card-actions">
                <button type="button" class="pr-complete-btn" data-id="${r.id}">업로드</button>
                <button type="button" class="pr-reject-btn" data-id="${r.id}">피드백</button>
-             </div>`
+             </div>
+             ${r.triage ? '' : `<div class="pr-card-actions"><button type="button" class="pr-auto-btn" data-id="${r.id}">자동 처리 시도</button></div>`}`
           : r.trashed
             ? `<div class="pr-card-actions">
                  <button type="button" class="pr-restore-btn" data-id="${r.id}">복구</button>
@@ -458,6 +495,9 @@ function prRenderList() {
     )
     .join('');
 
+  list.querySelectorAll('.pr-auto-btn').forEach((btn) => {
+    btn.addEventListener('click', () => prTryAutoHandle(btn));
+  });
   list.querySelectorAll('.pr-complete-btn').forEach((btn) => {
     btn.addEventListener('click', () => prOpenAction(btn.dataset.id, 'done'));
   });

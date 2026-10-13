@@ -418,6 +418,22 @@ async function notifyRequester(nk, record) {
   await db.ref(`notifications/${nk}/${id}`).set(Object.assign({ read: false, createdAt: new Date().toISOString(), link: 'my-dna.html' }, record));
 }
 
+// GM이 이미 접수된 옛 의뢰(자동 처리가 생기기 전에 들어온)를 대신 넘길 때, 요청자가 브라우저에서 보내주던
+// 작품 정보가 없어서 서버가 allIPs에서 직접 읽어와요.
+const GOAL_LABEL = { webnovel: '웹소설', webtoon: '웹툰', video: '영상', multi: '멀티포맷' };
+async function loadIpContext(ipId) {
+  if (typeof ipId !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(ipId)) return {};
+  const ip = (await db.ref('allIPs/' + ipId).once('value')).val() || {};
+  return {
+    title: ip.title,
+    goal: GOAL_LABEL[ip.goal] || ip.goal,
+    genres: ip.genres,
+    logline: ip.logline,
+    synopsis: ip.synopsis,
+    episodes: (Array.isArray(ip.episodes) ? ip.episodes : Object.values(ip.episodes || {})).map((e) => e && e.title).filter(Boolean),
+  };
+}
+
 async function handleTriage(uid, body, decoded) {
   const nk = decoded && decoded.nk;
   const nick = decoded && decoded.nick;
@@ -429,8 +445,12 @@ async function handleTriage(uid, body, decoded) {
   const ref = db.ref((kind === 'review' ? 'ipReviews/' : 'productionRequests/') + id);
   const rec = (await ref.once('value')).val();
   if (!rec) return { ok: true, outcome: 'skipped', reason: 'not_found' };
-  if (rec.requesterNickname !== nick) throw new ApiError(403, 'not_yours', '내가 한 의뢰만 처리할 수 있어요.');
-  if (rec.status !== 'pending' || rec.triage !== 'queued') return { ok: true, outcome: 'skipped', reason: 'not_queued' };
+  // GM은 다른 사람의 의뢰도, 자동 처리가 생기기 전에 접수돼 triage 표시가 없는 옛 의뢰도 넘길 수 있어요.
+  const isGm = nk === 'GM';
+  if (!isGm && rec.requesterNickname !== nick) throw new ApiError(403, 'not_yours', '내가 한 의뢰만 처리할 수 있어요.');
+  if (rec.status !== 'pending' || (rec.triage !== 'queued' && !(isGm && !rec.triage))) return { ok: true, outcome: 'skipped', reason: 'not_queued' };
+  // 결과 알림은 항상 의뢰한 사람에게 가요 (GM이 눌러도 GM에게 가지 않아요).
+  const targetNk = lib.safeSegment(rec.requesterNickname);
   if (!(await claimTriage(id))) return { ok: true, outcome: 'skipped', reason: 'in_progress' };
 
   const finish = async (patch) => {
@@ -450,7 +470,8 @@ async function handleTriage(uid, body, decoded) {
   const key = kind === 'review' ? rec.stepKey : rec.key;
   if (!lib.isTextWork(scope, key, label)) return handoff('글로 처리하기 어려운 항목이에요');
 
-  const ip = lib.sanitizeIp(body.ip);
+  const sent = body.ip && typeof body.ip === 'object' && Object.keys(body.ip).length ? body.ip : await loadIpContext(rec.ipId);
+  const ip = lib.sanitizeIp(sent);
   let userPrompt;
   if (kind === 'review') {
     const subs = lib.submissionsToText(rec.submissions);
@@ -500,14 +521,14 @@ async function handleTriage(uid, body, decoded) {
   const title = rec.ipTitle || '제목 없는 IP';
   if (kind === 'review') {
     await finish(Object.assign(base, { status: 'reviewed', adminProgress: parsed.adminProgress, adminComment: parsed.adminComment, needsRevision: parsed.needsRevision, reviewedAt: now }));
-    await notifyRequester(nk, {
+    await notifyRequester(targetNk, {
       type: 'ip',
       title: '의뢰 결과가 도착했어요',
       message: `'${title}'의 '${label}' 항목이 ${parsed.adminProgress}%로 진단됐어요.${parsed.needsRevision ? ' 보완이 필요해요.' : ''} "${parsed.adminComment.slice(0, 120)}"`,
     });
   } else {
     await finish(Object.assign(base, { status: 'done', resultNote: parsed.resultNote || '', resultText: parsed.resultText }));
-    await notifyRequester(nk, {
+    await notifyRequester(targetNk, {
       type: 'production',
       title: '의뢰 결과가 도착했어요',
       message: `'${title}'의 '${label}' 의뢰가 완료됐어요. 결과를 확인해보세요.${parsed.resultNote ? ' ' + parsed.resultNote : ''}`,
