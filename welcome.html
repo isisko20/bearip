@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#6a3fd6">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Thinkit">
+<meta property="og:title" content="Thinkit — 친구들과 IP를 같이 만들어요">
+<meta property="og:description" content="아이디어를 IP로 키우는 공간. 설치부터 첫 사용까지 1분 안내.">
+<title>Thinkit — 시작하기</title>
+<style>
+  :root { --bg:#f6f6fb; --panel:#fff; --ink:#201d33; --soft:#6b6781; --line:#e9e7f3; --purple:#6d4de6; --tint:#efeaff; --warn-bg:#fff3e0; --warn-ink:#8a4d0e; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14121f; --panel:#1e1b2e; --ink:#f2f0fa; --soft:#a9a4c0; --line:#322e47; --tint:#2a2447; --warn-bg:#3a2a14; --warn-ink:#f1c27d; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; line-height:1.65; word-break:keep-all; }
+  .wrap { max-width:560px; margin:0 auto; padding:28px 16px 56px; }
+  .brand { display:flex; align-items:center; gap:10px; font-weight:800; font-size:18px; margin-bottom:22px; }
+  .brand img { width:34px; height:34px; border-radius:9px; }
+  h1 { font-size:26px; line-height:1.35; margin:0 0 10px; }
+  .lead { color:var(--soft); font-size:15px; margin:0 0 20px; }
+  .cta { display:block; width:100%; padding:15px; border:none; border-radius:14px; background:var(--purple); color:#fff; font:inherit; font-size:16px; font-weight:800; text-align:center; text-decoration:none; cursor:pointer; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:20px 18px; margin-top:16px; }
+  .card h2 { font-size:17px; margin:0 0 4px; display:flex; align-items:center; gap:8px; }
+  .num { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:var(--purple); color:#fff; font-size:13px; font-weight:800; flex-shrink:0; }
+  .sub { color:var(--soft); font-size:13.5px; margin:0 0 12px; }
+  .tabs { display:flex; gap:6px; margin:10px 0 12px; background:var(--bg); padding:4px; border-radius:999px; }
+  .tabs button { flex:1; padding:9px 6px; border:none; border-radius:999px; background:none; color:var(--soft); font:inherit; font-size:13.5px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .tabs button.on { background:var(--purple); color:#fff; }
+  ol { margin:0; padding-left:20px; } ol li { margin-bottom:6px; font-size:14.5px; }
+  .pane { display:none; } .pane.on { display:block; }
+  .note { margin-top:12px; padding:11px 13px; border-radius:12px; background:var(--tint); font-size:13.5px; color:var(--ink); }
+  .warn { background:var(--warn-bg); color:var(--warn-ink); border-radius:14px; padding:14px 15px; margin-bottom:16px; font-size:14px; display:none; }
+  .warn b { display:block; margin-bottom:4px; }
+  .warn button { margin-top:8px; padding:8px 14px; border:none; border-radius:10px; background:var(--warn-ink); color:var(--warn-bg); font:inherit; font-weight:800; cursor:pointer; }
+  .steps { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; }
+  .steps li { display:flex; gap:10px; font-size:14.5px; margin:0; }
+  .steps b { display:block; }
+  .steps span { color:var(--soft); font-size:13.5px; }
+  .foot { text-align:center; color:var(--soft); font-size:13px; margin-top:22px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><img src="assets/icons/icon-192.png" alt=""> Thinkit</div>
+
+  <div class="warn" id="kakaoWarn">
+    <b>지금 카카오톡 안에서 열려 있어요</b>
+    카카오톡 안에서는 앱 설치가 안 돼요. 오른쪽 아래 ⋮ 버튼 → <b style="display:inline">"다른 브라우저로 열기"</b>를 눌러 크롬(안드로이드)이나 사파리(아이폰)로 열어주세요.
+    <br><button type="button" id="copyLink">이 주소 복사하기</button>
+  </div>
+
+  <h1>친구들과 IP를 같이 만들어요</h1>
+  <p class="lead">아이디어를 작품으로 키우는 공간이에요. 설치부터 첫 사용까지 1분이면 돼요.</p>
+  <a class="cta" href="login.html">지금 시작하기</a>
+
+  <div class="card">
+    <h2><span class="num">1</span>앱처럼 설치하기</h2>
+    <p class="sub">홈 화면에 아이콘이 생기고, 주소창 없이 앱처럼 열려요.</p>
+    <div class="tabs" id="deviceTabs">
+      <button type="button" data-d="android">안드로이드</button>
+      <button type="button" data-d="ios">아이폰</button>
+      <button type="button" data-d="pc">PC</button>
+    </div>
+    <div class="pane" data-pane="android">
+      <ol>
+        <li><b>크롬</b>으로 이 주소를 열어요.</li>
+        <li>로그인하면 아래에 뜨는 <b>"설치"</b> 버튼을 눌러요. 안 뜨면 오른쪽 위 ⋮ → <b>"앱 설치"</b>(또는 "홈 화면에 추가")예요.</li>
+        <li>홈 화면의 Thinkit 아이콘으로 열면 끝!</li>
+      </ol>
+    </div>
+    <div class="pane" data-pane="ios">
+      <ol>
+        <li><b>사파리</b>로 이 주소를 열어요. (크롬이나 카카오톡 안에서는 안 돼요.)</li>
+        <li>아래쪽 <b>공유 버튼(□↑)</b> → <b>"홈 화면에 추가"</b>를 눌러요.</li>
+        <li>오른쪽 위 <b>"추가"</b>를 누르면 홈 화면에 아이콘이 생겨요.</li>
+      </ol>
+    </div>
+    <div class="pane" data-pane="pc">
+      <ol>
+        <li><b>크롬</b>이나 <b>엣지</b>로 이 주소를 열어요.</li>
+        <li>주소창 오른쪽 끝의 <b>설치 아이콘(⊕)</b>을 눌러요. 로그인하면 뜨는 "설치" 버튼도 같아요.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="num">2</span>닉네임과 PIN 만들기</h2>
+    <p class="sub">처음 들어오면 닉네임을 정하고 PIN(4자 이상)을 만들어요.</p>
+    <div class="note">
+      <b>PIN</b>은 내 닉네임과 내 작품을 지키는 비밀번호예요. 다른 사람이 내 닉네임을 쓰거나 내 작품을 고치지 못하게 막아줘요.
+      <b>잊어버리면 직접 찾을 수 없으니</b> 꼭 기억해 두세요.
+    </div>
+    <p class="sub" style="margin-top:10px">이미 쓰던 닉네임이라면 "PIN을 설정해 주세요" 안내 창이 떠요. "나중에"보다 지금 설정해 주세요.</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="num">3</span>이렇게 써요</h2>
+    <p class="sub">MY DNA의 개발 맵에서 단계마다 해요. (개발 맵 제목 옆 "사용법"에서 다시 볼 수 있어요.)</p>
+    <ul class="steps">
+      <li><span class="num">①</span><div><b>업로드</b><span>단계마다 내 자료를 올려요. 목표 수량(예: 시나리오 총 몇 화)을 정하고, 필요 없는 단계는 0으로 두세요.</span></div></li>
+      <li><span class="num">②</span><div><b>필수 요소 확인</b><span>시나리오·캐릭터 설정·세계관은 꼭 필요한 요소가 들어 있는지 자동으로 확인하고, 빠진 항목의 이름을 알려줘요.</span></div></li>
+      <li><span class="num">③</span><div><b>작성 완성도 올리기</b><span>빠진 항목을 채워서 다시 저장하면 올라가요.</span></div></li>
+      <li><span class="num">④</span><div><b>띵킷 분석 · 의뢰하기</b><span>100%가 되면 "분석하기"(무료)로 준비도를 받아요. 구체적인 보완 의견이나 제작이 필요하면 "의뢰하기"(크레딧)를 눌러요.</span></div></li>
+    </ul>
+  </div>
+
+  <a class="cta" href="login.html" style="margin-top:20px">지금 시작하기</a>
+  <p class="foot">막히는 게 있으면 운영자에게 카톡으로 알려주세요.</p>
+</div>
+
+<script>
+(function () {
+  var ua = navigator.userAgent || '';
+  var isKakao = /KAKAOTALK/i.test(ua);
+  var isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var isAndroid = /Android/i.test(ua);
+  var device = isIOS ? 'ios' : isAndroid ? 'android' : 'pc';
+
+  function show(d) {
+    document.querySelectorAll('#deviceTabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.d === d); });
+    document.querySelectorAll('.pane').forEach(function (p) { p.classList.toggle('on', p.dataset.pane === d); });
+  }
+  document.querySelectorAll('#deviceTabs button').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.d); }); });
+  show(device);
+
+  if (isKakao) {
+    document.getElementById('kakaoWarn').style.display = 'block';
+    document.getElementById('copyLink').addEventListener('click', function () {
+      var btn = this;
+      var done = function () { btn.textContent = '복사했어요! 크롬/사파리에 붙여넣어 주세요'; };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(location.href).then(done, function () { btn.textContent = '길게 눌러서 주소를 복사해 주세요'; });
+      else btn.textContent = '길게 눌러서 주소를 복사해 주세요';
+    });
+  }
+})();
+</script>
+</body>
+</html>

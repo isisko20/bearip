@@ -26,6 +26,8 @@ function prShowGmLocked() {
   if (errorPanel) errorPanel.style.display = 'none';
   const acctPanel = document.getElementById('prAcctPanel');
   if (acctPanel) acctPanel.style.display = 'none';
+  const invitePanel = document.getElementById('prInvitePanel');
+  if (invitePanel) invitePanel.style.display = 'none';
   if (filterRow) filterRow.style.display = 'none';
   if (list) list.style.display = 'none';
   if (empty) empty.style.display = 'none';
@@ -208,6 +210,61 @@ async function prAiRequest(action) {
   } finally {
     pinInput.value = '';
   }
+}
+
+// 친구 안내문 — 안내 페이지(welcome.html) 링크가 들어간 카톡용 문구. 주소는 지금 열린 사이트 기준으로 만들어요.
+function prInviteUrl() {
+  return new URL('welcome.html', location.href).href;
+}
+
+function prInviteTexts() {
+  const url = prInviteUrl();
+  return {
+    prInviteNew: [
+      'Thinkit에 초대해요 🙂',
+      '친구들과 아이디어를 IP로 같이 키우는 공간이에요.',
+      '',
+      '👉 ' + url,
+      '',
+      '1) 링크를 크롬(안드로이드)이나 사파리(아이폰)로 열어서 "앱으로 설치"',
+      '2) 닉네임 + PIN(4자 이상) 만들기 — PIN은 잊어버리면 못 찾으니 꼭 기억해 주세요',
+      '3) MY DNA 개발 맵에서 "업로드" → 빠진 항목 확인 → 100%가 되면 "분석하기"(무료)',
+      '',
+      '※ 카톡 안에서 열면 설치가 안 돼요. 오른쪽 아래 ⋮ → "다른 브라우저로 열기"를 눌러 주세요.',
+    ].join('\n'),
+    prInviteOld: [
+      'Thinkit 업데이트 안내예요 🙂',
+      '',
+      '1) 내 닉네임을 PIN으로 잠가 주세요 — 앱에 들어가면 뜨는 안내 창에서 설정하면 돼요. (다른 사람이 내 작품을 고치지 못하게 지켜줘요. PIN은 잊어버리면 못 찾으니 꼭 기억해 주세요)',
+      '2) 개발 맵이 바뀌었어요: 업로드하면 빠진 항목을 알려주고, 100%가 되면 "분석하기"(무료)로 준비도를 볼 수 있어요. 개발 맵 제목 옆 "사용법"을 눌러보세요.',
+      '3) 앱처럼 설치할 수도 있어요 (홈 화면에 아이콘)',
+      '',
+      '👉 자세한 안내: ' + url,
+    ].join('\n'),
+  };
+}
+
+function prWireInvite() {
+  const texts = prInviteTexts();
+  Object.keys(texts).forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = texts[id];
+  });
+  document.getElementById('prInvitePanel').addEventListener('click', async (e) => {
+    const copyBtn = e.target.closest('[data-copy]');
+    if (copyBtn) {
+      const el = document.getElementById(copyBtn.dataset.copy);
+      try {
+        await navigator.clipboard.writeText(el.value);
+        bearipShowToast('복사했어요. 카톡에 붙여넣어 보내세요');
+      } catch (err) {
+        el.select();
+        bearipShowToast('자동 복사가 안 돼서 문구를 선택해 뒀어요. 길게 눌러 복사해 주세요');
+      }
+      return;
+    }
+    if (e.target.closest('#prInviteOpen')) window.open(prInviteUrl(), '_blank', 'noopener');
+  });
 }
 
 // 대기 중인 의뢰가 얼마나 오래 기다렸는지 — 하루 이상이면 일수를, 일주일이 넘으면 주황색으로 보여줘요.
@@ -722,6 +779,7 @@ document.addEventListener('DOMContentLoaded', () => {
   prRenderErrors();
   document.getElementById('prErrorReload').addEventListener('click', prRenderErrors);
   document.getElementById('prErrorClearAll').addEventListener('click', prClearAllErrors);
+  prWireInvite();
   document.getElementById('prAcctLoad').addEventListener('click', prAcctLoad);
   document.getElementById('prAcctNudgeAll').addEventListener('click', () => {
     if (!prAcctState) return;

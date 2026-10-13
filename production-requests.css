@@ -227,3 +227,11 @@
 }
 .pr-auto-btn:hover { background: var(--dr-active-bg); }
 .pr-auto-btn:disabled { opacity: 0.6; cursor: default; }
+
+/* 친구 안내문 */
+.pr-invite-label { font-size: 12.5px; font-weight: 800; color: var(--dr-ink); margin: 8px 0 6px; }
+.pr-invite-text {
+  width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--dr-border); background: var(--dr-bg-soft);
+  color: var(--dr-ink); font-family: inherit; font-size: 13px; line-height: 1.6; resize: vertical;
+}
+.pr-invite-text:focus { outline: none; border-color: var(--dr-purple); }
