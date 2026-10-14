@@ -2584,7 +2584,9 @@ function bearipSetUser(user) {
 function bearipLogout() {
   localStorage.removeItem(BEARIP_USER_KEY);
   if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
-    return firebase.auth().signOut().catch(() => {});
+    // 이 기기의 푸시 알림을 이 계정에서 먼저 떼요 (로그아웃하면 DB 권한이 사라져서 그 전에 해야 해요)
+    const detach = window.bearipPush && window.bearipPush.detachDevice ? window.bearipPush.detachDevice().catch(() => {}) : Promise.resolve();
+    return detach.then(() => firebase.auth().signOut()).catch(() => {});
   }
   return Promise.resolve();
 }
@@ -3031,6 +3033,8 @@ function bearipAddNotification(notif, targetNickname) {
   if (!bearipFirebaseReady()) return;
   const id = 'ntf_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
   const record = Object.assign({ read: false, createdAt: new Date().toISOString() }, notif);
+  // 내가 한 일을 나에게 알리는 알림은 폰 푸시로 보내지 않아요 (서버가 self 표시를 보고 건너뛰어요)
+  if (!targetNickname || bearipSafePathSegment(targetNickname) === bearipSafePathSegment(bearipScopeSuffix())) record.self = true;
   _bearipFirebaseWrite(() => firebase.database().ref(bearipNotificationsPath(targetNickname) + '/' + id).set(bearipFirebaseSafe(record)));
 }
 

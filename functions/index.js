@@ -2,12 +2,14 @@
 //   aiAssist : 동의 확인 → 하루 횟수 확인 → 매뉴얼 + 내 IP 정보 + 질문으로 Gemma 호출
 //   aiAdmin  : GM(PIN 확인)만 AI 켜기/끄기와 하루 한도 조정, 계정 PIN 현황·알림·IP 주인 지정
 //   analyzeMaterial : 올린 자료의 필수 요소 점검(빠진 요소 이름만) + 글 항목 준비도 점수 — 작성 완성도·띵킷 분석에 써요
+//   pushOnNotification : 알림이 새로 생기면(서버가 쓴 것이든 GM·다른 사용자가 쓴 것이든) 그 사람의 폰에 푸시 알림을 보내요
 //   requestSweep : 1시간마다 — 1차 검토가 시작되지 않은 의뢰를 사람에게 넘기고, 오래 기다리는 의뢰를 GM에게 알려요
 //   requestTriage : "의뢰하기"로 들어온 의뢰를 1차로 검토 — 글로 처리할 수 있으면 결과를 바로 내고,
 //                   아니면 관리자 대기열에 그대로 남겨요 (화면에는 누가 처리했는지 드러내지 않아요)
 // 매뉴얼(functions/manuals)은 공개 저장소에 올리지 않고(.gitignore) 배포할 때만 함께 올라가요.
 const { onRequest } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { onValueCreated } = require('firebase-functions/v2/database');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const fs = require('fs');
@@ -17,6 +19,10 @@ const lib = require('./lib');
 admin.initializeApp({ databaseURL: 'https://thinkit-ccb2e-default-rtdb.firebaseio.com' });
 const db = admin.database();
 const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
+const VAPID_PRIVATE_KEY = defineSecret('VAPID_PRIVATE_KEY');
+// 공개 키는 비밀이 아니에요 (브라우저가 푸시를 구독할 때 쓰고 app-boot.js에도 같은 값이 있어요). 짝이 되는 비밀 키만 시크릿에 있어요.
+const VAPID_PUBLIC_KEY = 'BEEPHDhiHhGvnVi5-B0brMt7P5Bf7VFNbjJb1Wxod0NvdoR9mhPY_Q5gXwmcHhP78thLa2QenUMjnCPdAQc54Jk';
+const PUSH_PER_HOUR = 20; // 한 사람에게 한 시간에 보내는 푸시 상한 (알림이 한꺼번에 쏟아질 때 폰이 울려대지 않게)
 
 const REGION = 'asia-northeast3';
 const MODEL = 'gemma-4-26b-a4b-it'; // 모델을 바꾸려면 이 한 줄만 고치면 돼요 (예: gemma-4-31b-it — 더 정교하지만 느려요)
@@ -670,6 +676,64 @@ async function runSweep() {
   }
   return { stuck: plan.stuck.length, digest: !!plan.digest };
 }
+
+// 새 알림 한 건을 그 사람의 기기(pushSubs/<닉네임>/*)로 푸시해요. 실패해도 알림 자체에는 영향이 없어요.
+// 이 함수는 알림이 쓰인 뒤에 따로 돌아서, 푸시가 막혀도 종 아이콘 알림은 그대로 와요.
+async function sendPush(nk, id, rec) {
+  const payload = lib.buildPushPayload(rec, id);
+  if (!payload) return { sent: 0, skipped: 'not_pushable' };
+  const subs = (await db.ref('pushSubs/' + nk).once('value')).val() || {};
+  const ids = Object.keys(subs).filter((k) => lib.isValidPushSub(subs[k]));
+  if (!ids.length) return { sent: 0, skipped: 'no_devices' };
+
+  const hour = Math.floor(Date.now() / 3600000);
+  const rate = await db.ref('pushRate/' + nk).transaction((cur) => {
+    if (cur && cur.h === hour && cur.n >= PUSH_PER_HOUR) return undefined;
+    return { h: hour, n: cur && cur.h === hour ? cur.n + 1 : 1 };
+  });
+  if (!rate.committed) return { sent: 0, skipped: 'rate_limited' };
+
+  const webpush = require('web-push');
+  let privateKey = '';
+  try {
+    privateKey = VAPID_PRIVATE_KEY.value();
+  } catch (e) {
+    privateKey = '';
+  }
+  if (!privateKey) return { sent: 0, skipped: 'no_key' };
+  webpush.setVapidDetails('https://isisko20.github.io/bearip/', VAPID_PUBLIC_KEY, privateKey);
+
+  let sent = 0;
+  await Promise.all(
+    ids.map(async (sid) => {
+      try {
+        await webpush.sendNotification({ endpoint: subs[sid].endpoint, keys: subs[sid].keys }, JSON.stringify(payload), { TTL: 86400, urgency: 'normal' });
+        sent++;
+      } catch (e) {
+        // 404·410 = 앱을 지웠거나 알림을 끈 기기 → 목록에서 정리해요. 그 밖의 오류는 다음 알림 때 다시 시도돼요.
+        if (e && (e.statusCode === 404 || e.statusCode === 410)) await db.ref('pushSubs/' + nk + '/' + sid).remove().catch(() => {});
+        else console.error('push failed', e && e.statusCode);
+      }
+    })
+  );
+  return { sent };
+}
+
+// 실시간 DB가 us-central1에 있어서, DB 변경을 듣는 함수는 같은 지역에 있어야 해요.
+exports.pushOnNotification = onValueCreated(
+  { ref: '/notifications/{nk}/{id}', instance: 'thinkit-ccb2e-default-rtdb', region: 'us-central1', secrets: [VAPID_PRIVATE_KEY], memory: '256MiB', timeoutSeconds: 60 },
+  async (event) => {
+    try {
+      const nk = lib.fixPathParam(event.params.nk);
+      const result = await sendPush(nk, event.params.id, event.data && event.data.val());
+      console.log('push', JSON.stringify(result));
+      return result;
+    } catch (e) {
+      console.error('pushOnNotification', e && e.message);
+      return null;
+    }
+  }
+);
 
 function makeEndpoint(handler, secrets, opts = {}) {
   const { requireAuth = true, timeoutSeconds = 90 } = opts;

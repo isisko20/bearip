@@ -214,6 +214,23 @@ const lib = require('./lib');
   assert.ok(ssys.includes('매뉴얼 Q') && ssys.includes('점수: 정수'));
   assert.ok(lib.buildScorePrompt('story', lib.sanitizeIp({ title: '내 작품' }), '스토리', '본문').includes('제목: 내 작품'));
   console.log('ok  점검·점수 프롬프트와 점수 해석');
+  // 17) 폰 푸시 알림: 알려진 푸시 서비스 주소만, 내용은 알림에서 안전하게
+  assert.ok(lib.isPushEndpointOk('https://fcm.googleapis.com/fcm/send/abc'));
+  assert.ok(lib.isPushEndpointOk('https://updates.push.services.mozilla.com/wpush/v2/abc'));
+  assert.ok(lib.isPushEndpointOk('https://web.push.apple.com/QAbc'));
+  assert.ok(lib.isPushEndpointOk('https://wns2-par02p.notify.windows.com/w/?token=x'));
+  ['http://fcm.googleapis.com/x', 'https://evil.example.com/fcm.googleapis.com', 'https://fcm.googleapis.com.evil.com/x', 'https://fcm.googleapis.com:8443/x', 'https://127.0.0.1/x', 'javascript:alert(1)', '', null].forEach((u) => assert.ok(!lib.isPushEndpointOk(u), '막아야 해요: ' + u));
+  const goodSub = { endpoint: 'https://fcm.googleapis.com/fcm/send/abc', keys: { p256dh: 'k', auth: 'a' } };
+  assert.ok(lib.isValidPushSub(goodSub));
+  assert.ok(!lib.isValidPushSub({ endpoint: goodSub.endpoint }) && !lib.isValidPushSub(null) && !lib.isValidPushSub({ endpoint: 'https://x.test/', keys: goodSub.keys }));
+  const pl = lib.buildPushPayload({ title: '의뢰 결과가 도착했어요', message: '가'.repeat(300), link: 'my-dna.html', read: false }, 'ntf_1');
+  assert.deepStrictEqual([pl.title, pl.url, pl.tag, pl.body.length], ['의뢰 결과가 도착했어요', 'my-dna.html', 'ntf_1', 120]);
+  assert.strictEqual(lib.buildPushPayload({ title: '내 일', message: 'x', self: true }, 'a'), null, '내가 한 일을 나에게 알리는 알림은 푸시하지 않아요');
+  assert.strictEqual(lib.buildPushPayload({ title: '읽음', message: 'x', read: true }, 'a'), null);
+  assert.strictEqual(lib.buildPushPayload({ message: '제목 없음' }, 'a'), null);
+  assert.strictEqual(lib.buildPushPayload({ title: 't', message: 'm', link: 'https://evil.example.com/' }, 'a').url, 'notifications.html', '바깥 주소로는 보내지 않아요');
+  assert.strictEqual(lib.buildPushPayload({ title: 't', message: 'm', link: '../x.html' }, 'a').url, 'notifications.html');
+  console.log('ok  푸시 알림 주소 검사·내용 만들기');
   console.log('\n전부 통과');
 })().catch((e) => {
   console.error('FAIL:', e.message);

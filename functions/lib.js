@@ -275,6 +275,39 @@ function planSweep(productionRequests, ipReviews, now, lastDigestAt) {
   return { stuck, digest: due ? { count: waiting.length, oldestDays: Math.floor(oldest / 86400000) } : null };
 }
 
+// ---- 폰 푸시 알림 ----
+// 구독 정보(endpoint)는 브라우저가 알려주는 값이라, 서버가 아무 주소로나 요청을 보내지 않게
+// 알려진 푸시 서비스 주소(크롬·파이어폭스·사파리·엣지)만 허용해요.
+const PUSH_HOSTS = [/(^|\.)fcm\.googleapis\.com$/, /(^|\.)push\.services\.mozilla\.com$/, /(^|\.)push\.apple\.com$/, /(^|\.)notify\.windows\.com$/];
+function isPushEndpointOk(endpoint) {
+  try {
+    const u = new URL(String(endpoint));
+    return u.protocol === 'https:' && !u.port && PUSH_HOSTS.some((re) => re.test(u.hostname));
+  } catch (e) {
+    return false;
+  }
+}
+function isValidPushSub(sub) {
+  return !!sub && typeof sub === 'object' && isPushEndpointOk(sub.endpoint) && !!sub.keys && typeof sub.keys.p256dh === 'string' && typeof sub.keys.auth === 'string';
+}
+// DB 변경 이벤트의 경로 값({nk})은 한글 같은 비영어 글자가 깨져서 도착해요 (UTF-8 바이트가 Latin-1 글자로 읽힌 모양).
+// 그렇게 깨진 값이면 원래대로 되돌리고, 영어·숫자뿐이거나 정상적인 값이면 그대로 둬요.
+function fixPathParam(value) {
+  const s = String(value == null ? '' : value);
+  if (/^[ -]*$/.test(s) || !/^[ -ÿ]*$/.test(s)) return s;
+  const fixed = Buffer.from(s, 'latin1').toString('utf8');
+  return fixed.includes('�') ? s : fixed;
+}
+
+// 알림 한 건을 푸시로 보낼지, 보낸다면 어떤 내용일지 정해요. 내가 한 일을 나에게 알리는 알림(self)이나 이미 읽은 알림은 보내지 않아요.
+function buildPushPayload(rec, id) {
+  if (!rec || typeof rec !== 'object' || rec.self === true || rec.read === true) return null;
+  const title = clip(rec.title, 60);
+  if (!title) return null;
+  const link = typeof rec.link === 'string' && /^[A-Za-z0-9_.\-]+\.html(\?[A-Za-z0-9_=&%.\-]*)?$/.test(rec.link) ? rec.link : 'notifications.html';
+  return { title, body: clip(rec.message, 120), url: link, tag: String(id || '') };
+}
+
 // 길이 제한에 걸려도 문장 중간에서 끊기지 않게, 마지막 문장 끝까지만 남겨요.
 function clipToSentence(value, max) {
   const text = String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
@@ -461,7 +494,7 @@ function parseScoreReply(text) {
 
 module.exports = {
   CHECKLISTS, checklistCategory, buildCheckSystemPrompt, buildCheckPrompt, parseCheckReply, buildScoreSystemPrompt, buildScorePrompt, parseScoreReply,
-  meaningfulText, planSweep, clipToSentence, isTextWork, submissionsToText, buildTriageSystemPrompt, buildReviewPrompt, buildProductionPrompt, parseTriageReply,
+  fixPathParam, isPushEndpointOk, isValidPushSub, buildPushPayload, meaningfulText, planSweep, clipToSentence, isTextWork, submissionsToText, buildTriageSystemPrompt, buildReviewPrompt, buildProductionPrompt, parseTriageReply,
   kstDate, clip, sanitizeIp, ipToText, buildSystemPrompt, buildUserPrompt, extractAnswer, verifyPin,
   PIN_MIN_LENGTH, MAX_PIN_FAILS, LOCK_MS,
   safeSegment, normalizeNickname, validPin, uidFor, hashPin, makeAccountRecord, isLocked, nextFailState,

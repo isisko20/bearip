@@ -18,6 +18,23 @@
       }
     },
 
+    "pushSubs": {
+      "$nickname": {
+        "$subId": {
+          ".write": "auth.token.nk == $nickname",
+          ".validate": "newData.hasChildren(['endpoint', 'keys'])",
+          "endpoint": { ".validate": "newData.isString() && newData.val().length < 600 && newData.val().beginsWith('https://')" },
+          "keys": {
+            "p256dh": { ".validate": "newData.isString() && newData.val().length < 200" },
+            "auth": { ".validate": "newData.isString() && newData.val().length < 100" }
+          },
+          "at": { ".validate": "newData.isString()" },
+          "ua": { ".validate": "newData.isString() && newData.val().length < 200" },
+          "$other": { ".validate": false }
+        }
+      }
+    },
+
     "productionRequests": {
       ".read": "auth != null",
       ".indexOn": ["ipId", "requesterNickname"],

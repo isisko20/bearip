@@ -40,6 +40,43 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// ---- 폰 푸시 알림 ----
+// 서버(functions/index.js의 pushOnNotification)가 보낸 알림을 받아서 보여주고, 누르면 해당 화면을 열어요.
+// 알림 내용은 서버가 정한 {title, body, url, tag}뿐이고, 주소는 이 사이트 안의 화면으로만 열어요.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = {};
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Thinkit', {
+      body: data.body || '',
+      icon: 'assets/icons/icon-192.png',
+      badge: 'assets/icons/icon-192.png',
+      tag: data.tag || undefined,
+      data: { url: data.url || 'notifications.html' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = new URL((event.notification.data && event.notification.data.url) || 'notifications.html', self.registration.scope);
+  if (target.origin !== self.location.origin) return;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      const open = wins.find((w) => w.url.startsWith(self.registration.scope) && 'navigate' in w);
+      if (!open) return self.clients.openWindow(target.href);
+      return open
+        .navigate(target.href)
+        .then((c) => (c || open).focus())
+        .catch(() => self.clients.openWindow(target.href));
+    })
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;

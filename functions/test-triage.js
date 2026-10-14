@@ -3,6 +3,8 @@
 const assert = require('assert');
 const Module = require('module');
 
+const pushState = { sent: [], failWith: {}, vapid: null, privateKey: 'FAKE-PRIVATE' };
+
 // ---- 가짜 실시간 DB ----
 const tree = {};
 const getAt = (path) => path.split('/').filter(Boolean).reduce((n, k) => (n == null ? n : n[k]), tree);
@@ -62,7 +64,16 @@ const fakes = {
   },
   'firebase-functions/v2/https': { onRequest: (_opts, handler) => handler },
   'firebase-functions/v2/scheduler': { onSchedule: (_opts, handler) => handler },
-  'firebase-functions/params': { defineSecret: () => ({ value: () => 'FAKE-KEY' }) },
+  'firebase-functions/v2/database': { onValueCreated: (_opts, handler) => handler },
+  'web-push': {
+    setVapidDetails: (...a) => (pushState.vapid = a),
+    sendNotification: async (sub, payload, opts) => {
+      pushState.sent.push({ sub, payload: JSON.parse(payload), opts });
+      const fail = pushState.failWith[sub.endpoint];
+      if (fail) throw Object.assign(new Error('push error'), { statusCode: fail });
+    },
+  },
+  'firebase-functions/params': { defineSecret: (name) => ({ value: () => (name === 'VAPID_PRIVATE_KEY' ? pushState.privateKey : 'FAKE-KEY') }) },
 };
 const realLoad = Module._load;
 Module._load = function (request, ...rest) {
@@ -548,6 +559,57 @@ const IP = { title: '테스트 작품', goal: '웹툰', genres: ['판타지'], l
   id = legacy({ status: 'done' });
   assert.strictEqual((await gmTriage({ kind: 'production', id })).body.reason, 'not_queued');
   console.log('ok  GM 처리 후 재요청·그림 항목·이미 끝난 의뢰');
+
+  // 28) 폰 푸시: 알림이 새로 생기면 그 사람의 기기로 보내요
+  const push = fns.pushOnNotification;
+  const sub = (host, n) => ({ endpoint: 'https://' + host + '/send/' + n, keys: { p256dh: 'p' + n, auth: 'a' + n }, at: new Date().toISOString() });
+  setAt('pushSubs/푸시손님/d1', sub('fcm.googleapis.com', 1));
+  setAt('pushSubs/푸시손님/d2', sub('updates.push.services.mozilla.com', 2));
+  setAt('pushSubs/푸시손님/bad', { endpoint: 'https://169.254.169.254/latest', keys: { p256dh: 'x', auth: 'y' } });
+  const fire = (nk, nid, rec) => push({ params: { nk, id: nid }, data: { val: () => rec } });
+  const rec1 = { type: 'production', title: '의뢰 결과가 도착했어요', message: "'테스트 작품'의 '스토리' 의뢰가 완료됐어요.", link: 'my-dna.html', read: false, createdAt: new Date().toISOString() };
+  pushState.sent = [];
+  await fire('푸시손님', 'ntf_p1', rec1);
+  assert.strictEqual(pushState.sent.length, 2, '검증을 통과한 기기 2대에만 보내요 (이상한 주소는 건너뛰어요)');
+  assert.deepStrictEqual(pushState.sent[0].payload, { title: '의뢰 결과가 도착했어요', body: rec1.message, url: 'my-dna.html', tag: 'ntf_p1' });
+  assert.ok(pushState.vapid && pushState.vapid[1].startsWith('BEEP') && pushState.vapid[2] === 'FAKE-PRIVATE');
+  // 내가 한 일을 나에게 알리는 알림·구독 없는 사람에게는 보내지 않아요
+  pushState.sent = [];
+  await fire('푸시손님', 'ntf_p2', Object.assign({}, rec1, { self: true }));
+  await fire('구독없는사람', 'ntf_p3', rec1);
+  assert.strictEqual(pushState.sent.length, 0);
+  // 앱을 지운 기기(410)는 목록에서 정리돼요
+  pushState.failWith['https://fcm.googleapis.com/send/1'] = 410;
+  await fire('푸시손님', 'ntf_p4', rec1);
+  assert.strictEqual(getAt('pushSubs/푸시손님/d1'), undefined, '끊긴 기기는 정리');
+  assert.ok(getAt('pushSubs/푸시손님/d2'), '나머지 기기는 그대로');
+  // 일시적인 오류(500)는 기기를 지우지 않아요
+  pushState.failWith['https://updates.push.services.mozilla.com/send/2'] = 500;
+  await fire('푸시손님', 'ntf_p5', rec1);
+  assert.ok(getAt('pushSubs/푸시손님/d2'));
+  // 한 시간에 20건까지만
+  pushState.failWith = {};
+  pushState.sent = [];
+  for (let i = 0; i < 30; i++) await fire('푸시손님', 'ntf_q' + i, rec1);
+  assert.ok(pushState.sent.length > 0 && pushState.sent.length <= 20, '시간당 상한: ' + pushState.sent.length);
+  // 비밀 키가 없으면(아직 설정 전) 조용히 건너뛰어요
+  pushState.privateKey = '';
+  setAt('pushRate/푸시손님', null);
+  pushState.sent = [];
+  await fire('푸시손님', 'ntf_p6', rec1);
+  assert.strictEqual(pushState.sent.length, 0);
+  // 실서버에서는 경로 값의 한글이 깨져서(UTF-8 바이트가 Latin-1로 읽힘) 도착해요 — 되돌려서 같은 사람을 찾아야 해요
+  pushState.privateKey = 'FAKE-PRIVATE';
+  setAt('pushRate/푸시손님', null);
+  setAt('pushSubs/푸시손님/d3', sub('fcm.googleapis.com', 3));
+  pushState.sent = [];
+  await fire(Buffer.from('푸시손님', 'utf8').toString('latin1'), 'ntf_p7', rec1);
+  assert.ok(pushState.sent.length >= 1, '깨져서 도착한 한글 닉네임도 같은 사람으로 찾아요');
+  assert.strictEqual(lib.fixPathParam('GM'), 'GM');
+  assert.strictEqual(lib.fixPathParam('café'), 'café', '정상적인 비영어 글자는 건드리지 않아요');
+  // 알림 데이터가 비어 있어도 오류 없이 끝나요
+  await push({ params: { nk: 'x', id: 'y' }, data: null });
+  console.log('ok  폰 푸시 (대상 기기·자기 알림 제외·끊긴 기기 정리·시간당 상한·키 없음)');
 
   console.log('\n전부 통과');
 })().catch((e) => {

@@ -57,6 +57,63 @@ function ntRender() {
   });
 }
 
+// ---- 폰 알림 켜기/끄기 카드 (app-boot.js의 bearipPush 사용) ----
+async function ntPushRender() {
+  const card = document.getElementById('ntPush');
+  if (!card || !window.bearipPush) return;
+  const state = await window.bearipPush.state().catch(() => 'unsupported');
+  const title = document.getElementById('ntPushTitle');
+  const sub = document.getElementById('ntPushSub');
+  const btn = document.getElementById('ntPushBtn');
+  btn.disabled = false;
+  btn.classList.remove('quiet');
+  btn.style.display = '';
+  card.style.display = state === 'unsupported' ? 'none' : 'flex';
+  btn.dataset.state = state;
+  if (state === 'off') {
+    title.textContent = '결과가 나오면 폰으로 알려드릴까요?';
+    sub.textContent = '의뢰 결과나 쪽지가 도착하면 앱을 열지 않아도 알림이 와요. 이 기기에서만 켜져요.';
+    btn.textContent = '알림 켜기';
+  } else if (state === 'on') {
+    title.textContent = '이 기기로 알림을 받고 있어요';
+    sub.textContent = '의뢰 결과나 쪽지가 도착하면 폰에 알림이 떠요.';
+    btn.textContent = '끄기';
+    btn.classList.add('quiet');
+  } else if (state === 'denied') {
+    title.textContent = '이 기기에서 알림이 막혀 있어요';
+    sub.textContent = '브라우저(또는 휴대폰) 설정에서 Thinkit의 알림을 허용하면 켤 수 있어요.';
+    btn.style.display = 'none';
+  } else if (state === 'install') {
+    title.textContent = '홈 화면에 추가하면 폰 알림을 받을 수 있어요';
+    sub.textContent = 'Safari 아래쪽의 공유 버튼(네모에 위 화살표)을 누르고 "홈 화면에 추가"를 선택한 뒤, 추가된 Thinkit 앱에서 다시 열어주세요.';
+    btn.style.display = 'none';
+  }
+}
+
+function ntPushInit() {
+  const btn = document.getElementById('ntPushBtn');
+  if (!btn) return;
+  ntPushRender();
+  btn.addEventListener('click', async () => {
+    const state = btn.dataset.state;
+    btn.disabled = true;
+    try {
+      if (state === 'off') {
+        const r = await window.bearipPush.enable();
+        if (r.ok) bearipShowToast('이 기기로 알림을 보내드릴게요');
+        else if (r.reason === 'denied') bearipShowToast('알림이 차단됐어요. 설정에서 허용해주세요');
+        else if (r.reason !== 'dismissed') bearipShowToast('알림을 켜지 못했어요. 잠시 후 다시 시도해주세요');
+      } else if (state === 'on') {
+        await window.bearipPush.disable();
+        bearipShowToast('이 기기의 알림을 껐어요');
+      }
+    } catch (e) {
+      bearipShowToast('알림을 바꾸지 못했어요. 잠시 후 다시 시도해주세요');
+    }
+    ntPushRender();
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Render in whichever shell (light shell / dark CONTENT ROOM) the user
   // was just browsing in, since this page is reachable from either.
@@ -66,6 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   ntRender();
   if (typeof bearipOnDataChange === 'function') bearipOnDataChange('notifications', ntRender);
+
+  ntPushInit();
 
   document.getElementById('ntReadAllBtn').addEventListener('click', () => {
     bearipMarkAllNotificationsRead();

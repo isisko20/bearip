@@ -137,6 +137,127 @@
     report(code === 'PERMISSION_DENIED' ? 'denied' : 'rejection', (reason && reason.message) || String(reason), '', 0, 0, reason && reason.stack, code);
   });
 
+  // ================= 폰 푸시 알림 =================
+  // 알림함에 새 알림이 생기면 서버(pushOnNotification)가 이 기기로도 푸시를 보내요. 여기서는 "이 기기에서 받기"를 켜고 끄고,
+  // 구독 정보를 pushSubs/<닉네임>/<기기>에 저장해요 (규칙상 본인 닉네임 아래에만 쓸 수 있어요).
+  //  · 켜기는 반드시 사람이 버튼을 눌렀을 때만 (브라우저가 그렇게 요구해요)
+  //  · 로그아웃하면 이 기기를 그 계정에서 떼고, 다시 로그인하면 자동으로 새 계정에 붙여요 (공용 기기에서 남의 알림이 뜨지 않게)
+  //  · 아이폰은 홈 화면에 추가한 앱에서만 푸시가 돼요 (사파리 탭에서는 불가)
+  const VAPID_PUBLIC_KEY = 'BEEPHDhiHhGvnVi5-B0brMt7P5Bf7VFNbjJb1Wxod0NvdoR9mhPY_Q5gXwmcHhP78thLa2QenUMjnCPdAQc54Jk';
+  const PUSH_SAVED_KEY = 'bearip_push_saved'; // "닉네임/기기id" — 이 기기를 어느 계정에 붙여놨는지
+
+  const pushUa = navigator.userAgent;
+  const pushIos = /iPad|iPhone|iPod/.test(pushUa) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  function pushSupported() {
+    return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && (location.protocol === 'https:' || location.hostname === 'localhost');
+  }
+  function b64ToBytes(b64) {
+    const pad = '='.repeat((4 - (b64.length % 4)) % 4);
+    const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+  }
+  async function deviceId(endpoint) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(endpoint));
+    return Array.from(new Uint8Array(buf)).slice(0, 12).map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  function currentNk() {
+    const user = typeof bearipGetUser === 'function' ? bearipGetUser() : null;
+    return user && user.nickname && typeof bearipSafePathSegment === 'function' ? bearipSafePathSegment(user.nickname) : null;
+  }
+  function getSavedRef() {
+    try {
+      return localStorage.getItem(PUSH_SAVED_KEY) || '';
+    } catch (e) {
+      return '';
+    }
+  }
+  function setSavedRef(v) {
+    try {
+      if (v) localStorage.setItem(PUSH_SAVED_KEY, v);
+      else localStorage.removeItem(PUSH_SAVED_KEY);
+    } catch (e) {
+      /* best-effort */
+    }
+  }
+  async function dbRef(path) {
+    await _bearipWhenFirebaseAuthed();
+    return firebase.database().ref(path);
+  }
+  async function getSub() {
+    if (!pushSupported()) return null;
+    const reg = await navigator.serviceWorker.ready;
+    return reg.pushManager.getSubscription();
+  }
+  // 이 기기를 지금 로그인한 계정에 붙여요 (이미 다른 계정에 붙어 있으면 거기서 떼요).
+  async function attach(sub) {
+    const nk = currentNk();
+    if (!nk) return false;
+    const id = await deviceId(sub.endpoint);
+    const want = nk + '/' + id;
+    const saved = getSavedRef();
+    if (saved === want) return true;
+    if (saved) await (await dbRef('pushSubs/' + saved)).remove().catch(() => {});
+    const json = sub.toJSON();
+    await (await dbRef('pushSubs/' + want)).set({
+      endpoint: json.endpoint,
+      keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+      at: new Date().toISOString(),
+      ua: clip(pushUa, 150),
+    });
+    setSavedRef(want);
+    return true;
+  }
+
+  window.bearipPush = {
+    // 'unsupported' | 'install' (아이폰: 홈 화면에 추가 필요) | 'denied' | 'off' | 'on'
+    async state() {
+      if (!pushSupported()) return pushIos && !isStandalone() ? 'install' : 'unsupported';
+      if (Notification.permission === 'denied') return 'denied';
+      if (Notification.permission !== 'granted') return 'off';
+      const sub = await getSub().catch(() => null);
+      return sub && getSavedRef() ? 'on' : 'off';
+    },
+    async enable() {
+      if (!pushSupported()) return { ok: false, reason: 'unsupported' };
+      if (!currentNk()) return { ok: false, reason: 'login' };
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') return { ok: false, reason: perm === 'denied' ? 'denied' : 'dismissed' };
+      const reg = await navigator.serviceWorker.ready;
+      const sub = (await reg.pushManager.getSubscription()) || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(VAPID_PUBLIC_KEY) }));
+      await attach(sub);
+      return { ok: true };
+    },
+    async disable() {
+      const saved = getSavedRef();
+      const sub = await getSub().catch(() => null);
+      if (saved) await (await dbRef('pushSubs/' + saved)).remove().catch(() => {});
+      setSavedRef('');
+      if (sub) await sub.unsubscribe().catch(() => {});
+      return { ok: true };
+    },
+    // 로그아웃 직전에 부르면 이 기기를 지금 계정에서 떼요 (브라우저 구독은 그대로 두고, 다시 로그인하면 붙여요).
+    async detachDevice() {
+      const saved = getSavedRef();
+      if (!saved) return;
+      setSavedRef('');
+      await (await dbRef('pushSubs/' + saved)).remove();
+    },
+  };
+
+  // 이미 켜 둔 기기는 페이지를 열 때 조용히 맞춰요: 다른 계정으로 로그인했거나 구독 정보가 바뀌었으면 새로 붙여요.
+  window.addEventListener('load', () => {
+    setTimeout(async () => {
+      try {
+        if (!pushSupported() || Notification.permission !== 'granted' || !currentNk()) return;
+        const sub = await getSub();
+        if (sub) await attach(sub);
+      } catch (e) {
+        /* 조용히 건너뛰어요 */
+      }
+    }, 3000);
+  });
+
   // ================= 앱 설치 안내 =================
   // 로그인한 사람에게만, 앱으로 열려 있지 않을 때만, 닫으면 14일 동안 다시 안 보여줘요.
   //  · 안드로이드/PC 크롬: 설치 버튼 (beforeinstallprompt)

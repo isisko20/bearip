@@ -1086,8 +1086,23 @@ function ensureProductionRequestOverlay() {
     if (typeof renderProductionRequestsList === 'function') renderProductionRequestsList();
     closeProductionRequest();
     bearipShowToast(`의뢰를 접수했어요. ${price}C가 결제됐어요.`);
+    mdPushHint();
   });
   return overlay;
+}
+
+// 의뢰를 넣은 직후, 폰 알림이 꺼져 있으면 한 번만 켤 수 있는 곳을 알려줘요 (결과가 나왔을 때 놓치지 않게).
+function mdPushHint() {
+  try {
+    if (!window.bearipPush || localStorage.getItem('bearip_push_hinted')) return;
+    window.bearipPush.state().then((s) => {
+      if (s !== 'off' && s !== 'install') return;
+      localStorage.setItem('bearip_push_hinted', '1');
+      setTimeout(() => bearipShowToast('결과는 알림함에 도착해요. 폰 알림은 알림함에서 켤 수 있어요'), 2800);
+    }).catch(() => {});
+  } catch (e) {
+    /* 안내만 못 보여줄 뿐이에요 */
+  }
 }
 
 function closeProductionRequest() {
@@ -2133,6 +2148,7 @@ function mdSpendAndRequestReview(index, message) {
   renderExpertHelpList();
   renderRoadmap();
   bearipShowToast(`의뢰를 접수했어요. ${BEARIP_EXPERT_REVIEW_PRICE}C가 결제됐어요.`);
+  mdPushHint();
 }
 
 let expertReviewRequestPendingIndex = null;
