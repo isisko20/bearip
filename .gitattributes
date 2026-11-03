@@ -1,0 +1,6 @@
+# 저장소에는 줄바꿈을 LF로 통일해서 저장해요 (Windows·Mac 작업자가 섞여도 줄바꿈 차이로 생기는 가짜 변경을 막아요).
+* text=auto
+*.png binary
+*.jpg binary
+*.ico binary
+*.docx binary

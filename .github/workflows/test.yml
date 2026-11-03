@@ -1,0 +1,37 @@
+# PR을 열거나 main에 합쳐질 때마다 자동으로 확인해요. 통과해야 PR을 합칠 수 있어요.
+name: test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: 화면 스크립트 문법 검사
+        run: for f in *.js tools/*.js; do node --check "$f"; done
+
+      - name: DB 규칙 JSON 검사
+        run: node -e "for (const f of ['database.rules.json','database.rules.next.json','manifest.webmanifest']) JSON.parse(require('fs').readFileSync(f,'utf8'))"
+
+      - name: 서버 함수 테스트
+        working-directory: functions
+        run: |
+          npm ci --no-audit --no-fund
+          # AI 매뉴얼은 비공개라 저장소에 없어요 — 테스트에는 내용이 필요 없어서 자리표시 파일을 만들어요
+          mkdir -p manuals
+          [ -f manuals/story-design.txt ] || echo "테스트용 자리표시 매뉴얼" > manuals/story-design.txt
+          npm test
